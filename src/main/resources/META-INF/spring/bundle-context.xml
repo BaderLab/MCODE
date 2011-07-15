@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+	<!-- Create an instance (bean) of the class -->
+
+	<!--<bean id="plugin" class="org.cytoscape.mcode.internal.MCODEPlugin">
+		<constructor-arg ref="pluginAdapterServiceRef" />
+		<constructor-arg ref="openBrowserServiceRef" />
+        <constructor-arg ref="resources" />
+	</bean>-->
+	
+	<bean id="startMenuAction" class="org.cytoscape.mcode.internal.MCODEStartAction">
+		<constructor-arg value="Start MCODE" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+	</bean>
+
+	<bean id="helpMenuAction" class="org.cytoscape.mcode.internal.MCODEHelpAction">
+		<constructor-arg value="Help" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="openBrowserServiceRef" />
+	</bean>
+	
+	<bean id="aboutMenuAction" class="org.cytoscape.mcode.internal.MCODEAboutAction">
+		<constructor-arg value="About" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="openBrowserServiceRef" />
+		<constructor-arg ref="resources" />
+	</bean>
+
+	<bean id="resources" class="org.cytoscape.mcode.internal.util.MCODEResources" />
+
+</beans>
