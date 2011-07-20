@@ -7,33 +7,44 @@
 		http://www.springframework.org/schema/context
 		http://www.springframework.org/schema/context/spring-context-2.5.xsd">
 
-	<!-- Create an instance (bean) of the class -->
-
-	<!--<bean id="plugin" class="org.cytoscape.mcode.internal.MCODEPlugin">
-		<constructor-arg ref="pluginAdapterServiceRef" />
-		<constructor-arg ref="openBrowserServiceRef" />
-        <constructor-arg ref="resources" />
-	</bean>-->
+	<!-- Actions -->
 	
-	<bean id="startMenuAction" class="org.cytoscape.mcode.internal.MCODEStartAction">
-		<constructor-arg value="Start MCODE" />
+	<bean id="openAction" class="org.cytoscape.mcode.internal.MCODEOpenAction">
+		<constructor-arg value="Open MCODE" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="cyServiceRegistrarServiceRef" />
+		<constructor-arg ref="analyzeAction" />
+	</bean>
+	
+	<bean id="closeAction" class="org.cytoscape.mcode.internal.MCODECloseAction">
+		<constructor-arg value="Close MCODE" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="cyServiceRegistrarServiceRef" />
 	</bean>
 
-	<bean id="helpMenuAction" class="org.cytoscape.mcode.internal.MCODEHelpAction">
+	<bean id="helpAction" class="org.cytoscape.mcode.internal.MCODEHelpAction">
 		<constructor-arg value="Help" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="openBrowserServiceRef" />
 	</bean>
 	
-	<bean id="aboutMenuAction" class="org.cytoscape.mcode.internal.MCODEAboutAction">
+	<bean id="aboutAction" class="org.cytoscape.mcode.internal.MCODEAboutAction">
 		<constructor-arg value="About" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="openBrowserServiceRef" />
-		<constructor-arg ref="resources" />
 	</bean>
-
-	<bean id="resources" class="org.cytoscape.mcode.internal.util.MCODEResources" />
+	
+	<bean id="analyzeAction" class="org.cytoscape.mcode.internal.MCODEAnalyzeAction">
+		<constructor-arg value="Analyze current network" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="cyServiceRegistrarServiceRef" />
+	</bean>
+	
+	<!-- Other beans -->
 
 </beans>

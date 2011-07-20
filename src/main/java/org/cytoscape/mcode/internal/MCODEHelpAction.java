@@ -2,7 +2,7 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 
-import org.cytoscape.application.swing.AbstractCyAction;
+import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.session.CyApplicationManager;
 import org.cytoscape.util.swing.OpenBrowser;
 
@@ -46,16 +46,17 @@ import org.cytoscape.util.swing.OpenBrowser;
  * Opens a browser with the MCODE wiki page.
  */
 
-public class MCODEHelpAction extends AbstractCyAction {
+public class MCODEHelpAction extends AbstractMCODEAction {
 
 	private static final long serialVersionUID = -8129187221346920847L;
 
 	private final OpenBrowser openBrowser;
 
-	public MCODEHelpAction(final String menuTitle,
+	public MCODEHelpAction(final String name,
 						   final CyApplicationManager applicationManager,
+						   final CySwingApplication swingApplication,
 						   final OpenBrowser openBrowser) {
-		super(menuTitle, applicationManager);
+		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
 		setPreferredMenu("Plugins.MCODE");
 	}

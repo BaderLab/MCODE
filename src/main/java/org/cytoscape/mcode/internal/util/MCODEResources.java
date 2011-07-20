@@ -4,7 +4,7 @@ import java.net.URL;
 
 public class MCODEResources {
 
-	public static enum Image {
+	public static enum ImageName {
 		LOGO("/img/logo1.png"),
 		LOGO_SMALL("/img/logo2.png"),
 		LOGO_SIMPLE("/img/logo.png"),
@@ -14,7 +14,7 @@ public class MCODEResources {
 
 		private final String name;
 
-		private Image(final String name) {
+		private ImageName(final String name) {
 			this.name = name;
 		}
 
@@ -24,8 +24,8 @@ public class MCODEResources {
 		}
 	}
 
-	public URL getUrl(Image img) {
-		return this.getClass().getResource(img.toString());
+	public static URL getUrl(ImageName img) {
+		return MCODEResources.class.getResource(img.toString());
 	}
 
 }

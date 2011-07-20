@@ -2,9 +2,7 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 
-import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.mcode.internal.util.MCODEResources;
 import org.cytoscape.mcode.internal.view.MCODEAboutDialog;
 import org.cytoscape.session.CyApplicationManager;
 import org.cytoscape.util.swing.OpenBrowser;
@@ -48,30 +46,25 @@ import org.cytoscape.util.swing.OpenBrowser;
 /**
  * The action to show the About dialog box
  */
-public class MCODEAboutAction extends AbstractCyAction {
+public class MCODEAboutAction extends AbstractMCODEAction {
 
 	private static final long serialVersionUID = -8445425993916988045L;
 
-	private final CySwingApplication swingApplication;
 	private final OpenBrowser openBrowser;
-	private final MCODEResources resources;
 
-	public MCODEAboutAction(final String menuTitle,
+	public MCODEAboutAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
-							final OpenBrowser openBrowser,
-							final MCODEResources resources) {
-		super(menuTitle, applicationManager);
-		this.swingApplication = swingApplication;
+							final OpenBrowser openBrowser) {
+		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
-		this.resources = resources;
 		setPreferredMenu("Plugins.MCODE");
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//display about box
-		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, resources);
+		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser);
 		aboutDialog.pack();
 		aboutDialog.setVisible(true);
 	}
