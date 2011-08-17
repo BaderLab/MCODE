@@ -3,12 +3,12 @@ package org.cytoscape.mcode.internal;
 import java.awt.event.ActionEvent;
 import java.util.Properties;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.session.CyApplicationManager;
 
 /**
  * Creates a new menu item under Plugins menu section.

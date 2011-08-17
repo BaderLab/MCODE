@@ -1,18 +1,23 @@
 package org.cytoscape.mcode.internal.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.work.TaskMonitor;
 
 /**
@@ -64,7 +69,7 @@ public class MCODEAlgorithm {
 
 		double density; //neighborhood density
 		int numNodeNeighbors; //number of node neighbors
-		long[] nodeNeighbors; //stores node indices of all neighbors
+		int[] nodeNeighbors; //stores node indices of all neighbors
 		int coreLevel; //e.g. 2 = a 2-core
 		double coreDensity; //density of the core neighborhood
 		double score; //node score
@@ -79,9 +84,9 @@ public class MCODEAlgorithm {
 
 	//data structures useful to have around for more than one cluster finding iteration
 	//key is the node index, value is a NodeInfo instance
-	private Map<Long, NodeInfo> currentNodeInfoHashMap;
+	private Map<Integer, NodeInfo> currentNodeInfoHashMap;
 	//key is node score, value is nodeIndex
-	private SortedMap<Double, List<Long>> currentNodeScoreSortedMap;
+	private SortedMap<Double, List<Integer>> currentNodeScoreSortedMap;
 	//because every network can be scored and clustered several times with different parameters
 	//these results have to be stored so that the same scores are used during exploration when
 	//the user is switching between the various results
@@ -89,27 +94,30 @@ public class MCODEAlgorithm {
 	//haven't changed for example) the clustering method must save the current node scores under the new result
 	//title for later reference
 	//key is result id, value is nodeScoreSortedMap
-	private Map<Integer, SortedMap<Double, List<Long>>> nodeScoreResultsMap = new HashMap<Integer, SortedMap<Double, List<Long>>>();
+	private Map<Integer, SortedMap<Double, List<Integer>>> nodeScoreResultsMap = new HashMap<Integer, SortedMap<Double, List<Integer>>>();
 	//key is result id, value is nodeInfroHashMap
-	private Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<Integer, Map<Long, NodeInfo>>();
+	private Map<Integer, Map<Integer, NodeInfo>> nodeInfoResultsMap = new HashMap<Integer, Map<Integer, NodeInfo>>();
 
 	private MCODEParameterSet params; //the parameters used for this instance of the algorithm
 	//stats
 	private long lastScoreTime;
 	private long lastFindTime;
 
+	private final MCODEUtil mcodeUtil;
+
 	/**
 	 * The constructor.  Use this to get an instance of MCODE to run.
 	 *
 	 * @param networkID Allows the algorithm to get the parameters of the focused network
 	 */
-	public MCODEAlgorithm(Long networkID) {
+	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
+		this.mcodeUtil = mcodeUtil;
 		//get current parameters
 		params = MCODECurrentParameters.getInstance().getParamsCopy(networkID);
 	}
 
-	public MCODEAlgorithm(TaskMonitor taskMonitor, Long networkID) {
-		this(networkID);
+	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
+		this(networkID, mcodeUtil);
 		this.taskMonitor = taskMonitor;
 	}
 
@@ -159,21 +167,22 @@ public class MCODEAlgorithm {
 	 * during the attribute setting method.
 	 *
 	 * @param rootGraphIndex Integer which is used to identify the nodes in the score-sorted tree map
-	 * @param resultSetName Title of the results for which we are retrieving a node score
+	 * @param resultTitle Title of the results for which we are retrieving a node score
 	 * @return node score as a Double
 	 */
 	public Double getNodeScore(int rootGraphIndex, String resultTitle) {
 		Double nodeScore = new Double(0.0);
-		TreeMap nodeScoreSortedMap = (TreeMap) nodeScoreResultsMap.get(resultTitle);
+		Map<Double, List<Integer>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultTitle);
 
-		for (Iterator score = nodeScoreSortedMap.keySet().iterator(); score.hasNext();) {
-			nodeScore = (Double) score.next();
-			ArrayList nodes = (ArrayList) nodeScoreSortedMap.get(nodeScore);
+		for (Iterator<Double> score = nodeScoreSortedMap.keySet().iterator(); score.hasNext();) {
+			nodeScore = score.next();
+			List<Integer> nodes = nodeScoreSortedMap.get(nodeScore);
 
-			if (nodes.contains(new Integer(rootGraphIndex))) {
+			if (nodes.contains(rootGraphIndex)) {
 				return nodeScore;
 			}
 		}
+
 		return nodeScore;
 	}
 
@@ -181,11 +190,11 @@ public class MCODEAlgorithm {
 	 * Gets the highest node score in a given result.  Used in the MCODEVisualStyleAction class to
 	 * re-initialize the visual calculators.
 	 *
-	 * @param resultSetName Title of the result
+	 * @param resultId Id of the result
 	 * @return First key in the nodeScoreSortedMap corresponding to the highest score
 	 */
 	public double getMaxScore(int resultId) {
-		SortedMap<Double, List<Long>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
+		SortedMap<Double, List<Integer>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
 
 		//Since the map is sorted, the first key is the highest value
 		return nodeScoreSortedMap.firstKey();
@@ -196,9 +205,9 @@ public class MCODEAlgorithm {
 	 * saved internally in your instance of MCODEAlgorithm.
 	 *
 	 * @param inputNetwork The network that will be scored
-	 * @param resultSetName Title of the result, used as an identifier in various hash maps
+	 * @param resultId Title of the result, used as an identifier in various hash maps
 	 */
-	public void scoreGraph(CyNetwork inputNetwork, int resultTitle) {
+	public void scoreGraph(CyNetwork inputNetwork, int resultId) {
 		params = getParams();
 		String callerID = "MCODEAlgorithm.MCODEAlgorithm";
 
@@ -209,46 +218,48 @@ public class MCODEAlgorithm {
 
 		//initialize
 		long msTimeBefore = System.currentTimeMillis();
-		Map<Long, NodeInfo> nodeInfoHashMap = new HashMap<Long, NodeInfo>(inputNetwork.getNodeCount());
+		Map<Integer, NodeInfo> nodeInfoHashMap = new HashMap<Integer, NodeInfo>(inputNetwork.getNodeCount());
 
 		//will store Doubles (score) as the key, Lists as values
-		SortedMap<Double, List<Long>> nodeScoreSortedMap = new TreeMap<Double, List<Long>>(new Comparator<Double>() {
+		SortedMap<Double, List<Integer>> nodeScoreSortedMap = new TreeMap<Double, List<Integer>>(
+																								 new Comparator<Double>() {
 
-			//sort Doubles in descending order
-			public int compare(Double d1, Double d2) {
-				if (d1 == d2) {
-					return 0;
-				} else if (d1 < d2) {
-					return 1;
-				} else {
-					return -1;
-				}
-			}
-		});
+																									 //sort Doubles in descending order
+																									 public int compare(Double d1,
+																														Double d2) {
+																										 if (d1 == d2) {
+																											 return 0;
+																										 } else if (d1 < d2) {
+																											 return 1;
+																										 } else {
+																											 return -1;
+																										 }
+																									 }
+																								 });
 
 		//iterate over all nodes and calculate MCODE score
 		NodeInfo nodeInfo = null;
 		double nodeScore;
-		List<Long> al;
+		List<Integer> al;
 		int i = 0;
 
 		List<CyNode> nodes = inputNetwork.getNodeList();
 
 		for (CyNode n : nodes) {
-			nodeInfo = calcNodeInfo(inputNetwork, n.getSUID());
-			nodeInfoHashMap.put(n.getSUID(), nodeInfo);
-			//score node TODO: add support for other scoring functions (low priority)
+			nodeInfo = calcNodeInfo(inputNetwork, n.getIndex());
+			nodeInfoHashMap.put(n.getIndex(), nodeInfo);
+			// Score node
 			nodeScore = scoreNode(nodeInfo);
 
-			//save score for later use in TreeMap
-			//add a list of nodes to each score in case nodes have the same score
+			// Save score for later use in TreeMap
+			// Add a list of nodes to each score in case nodes have the same score
 			if (nodeScoreSortedMap.containsKey(new Double(nodeScore))) {
 				//already have a node with this score, add it to the list
 				al = nodeScoreSortedMap.get(new Double(nodeScore));
-				al.add(n.getSUID());
+				al.add(n.getIndex());
 			} else {
-				al = new ArrayList<Long>();
-				al.add(n.getSUID());
+				al = new ArrayList<Integer>();
+				al.add(n.getIndex());
 				nodeScoreSortedMap.put(new Double(nodeScore), al);
 			}
 			if (taskMonitor != null) {
@@ -257,8 +268,8 @@ public class MCODEAlgorithm {
 			}
 		}
 
-		nodeScoreResultsMap.put(resultTitle, nodeScoreSortedMap);
-		nodeInfoResultsMap.put(resultTitle, nodeInfoHashMap);
+		nodeScoreResultsMap.put(resultId, nodeScoreSortedMap);
+		nodeInfoResultsMap.put(resultId, nodeInfoHashMap);
 
 		currentNodeScoreSortedMap = nodeScoreSortedMap;
 		currentNodeInfoHashMap = nodeInfoHashMap;
@@ -277,13 +288,13 @@ public class MCODEAlgorithm {
 	 * @return An array containing an MCODECluster object for each cluster.
 	 */
 	public MCODECluster[] findClusters(CyNetwork inputNetwork, int resultId) {
-		SortedMap<Double, List<Long>> nodeScoreSortedMap;
-		Map<Long, NodeInfo> nodeInfoHashMap;
+		SortedMap<Double, List<Integer>> nodeScoreSortedMap;
+		Map<Integer, NodeInfo> nodeInfoHashMap;
 
-		//First we check if the network has been scored under this result title (i.e. scoring
-		//was required due to a scoring parameter change).  If it hasn't then we want to use the
-		//current scores that were generated the last time the network was scored and store them
-		//under the title of this result set for later use
+		// First we check if the network has been scored under this result title (i.e. scoring
+		// was required due to a scoring parameter change).  If it hasn't then we want to use the
+		// current scores that were generated the last time the network was scored and store them
+		// under the title of this result set for later use
 		if (!nodeScoreResultsMap.containsKey(resultId)) {
 			nodeScoreSortedMap = currentNodeScoreSortedMap;
 			nodeInfoHashMap = currentNodeInfoHashMap;
@@ -304,83 +315,81 @@ public class MCODEAlgorithm {
 			return null;
 		}
 
-		if ((nodeInfoHashMap == null) || (nodeScoreSortedMap == null)) {
+		if (nodeInfoHashMap == null || nodeScoreSortedMap == null) {
 			System.err.println("In " + callerID + ": nodeInfoHashMap or nodeScoreSortedMap was null.");
 			return null;
 		}
 
-		//initialization
+		// Initialization
 		long msTimeBefore = System.currentTimeMillis();
-		Map<Long, Boolean> nodeSeenHashMap = new HashMap<Long, Boolean>(); //key is node ID
-		Long currentNode;
+		HashMap<Integer, Boolean> nodeSeenHashMap = new HashMap<Integer, Boolean>(); //key is node ID
+		int currentNode = -1;
 		int findingProgress = 0;
 		int findingTotal = 0;
-		Collection<List<Long>> values = nodeScoreSortedMap.values(); //returns a Collection sorted by key order (descending)
+		Collection<List<Integer>> values = nodeScoreSortedMap.values(); //returns a Collection sorted by key order (descending)
 
-		//In order to track the progress without significant lags (for times when many nodes have the same score
-		//and no progress is reported) we count all the scored nodes and track those instead
-		for (List<Long> value : values) {
-			for (Long id : value) {
-				findingTotal++;
-			}
+		// In order to track the progress without significant lags (for times when many nodes have the same score
+		// and no progress is reported) we count all the scored nodes and track those instead
+		for (List<Integer> value : values) {
+			findingTotal += value.size();
 		}
 
-		//stores the list of clusters as ArrayLists of node indices in the input Network
+		// Stores the list of clusters as ArrayLists of node indices in the input Network
 		List<MCODECluster> alClusters = new ArrayList<MCODECluster>();
 
-		//iterate over node ids sorted descending by their score
-		for (List<Long> alNodesWithSameScore : values) {
-			//each score may be associated with multiple nodes, iterate over these lists
+		// Iterate over node ids sorted descending by their score
+		for (List<Integer> alNodesWithSameScore : values) {
+			// Each score may be associated with multiple nodes, iterate over these lists
 			for (int j = 0; j < alNodesWithSameScore.size(); j++) {
 				currentNode = alNodesWithSameScore.get(j);
 
 				if (!nodeSeenHashMap.containsKey(currentNode)) {
 					currentCluster = new MCODECluster();
 					currentCluster.setSeedNode(currentNode);//store the current node as the seed node
-					//we store the current node seen hash map for later exploration purposes
-					// TODO
-					//					Map<Long, Boolean> nodeSeenHashMapSnapShot = new HashMap<Long, Boolean>(nodeSeenHashMap.clone());
+					// We store the current node seen hash map for later exploration purposes
+					Map<Integer, Boolean> nodeSeenHashMapSnapShot = new HashMap<Integer, Boolean>((Map) nodeSeenHashMap
+							.clone());
 
-					//here we use the original node score cutoff
-					List<Long> alCluster = getClusterCore(currentNode,
-														  nodeSeenHashMap,
-														  params.getNodeScoreCutoff(),
-														  params.getMaxDepthFromStart(),
-														  nodeInfoHashMap);
+					// Here we use the original node score cutoff
+					List<Integer> alCluster = getClusterCore(currentNode,
+															 nodeSeenHashMap,
+															 params.getNodeScoreCutoff(),
+															 params.getMaxDepthFromStart(),
+															 nodeInfoHashMap);
 					if (alCluster.size() > 0) {
-						//make sure seed node is part of cluster, if not already in there
+						// Make sure seed node is part of cluster, if not already in there
 						if (!alCluster.contains(currentNode)) {
 							alCluster.add(currentNode);
 						}
-						// TODO
-						//create an input graph for the filter and haircut methods
-						//						GraphPerspective gpCluster = createGraphPerspective(alCluster, inputNetwork);
-						//
-						//						if (!filterCluster(gpCluster)) {
-						//							if (params.isHaircut()) {
-						//								haircutCluster(gpCluster, alCluster, inputNetwork);
-						//							}
-						//
-						//							if (params.isFluff()) {
-						//								fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
-						//							}
-						//
-						//							currentCluster.setALCluster(alCluster);
-						//							gpCluster = createGraphPerspective(alCluster, inputNetwork);
-						//							currentCluster.setGPCluster(gpCluster);
-						//							currentCluster.setClusterScore(scoreCluster(currentCluster));
-						//							currentCluster.setNodeSeenHashMap(nodeSeenHashMapSnapShot);//store the list of all the nodes that have already been seen and incorporated in other clusters
-						//							currentCluster.setResultTitle(resultSetName);
-						//							//store detected cluster for later
-						//							alClusters.add(currentCluster);
-						//						}
+
+						// Create an input graph for the filter and haircut methods
+						CyNetwork gpCluster = createGraphPerspective(alCluster, inputNetwork);
+
+						if (!filterCluster(gpCluster)) {
+							if (params.isHaircut()) {
+								haircutCluster(gpCluster, alCluster);
+							}
+
+							if (params.isFluff()) {
+								fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
+							}
+
+							currentCluster.setALCluster(alCluster);
+							gpCluster = createGraphPerspective(alCluster, inputNetwork);
+							currentCluster.setNetwork(gpCluster);
+							currentCluster.setClusterScore(scoreCluster(currentCluster));
+							currentCluster.setNodeSeenHashMap(nodeSeenHashMapSnapShot);//store the list of all the nodes that have already been seen and incorporated in other clusters
+							currentCluster.setResultId(resultId);
+							//store detected cluster for later
+							alClusters.add(currentCluster);
+						}
 					}
 				}
 
 				if (taskMonitor != null) {
 					findingProgress++;
-					//We want to be sure that only progress changes are reported and not
-					//miniscule decimal increments so that the taskMonitor isn't overwhelmed
+					// We want to be sure that only progress changes are reported and not
+					// miniscule decimal increments so that the taskMonitor isn't overwhelmed
 					int newProgress = (findingProgress * 100) / findingTotal;
 					int oldProgress = ((findingProgress - 1) * 100) / findingTotal;
 
@@ -395,8 +404,8 @@ public class MCODEAlgorithm {
 			}
 		}
 
-		//Once the clusters have been found we either return them or in the case of selection scope, we select only
-		//the ones that contain the selected node(s) and return those
+		// Once the clusters have been found we either return them or in the case of selection scope, we select only
+		// the ones that contain the selected node(s) and return those
 		List<MCODECluster> selectedALClusters = new ArrayList<MCODECluster>();
 
 		if (!params.getScope().equals(MCODEParameterSet.NETWORK)) {
@@ -408,7 +417,7 @@ public class MCODEAlgorithm {
 					alSelectedNodes.add(params.getSelectedNodes()[i]);
 				}
 
-				//method for returning all clusters that contain any of the selected nodes
+				// Method for returning all clusters that contain any of the selected nodes
 				for (Integer nodeIndex : alSelectedNodes) {
 					if (alCluster.contains(nodeIndex)) {
 						selectedALClusters.add(cluster);
@@ -420,7 +429,7 @@ public class MCODEAlgorithm {
 			alClusters = selectedALClusters;
 		}
 
-		//Finally convert the arraylist into a fixed array
+		// Finally convert the arraylist into a fixed array
 		MCODECluster[] clusters = new MCODECluster[alClusters.size()];
 
 		for (int c = 0; c < clusters.length; c++) {
@@ -446,64 +455,61 @@ public class MCODEAlgorithm {
 									   double nodeScoreCutoff,
 									   CyNetwork inputNetwork,
 									   int resultId) {
-		//This method is similar to the finding method with the exception of the filtering so that the decrease of the cluster size
-		//can produce a single node, also the use of the node seen hash map is differentially applied...
-		Map<Long, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
+		// This method is similar to the finding method with the exception of the filtering so that the decrease of the cluster size
+		// can produce a single node, also the use of the node seen hash map is differentially applied...
+		Map<Integer, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
 		MCODEParameterSet params = MCODECurrentParameters.getResultParams(cluster.getResultId());
-		final Map<Long, Boolean> nodeSeenHashMap;
+		final Map<Integer, Boolean> nodeSeenHashMap;
 
-		//if the size slider is below the set node score cutoff we use the node seen hash map so that clusters
-		//with higher scoring seeds have priority, however when the slider moves higher than the node score cutoff
-		//we allow the cluster to accrue nodes from all around without the priority restriction
+		// If the size slider is below the set node score cutoff we use the node seen hash map so that clusters
+		// with higher scoring seeds have priority, however when the slider moves higher than the node score cutoff
+		// we allow the cluster to accrue nodes from all around without the priority restriction
 		if (nodeScoreCutoff <= params.getNodeScoreCutoff()) {
-			nodeSeenHashMap = new HashMap<Long, Boolean>(cluster.getNodeSeenHashMap());
+			nodeSeenHashMap = new HashMap<Integer, Boolean>(cluster.getNodeSeenHashMap());
 		} else {
-			nodeSeenHashMap = new HashMap<Long, Boolean>();
+			nodeSeenHashMap = new HashMap<Integer, Boolean>();
 		}
 
-		Long seedNode = cluster.getSeedNode();
+		int seedNode = cluster.getSeedNode();
 
-		List<Long> alCluster = getClusterCore(seedNode,
-											  nodeSeenHashMap,
-											  nodeScoreCutoff,
-											  params.getMaxDepthFromStart(),
-											  nodeInfoHashMap);
+		List<Integer> alCluster = getClusterCore(seedNode, nodeSeenHashMap, nodeScoreCutoff, params
+				.getMaxDepthFromStart(), nodeInfoHashMap);
 
-		//make sure seed node is part of cluster, if not already in there
+		// Make sure seed node is part of cluster, if not already in there
 		if (!alCluster.contains(seedNode)) {
 			alCluster.add(seedNode);
 		}
 
-		//create an input graph for the filter and haircut methods
+		// Create an input graph for the filter and haircut methods
 		CyNetwork gpCluster = createGraphPerspective(alCluster, inputNetwork);
-		// TODO
-		//		if (params.isHaircut()) {
-		//			haircutCluster(gpCluster, alCluster, inputNetwork);
-		//		}
-		//
-		//		if (params.isFluff()) {
-		//			fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
-		//		}
-		//
-		//		cluster.setALCluster(alCluster);
-		//		gpCluster = createGraphPerspective(alCluster, inputNetwork);
-		//		cluster.setGPCluster(gpCluster);
-		//		cluster.setClusterScore(scoreCluster(cluster));
+
+		if (params.isHaircut()) {
+			haircutCluster(gpCluster, alCluster);
+		}
+
+		if (params.isFluff()) {
+			fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
+		}
+
+		cluster.setALCluster(alCluster);
+		gpCluster = createGraphPerspective(alCluster, inputNetwork);
+		cluster.setNetwork(gpCluster);
+		cluster.setClusterScore(scoreCluster(cluster));
 
 		return cluster;
 	}
 
-	private CyNetwork createGraphPerspective(List<Long> alCluster, CyNetwork inputNetwork) {
-		//convert Integer array to int array
-		long[] clusterArray = new long[alCluster.size()];
+	private CyNetwork createGraphPerspective(List<Integer> alCluster, CyNetwork inputNetwork) {
+		Set<CyNode> nodes = new HashSet<CyNode>();
 
-		for (int i = 0; i < alCluster.size(); i++) {
-			clusterArray[i] = alCluster.get(i);
+		for (int index : alCluster) {
+			CyNode n = inputNetwork.getNode(index);
+			nodes.add(n);
 		}
-		// TODO
-		//		CyNetwork gpCluster = inputNetwork.createGraphPerspective(clusterArray);
-		//		return gpCluster;
-		return null;
+
+		CyNetwork gpCluster = mcodeUtil.createSubNetwork(inputNetwork, nodes);
+
+		return gpCluster;
 	}
 
 	/**
@@ -535,8 +541,8 @@ public class MCODEAlgorithm {
 		int numNodes = 0;
 		double density = 0.0, score = 0.0;
 
-		numNodes = cluster.getView().getModel().getNodeCount();
-		density = calcDensity(cluster.getView().getModel(), true);
+		numNodes = cluster.getNetwork().getNodeCount();
+		density = calcDensity(cluster.getNetwork(), true);
 		score = density * numNodes;
 
 		return score;
@@ -548,80 +554,90 @@ public class MCODEAlgorithm {
 	 * This is a utility function for the algorithm.
 	 *
 	 * @param inputNetwork The input network for reference
-	 * @param nodeId The SUID of the node in the input network to score
+	 * @param nodeIndex    The index of the node in the input network to score
 	 * @return A NodeInfo object containing node information required for the algorithm
 	 */
-	private NodeInfo calcNodeInfo(CyNetwork inputNetwork, long nodeId) {
-		long[] neighborhood;
+	private NodeInfo calcNodeInfo(CyNetwork inputNetwork, int nodeIndex) {
+		final int[] neighborhood;
 
 		String callerID = "MCODEAlgorithm.calcNodeInfo";
+
 		if (inputNetwork == null) {
 			System.err.println("In " + callerID + ": gpInputGraph was null.");
 			return null;
 		}
-		// TODO
-		//get neighborhood of this node (including the node)
-		//		long[] neighbors = inputNetwork.neighborsArray(nodeId);
-		//
-		//		if (neighbors.length < 2) {
-		//			//if there are no neighbors or just one neighbor, nodeInfo calculation is trivial
-		//			NodeInfo nodeInfo = new NodeInfo();
-		//
-		//			if (neighbors.length == 1) {
-		//				nodeInfo.coreLevel = 1;
-		//				nodeInfo.coreDensity = 1.0;
-		//				nodeInfo.density = 1.0;
-		//			}
-		//
-		//			return nodeInfo;
-		//		}
-		//
-		//		//add original node to extract complete neighborhood
-		//		Arrays.sort(neighbors);
-		//
-		//		if (Arrays.binarySearch(neighbors, nodeId) < 0) {
-		//			neighborhood = new long[neighbors.length + 1];
-		//			System.arraycopy(neighbors, 0, neighborhood, 1, neighbors.length);
-		//			neighborhood[0] = nodeId;
-		//		} else {
-		//			neighborhood = neighbors;
-		//		}
-		//
-		//		//extract neighborhood subgraph
-		//		GraphPerspective gpNodeNeighborhood = inputNetwork.createGraphPerspective(neighborhood);
-		//
-		//		if (gpNodeNeighborhood == null) {
-		//			//this shouldn't happen
-		//			System.err.println("In " + callerID + ": gpNodeNeighborhood was null.");
-		//			return null;
-		//		}
-		//
-		//		//calculate the node information for each node
+
+		// Get neighborhood of this node (including the node)
+		CyNode rootNode = inputNetwork.getNode(nodeIndex);
+		List<CyNode> neighbors = inputNetwork.getNeighborList(rootNode, CyEdge.Type.ANY);
+
+		if (neighbors.size() < 2) {
+			// If there are no neighbors or just one neighbor, nodeInfo calculation is trivial
+			NodeInfo nodeInfo = new NodeInfo();
+
+			if (neighbors.size() == 1) {
+				nodeInfo.coreLevel = 1;
+				nodeInfo.coreDensity = 1.0;
+				nodeInfo.density = 1.0;
+			}
+
+			return nodeInfo;
+		}
+
+		int[] neighborIndexes = new int[neighbors.size()];
+		int i = 0;
+		
+		for (CyNode n : neighbors) {
+			neighborIndexes[i++] = n.getIndex();
+		}
+		
+		// Add original node to extract complete neighborhood
+		Arrays.sort(neighborIndexes);
+
+		if (Arrays.binarySearch(neighborIndexes, nodeIndex) < 0) {
+			neighborhood = new int[neighborIndexes.length + 1];
+			System.arraycopy(neighborIndexes, 0, neighborhood, 1, neighborIndexes.length);
+			neighborhood[0] = nodeIndex;
+			neighbors.add(rootNode);
+		} else {
+			neighborhood = neighborIndexes;
+		}
+
+		//extract neighborhood subgraph
+		CySubNetwork gpNodeNeighborhood = mcodeUtil.createSubNetwork(inputNetwork, neighbors);
+
+		if (gpNodeNeighborhood == null) {
+			//this shouldn't happen
+			System.err.println("In " + callerID + ": gpNodeNeighborhood was null.");
+			return null;
+		}
+
+		// Calculate the node information for each node
 		NodeInfo nodeInfo = new NodeInfo();
-		//
-		//		//density
-		//		if (gpNodeNeighborhood != null) {
-		//			nodeInfo.density = calcDensity(gpNodeNeighborhood, params.isIncludeLoops());
-		//		}
-		//
-		//		nodeInfo.numNodeNeighbors = neighborhood.length;
-		//
-		//		//calculate the highest k-core
-		//		GraphPerspective gpCore = null;
-		//		Integer k = null;
-		//		Object[] returnArray = getHighestKCore(gpNodeNeighborhood);
-		//		k = (Integer) returnArray[0];
-		//		gpCore = (GraphPerspective) returnArray[1];
-		//		nodeInfo.coreLevel = k.intValue();
-		//
-		//		//calculate the core density - amplifies the density of heavily interconnected regions and attenuates
-		//		//that of less connected regions
-		//		if (gpCore != null) {
-		//			nodeInfo.coreDensity = calcDensity(gpCore, params.isIncludeLoops());
-		//		}
-		//
-		//		//record neighbor array for later use in cluster detection step
-		//		nodeInfo.nodeNeighbors = neighborhood;
+
+		// Density
+		if (gpNodeNeighborhood != null) {
+			nodeInfo.density = calcDensity(gpNodeNeighborhood, params.isIncludeLoops());
+		}
+
+		nodeInfo.numNodeNeighbors = neighborhood.length;
+
+		// Calculate the highest k-core
+		CyNetwork gpCore = null;
+		Integer k = null;
+		Object[] returnArray = getHighestKCore(gpNodeNeighborhood);
+		k = (Integer) returnArray[0];
+		gpCore = (CyNetwork) returnArray[1];
+		nodeInfo.coreLevel = k.intValue();
+
+		// Calculate the core density - amplifies the density of heavily interconnected regions and attenuates
+		// that of less connected regions
+		if (gpCore != null) {
+			nodeInfo.coreDensity = calcDensity(gpCore, params.isIncludeLoops());
+		}
+
+		// Record neighbor array for later use in cluster detection step
+		nodeInfo.nodeNeighbors = neighborhood;
 
 		return nodeInfo;
 	}
@@ -635,14 +651,14 @@ public class MCODEAlgorithm {
 	 * @param nodeScoreCutoff Slider input used for cluster exploration
 	 * @param maxDepthFromStart Limits the number of recursions
 	 * @param nodeInfoHashMap Provides the node scores
-	 * @return A list of node IDs representing the core of the cluster
+	 * @return A list of node indexes representing the core of the cluster
 	 */
-	private List<Long> getClusterCore(Long startNode,
-									  Map<Long, Boolean> nodeSeenHashMap,
-									  double nodeScoreCutoff,
-									  int maxDepthFromStart,
-									  Map<Long, NodeInfo> nodeInfoHashMap) {
-		List<Long> cluster = new ArrayList<Long>(); //stores node SUIDs
+	private List<Integer> getClusterCore(int startNode,
+										 Map<Integer, Boolean> nodeSeenHashMap,
+										 double nodeScoreCutoff,
+										 int maxDepthFromStart,
+										 Map<Integer, NodeInfo> nodeInfoHashMap) {
+		List<Integer> cluster = new ArrayList<Integer>(); //stores node indexes
 		getClusterCoreInternal(startNode,
 							   nodeSeenHashMap,
 							   ((NodeInfo) nodeInfoHashMap.get(startNode)).score,
@@ -668,14 +684,14 @@ public class MCODEAlgorithm {
 	 * @param nodeInfoHashMap   Provides score info
 	 * @return true
 	 */
-	private boolean getClusterCoreInternal(Long startNode,
-										   Map<Long, Boolean> nodeSeenHashMap,
+	private boolean getClusterCoreInternal(int startNode,
+										   Map<Integer, Boolean> nodeSeenHashMap,
 										   double startNodeScore,
 										   int currentDepth,
-										   List<Long> cluster,
+										   List<Integer> cluster,
 										   double nodeScoreCutoff,
 										   int maxDepthFromStart,
-										   Map<Long, NodeInfo> nodeInfoHashMap) {
+										   Map<Integer, NodeInfo> nodeInfoHashMap) {
 		//base cases for recursion
 		if (nodeSeenHashMap.containsKey(startNode)) {
 			return true; //don't recheck a node
@@ -688,10 +704,11 @@ public class MCODEAlgorithm {
 		}
 
 		//Initialization
-		Long currentNeighbor;
+		Integer currentNeighbor;
+		int numNodeNeighbors = nodeInfoHashMap.get(startNode).numNodeNeighbors;
 		int i = 0;
 
-		for (i = 0; i < nodeInfoHashMap.get(startNode).numNodeNeighbors; i++) {
+		for (i = 0; i < numNodeNeighbors; i++) {
 			//go through all currentNode neighbors to check their core density for cluster inclusion
 			currentNeighbor = nodeInfoHashMap.get(startNode).nodeNeighbors[i];
 
@@ -727,14 +744,16 @@ public class MCODEAlgorithm {
 	 * @param nodeInfoHashMap Provides neighbour info
 	 * @return true
 	 */
-	private boolean fluffClusterBoundary(List<Long> cluster, Map nodeSeenHashMap, Map<Long, NodeInfo> nodeInfoHashMap) {
-		Long currentNode = null, nodeNeighbor = null;
+	private boolean fluffClusterBoundary(List<Integer> cluster,
+										 Map nodeSeenHashMap,
+										 Map<Integer, NodeInfo> nodeInfoHashMap) {
+		Integer currentNode = null, nodeNeighbor = null;
 		//create a temp list of nodes to add to avoid concurrently modifying 'cluster'
-		List<Long> nodesToAdd = new ArrayList<Long>();
+		List<Integer> nodesToAdd = new ArrayList<Integer>();
 
 		//Keep a separate internal nodeSeenHashMap because nodes seen during a fluffing should not be marked as permanently seen,
 		//they can be included in another cluster's fluffing step.
-		Map<Long, Boolean> nodeSeenHashMapInternal = new HashMap<Long, Boolean>();
+		Map<Integer, Boolean> nodeSeenHashMapInternal = new HashMap<Integer, Boolean>();
 
 		//add all current neighbour's neighbours into cluster (if they have high enough clustering coefficients) and mark them all as seen
 		for (int i = 0; i < cluster.size(); i++) {
@@ -766,45 +785,43 @@ public class MCODEAlgorithm {
 	 * @param gpClusterGraph The cluster to check if it passes the filter
 	 * @return true if cluster should be filtered, false otherwise
 	 */
-	//	private boolean filterCluster(GraphPerspective gpClusterGraph) {
-	//		if (gpClusterGraph == null) {
-	//			return true;
-	//		}
-	//
-	//		//filter if the cluster does not satisfy the user specified k-core
-	//		GraphPerspective gpCore = getKCore(gpClusterGraph, params.getKCore());
-	//
-	//		if (gpCore == null) {
-	//			return true;
-	//		}
-	//
-	//		return false;
-	//	}
+	private boolean filterCluster(CyNetwork gpClusterGraph) {
+		if (gpClusterGraph == null) {
+			return true;
+		}
+
+		//filter if the cluster does not satisfy the user specified k-core
+		CyNetwork gpCore = getKCore(gpClusterGraph, params.getKCore());
+
+		if (gpCore == null) {
+			return true;
+		}
+
+		return false;
+	}
 
 	/**
 	 * Gives the cluster a haircut (removed singly connected nodes by taking a 2-core)
 	 *
 	 * @param gpClusterGraph The cluster graph
 	 * @param cluster        The cluster node ID list (in the original graph)
-	 * @param gpInputGraph   The original input graph
 	 * @return true
 	 */
-	//	private boolean haircutCluster(GraphPerspective gpClusterGraph, ArrayList cluster, GraphPerspective gpInputGraph) {
-	//		//get 2-core
-	//		GraphPerspective gpCore = getKCore(gpClusterGraph, 2);
-	//
-	//		if (gpCore != null) {
-	//			//clear the cluster and add all 2-core nodes back into it
-	//			cluster.clear();
-	//			//must add back the nodes in a way that preserves gpInputGraph node indices
-	//			int[] rootGraphIndices = gpCore.getNodeIndicesArray();
-	//			for (int i = 0; i < rootGraphIndices.length; i++) {
-	//				cluster.add(new Integer(gpInputGraph.getRootGraphNodeIndex(rootGraphIndices[i])));
-	//			}
-	//		}
-	//
-	//		return true;
-	//	}
+	private boolean haircutCluster(CyNetwork gpClusterGraph, List<Integer> cluster) {
+		// get 2-core
+		CyNetwork gpCore = getKCore(gpClusterGraph, 2);
+
+		if (gpCore != null) {
+			// clear the cluster and add all 2-core nodes back into it
+			cluster.clear();
+			// must add back the nodes in a way that preserves gpInputGraph node indices
+			for (CyNode n : gpCore.getNodeList()) {
+				cluster.add(n.getIndex());
+			}
+		}
+
+		return true;
+	}
 
 	/**
 	 * Calculate the density of a network
@@ -860,61 +877,61 @@ public class MCODEAlgorithm {
 	 * @param k            The k of the k-core to find e.g. 4 will find a 4-core
 	 * @return Returns a subgraph with the core, if any was found at given k
 	 */
-	//	public CyNetwork getKCore(CyNetwork inputNetwork, int k) {
-	//		String callerID = "MCODEAlgorithm.getKCore";
-	//
-	//		if (inputNetwork == null) {
-	//			System.err.println("In " + callerID + ": inputNetwork was null.");
-	//			return (null);
-	//		}
-	//
-	//		//filter all nodes with degree less than k until convergence
-	//		boolean firstLoop = true;
-	//		int numDeleted;
-	//		CyNetwork gpOutputGraph = null;
-	//
-	//		while (true) {
-	//			numDeleted = 0;
-	//			ArrayList alCoreNodeIndices = new ArrayList(inputNetwork.getNodeCount());
-	//			List<CyNode> nodes = inputNetwork.getNodeList();
-	//
-	//			for (CyNode n : nodes) {
-	//				if (inputNetwork.getDegree(n) >= k) {
-	//					alCoreNodeIndices.add(n.getSUID()); //contains all nodes with degree >= k
-	//				} else {
-	//					numDeleted++;
-	//				}
-	//			}
-	//
-	//			if ((numDeleted > 0) || (firstLoop)) {
-	//				//convert ArrayList to int[] for creation of a GraphPerspective for this core
-	//				int[] outputNodeIndices = new int[alCoreNodeIndices.size()];
-	//				int j = 0;
-	//
-	//				for (Iterator i = alCoreNodeIndices.iterator(); i.hasNext(); j++) {
-	//					outputNodeIndices[j] = ((Integer) i.next()).intValue();
-	//				}
-	//
-	//				gpOutputGraph = inputNetwork.createGraphPerspective(outputNodeIndices);
-	//
-	//				if (gpOutputGraph.getNodeCount() == 0) {
-	//					return (null);
-	//				}
-	//
-	//				//iterate again, but with a new k-core input graph
-	//				inputNetwork = gpOutputGraph;
-	//
-	//				if (firstLoop) {
-	//					firstLoop = false;
-	//				}
-	//			} else {
-	//				//stop the loop
-	//				break;
-	//			}
-	//		}
-	//
-	//		return gpOutputGraph;
-	//	}
+	public CyNetwork getKCore(CyNetwork inputNetwork, int k) {
+		String callerID = "MCODEAlgorithm.getKCore";
+
+		if (inputNetwork == null) {
+			System.err.println("In " + callerID + ": inputNetwork was null.");
+			return null;
+		}
+
+		//filter all nodes with degree less than k until convergence
+		boolean firstLoop = true;
+		CyNetwork outputNetwork = null;
+
+		while (true) {
+			int numDeleted = 0;
+			List<Integer> alCoreNodeIndices = new ArrayList<Integer>(inputNetwork.getNodeCount());
+			List<CyNode> nodes = inputNetwork.getNodeList();
+
+			for (CyNode n : nodes) {
+				int degree = inputNetwork.getAdjacentEdgeList(n, CyEdge.Type.ANY).size();
+
+				if (degree >= k) {
+					alCoreNodeIndices.add(n.getIndex()); //contains all nodes with degree >= k
+				} else {
+					numDeleted++;
+				}
+			}
+
+			if (numDeleted > 0 || firstLoop) {
+				Set<CyNode> outputNodes = new HashSet<CyNode>();
+
+				for (int index : alCoreNodeIndices) {
+					CyNode n = inputNetwork.getNode(index);
+					outputNodes.add(n);
+				}
+
+				outputNetwork = mcodeUtil.createSubNetwork(inputNetwork, outputNodes);
+
+				if (outputNetwork.getNodeCount() == 0) {
+					return null;
+				}
+
+				// Iterate again, but with a new k-core input graph
+				inputNetwork = outputNetwork;
+
+				if (firstLoop) {
+					firstLoop = false;
+				}
+			} else {
+				//stop the loop
+				break;
+			}
+		}
+
+		return outputNetwork;
+	}
 
 	/**
 	 * Find the highest k-core in the input graph.
@@ -924,28 +941,28 @@ public class MCODEAlgorithm {
 	 *         The first object is the highest k value i.e. objectArray[0]
 	 *         The second object is the highest k-core as a GraphPerspective i.e. objectArray[1]
 	 */
-	//	public Object[] getHighestKCore(GraphPerspective gpInputGraph) {
-	//		String callerID = "MCODEAlgorithm.getHighestKCore";
-	//
-	//		if (gpInputGraph == null) {
-	//			System.err.println("In " + callerID + ": gpInputGraph was null.");
-	//			return (null);
-	//		}
-	//
-	//		int i = 1;
-	//		GraphPerspective gpCurCore = null, gpPrevCore = null;
-	//
-	//		while ((gpCurCore = getKCore(gpInputGraph, i)) != null) {
-	//			gpInputGraph = gpCurCore;
-	//			gpPrevCore = gpCurCore;
-	//			i++;
-	//		}
-	//
-	//		Integer k = new Integer(i - 1);
-	//		Object[] returnArray = new Object[2];
-	//		returnArray[0] = k;
-	//		returnArray[1] = gpPrevCore; //in the last iteration, gpCurCore is null (loop termination condition)
-	//
-	//		return (returnArray);
-	//	}
+	public Object[] getHighestKCore(CyNetwork gpInputGraph) {
+		String callerID = "MCODEAlgorithm.getHighestKCore";
+
+		if (gpInputGraph == null) {
+			System.err.println("In " + callerID + ": gpInputGraph was null.");
+			return (null);
+		}
+
+		int i = 1;
+		CyNetwork gpCurCore = null, gpPrevCore = null;
+
+		while ((gpCurCore = getKCore(gpInputGraph, i)) != null) {
+			gpInputGraph = gpCurCore;
+			gpPrevCore = gpCurCore;
+			i++;
+		}
+
+		Integer k = new Integer(i - 1);
+		Object[] returnArray = new Object[2];
+		returnArray[0] = k;
+		returnArray[1] = gpPrevCore; //in the last iteration, gpCurCore is null (loop termination condition)
+
+		return returnArray;
+	}
 }

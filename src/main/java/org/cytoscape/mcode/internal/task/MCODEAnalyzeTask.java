@@ -1,8 +1,10 @@
 package org.cytoscape.mcode.internal.task;
 
-import java.awt.*;
+import java.awt.Image;
 
 import org.cytoscape.mcode.internal.MCODEAnalyzeAction;
+import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
+import org.cytoscape.mcode.internal.event.AnalysisCompletedListener;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
@@ -52,15 +54,17 @@ import org.cytoscape.work.TaskMonitor;
  */
 public class MCODEAnalyzeTask implements Task {
 
+	private final MCODEAlgorithm alg;
+	private final MCODEUtil mcodeUtil;
+	private final int analyze;
+	private final int resultId;
+	private final AnalysisCompletedListener listener;
+	
 	private boolean interrupted;
 	private CyNetwork network;
-	private MCODEAlgorithm alg;
 	private MCODECluster[] clusters;
 	private Image imageList[];
-	private boolean completedSuccessfully;
-	private int analyze;
-	private int resultId;
-
+	
 	/**
 	 * Scores and finds clusters in a given network
 	 *
@@ -69,11 +73,18 @@ public class MCODEAnalyzeTask implements Task {
 	 * @param resultId Identifier of the current result set
 	 * @param alg reference to the algorithm for this network
 	 */
-	public MCODEAnalyzeTask(CyNetwork network, int analyze, int resultId, MCODEAlgorithm alg) {
+	public MCODEAnalyzeTask(final CyNetwork network,
+							final int analyze,
+							final int resultId,
+							final MCODEAlgorithm alg,
+							final MCODEUtil mcodeUtil,
+							final AnalysisCompletedListener listener) {
 		this.network = network;
 		this.analyze = analyze;
 		this.resultId = resultId;
 		this.alg = alg;
+		this.mcodeUtil = mcodeUtil;
+		this.listener = listener;
 	}
 
 	/**
@@ -85,6 +96,8 @@ public class MCODEAnalyzeTask implements Task {
 			throw new IllegalStateException("Task Monitor is not set.");
 		}
 
+		boolean success = false;
+		
 		try {
 			//run MCODE scoring algorithm - node scores are saved in the alg object
 			alg.setTaskMonitor(taskMonitor, network.getSUID());
@@ -113,24 +126,27 @@ public class MCODEAnalyzeTask implements Task {
 
 			taskMonitor.setProgress(0);
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
-// TODO
-			//also create all the images here for the clusters, since it can be a time consuming operation
-//			clusters = MCODEUtil.sortClusters(clusters);
-//			imageList = new ImageName[clusters.length];
-//			int imageSize = MCODECurrentParameters.getResultParams(resultId).getDefaultRowHeight();
-//
-//			for (int i = 0; i < clusters.length; i++) {
-//				if (interrupted) {
-//					return;
-//				}
-//				imageList[i] = MCODEUtil.convertNetworkToImage(null, clusters[i], imageSize, imageSize, null, true);
-//				taskMonitor.setProgress((i * 100) / clusters.length);
-//			}
 
-			completedSuccessfully = true;
+			//also create all the images here for the clusters, since it can be a time consuming operation
+			clusters = mcodeUtil.sortClusters(clusters);
+			imageList = new Image[clusters.length];
+			int imageSize = MCODECurrentParameters.getResultParams(resultId).getDefaultRowHeight();
+
+			for (int i = 0; i < clusters.length; i++) {
+				if (interrupted) {
+					return;
+				}
+				imageList[i] = mcodeUtil.convertNetworkToImage(null, clusters[i], imageSize, imageSize, null, true);
+				taskMonitor.setProgress((i * 100) / clusters.length);
+			}
+
+			success = true;
 		} catch (Exception e) {
-			//TODO: ask Ethan if interrupt exception should be thrown from within code or should 'return' just be used?
-//			taskMonitor.setException(e, "MCODE cancelled");
+			throw new Exception("Error while executing the MCODE analysis", e);
+		} finally {
+			if (listener != null) {
+				listener.handleEvent(new AnalysisCompletedEvent(success, clusters, imageList));
+			}
 		}
 	}
 
@@ -141,40 +157,11 @@ public class MCODEAnalyzeTask implements Task {
 	}
 
 	/**
-	 * @return true if the task has completed successfully
-	 */
-	public boolean isCompletedSuccessfully() {
-		return completedSuccessfully;
-	}
-
-	/**
-	 * Get computed clusters once MCODE has been run.  Will be null if not computed.
-	 *
-	 * @return ArrayList of computed clusters
-	 */
-	public MCODECluster[] getClusters() {
-		return clusters;
-	}
-
-	/**
-	 * Get image list of computed clusters to be used for display
-	 *
-	 * @return Array of images
-	 */
-	public Image[] getImageList() {
-		return imageList;
-	}
-
-	/**
 	 * Gets the Task Title.
 	 *
 	 * @return human readable task title.
 	 */
 	public String getTitle() {
 		return new String("MCODE Network Cluster Detection");
-	}
-
-	public MCODEAlgorithm getAlg() {
-		return alg;
 	}
 }

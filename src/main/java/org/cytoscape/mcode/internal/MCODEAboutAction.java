@@ -2,9 +2,9 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.mcode.internal.view.MCODEAboutDialog;
-import org.cytoscape.session.CyApplicationManager;
 import org.cytoscape.util.swing.OpenBrowser;
 
 /**

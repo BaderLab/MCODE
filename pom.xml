@@ -97,8 +97,13 @@
 		<!-- Cytoscape -->
 		<dependency>
 			<groupId>org.cytoscape</groupId>
+			<artifactId>application-api</artifactId>
+			<version>3.0.0-alpha6-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
 			<artifactId>swing-application-api</artifactId>
-			<version>3.0.0-alpha3-SNAPSHOT</version>
+			<version>3.0.0-alpha6-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
@@ -108,7 +113,7 @@
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>swing-util-api</artifactId>
-			<version>3.0.0-alpha3-SNAPSHOT</version>
+			<version>3.0.0-alpha6-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
@@ -118,7 +123,7 @@
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>service-api</artifactId>
-			<version>3.0.0-alpha3-SNAPSHOT</version>
+			<version>3.0.0-alpha6-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Logging -->

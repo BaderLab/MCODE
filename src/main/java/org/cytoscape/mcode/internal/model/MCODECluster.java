@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.cytoscape.model.CyNetwork;
-import org.cytoscape.view.model.View;
+import org.cytoscape.view.model.CyNetworkView;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -48,11 +48,12 @@ import org.cytoscape.view.model.View;
 public class MCODECluster {
 
 	private List<Integer> alCluster;
-	private View<CyNetwork> view; //keeps track of layout so that layout process doesn't have to be repeated unecessarily
-	private Long seedNode;
-	private Map<Long, Boolean> nodeSeenHashMap; //stores the nodes that have already been included in higher ranking clusters
+	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unecessarily
+	private CyNetwork network;
+	private int seedNode;
+	private Map<Integer, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double clusterScore;
-	private String clusterName; //Pretty much unsed so far, but could store name by user's input
+	private String clusterName; // pretty much unused so far, but could store name by user's input
 	private int rank;
 	private int resultId;
 
@@ -75,12 +76,20 @@ public class MCODECluster {
 		this.clusterName = clusterName;
 	}
 
-	public View<CyNetwork> getView() {
+	public CyNetworkView getView() {
 		return view;
 	}
 
-	public void setView(View<CyNetwork> view) {
+	public void setView(CyNetworkView view) {
 		this.view = view;
+	}
+
+	public CyNetwork getNetwork() {
+		return network;
+	}
+
+	public void setNetwork(CyNetwork network) {
+		this.network = network;
 	}
 
 	public double getClusterScore() {
@@ -99,19 +108,19 @@ public class MCODECluster {
 		this.alCluster = alCluster;
 	}
 
-	public Long getSeedNode() {
+	public int getSeedNode() {
 		return seedNode;
 	}
 
-	public void setSeedNode(Long seedNode) {
+	public void setSeedNode(Integer seedNode) {
 		this.seedNode = seedNode;
 	}
 
-	public Map<Long, Boolean> getNodeSeenHashMap() {
+	public Map<Integer, Boolean> getNodeSeenHashMap() {
 		return nodeSeenHashMap;
 	}
 
-	public void setNodeSeenHashMap(Map<Long, Boolean> nodeSeenHashMap) {
+	public void setNodeSeenHashMap(Map<Integer, Boolean> nodeSeenHashMap) {
 		this.nodeSeenHashMap = nodeSeenHashMap;
 	}
 

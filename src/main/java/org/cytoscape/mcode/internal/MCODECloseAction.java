@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 
 import javax.swing.JOptionPane;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -13,7 +14,6 @@ import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.session.CyApplicationManager;
 
 /**
  * Closes the plugin panels.

@@ -8,24 +8,29 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
+import org.cytoscape.mcode.internal.event.AnalysisCompletedListener;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.model.MCODEParameterSet;
-import org.cytoscape.mcode.internal.task.MCODEAnalyzeTask;
+import org.cytoscape.mcode.internal.task.MCODEAnalyzeTaskFactory;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.mcode.internal.view.MCODEVisualStyle;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.session.CyApplicationManager;
 import org.cytoscape.view.model.View;
 import org.cytoscape.view.model.events.NetworkViewAddedEvent;
 import org.cytoscape.view.model.events.NetworkViewAddedListener;
 import org.cytoscape.view.model.events.NetworkViewDestroyedEvent;
 import org.cytoscape.view.model.events.NetworkViewDestroyedListener;
+import org.cytoscape.work.TaskManager;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -77,6 +82,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	public final static int INTERRUPTION = 3;
 
 	private final CyServiceRegistrar registrar;
+	private final TaskManager taskManager;
+	private final MCODEUtil mcodeUtil;
 
 	//Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkManager;
@@ -91,9 +98,14 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	public MCODEAnalyzeAction(final String title,
 							  final CyApplicationManager applicationManager,
 							  final CySwingApplication swingApplication,
-							  final CyServiceRegistrar registrar) {
+							  final CyServiceRegistrar registrar,
+							  final TaskManager taskManager,
+							  final MCODEUtil mcodeUtil) {
 		super(title, applicationManager, swingApplication);
 		this.registrar = registrar;
+		this.taskManager = taskManager;
+		this.mcodeUtil = mcodeUtil;
+
 		enableFor = "networkAndView";
 		networkManager = new HashMap<Long, MCODEAlgorithm>();
 	}
@@ -119,7 +131,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			return;
 		}
 
-		CyNetwork network = netView.getModel();
+		final CyNetwork network = netView.getModel();
 
 		// MCODE needs a network of at least 1 node
 		if (network.getNodeCount() < 1) {
@@ -157,7 +169,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			// Get a copy of the last saved parameters for comparison with the current ones
 			savedParamsCopy = MCODECurrentParameters.getInstance().getParamsCopy(network.getSUID());
 		} else {
-			alg = new MCODEAlgorithm(null);
+			alg = new MCODEAlgorithm(null, mcodeUtil);
 			savedParamsCopy = MCODECurrentParameters.getInstance().getParamsCopy(null);
 			networkManager.put(network.getSUID(), alg);
 			analyze = FIRST_TIME;
@@ -205,60 +217,70 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
 		}
 
+		boolean resultFound = false;
+
 		if (analyze == INTERRUPTION) {
 			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 										  interruptedMessage,
 										  "Analysis Interrupted",
 										  JOptionPane.WARNING_MESSAGE);
 		} else {
-			// Run MCODE
-			MCODEAnalyzeTask analyzeTask = new MCODEAnalyzeTask(network, analyze, resultId, alg);
-			// TODO:
-			//			//Configure JTask
-			//			JTaskConfig config = new JTaskConfig();
-			//
-			//			//Show Cancel/Close Buttons
-			//			config.displayCancelButton(true);
-			//			config.displayStatus(true);
-			//
-			//			//Execute Task via TaskManager
-			//			//This automatically pops-open a JTask Dialog Box
-			//			TaskManager.executeTask(analyzeTask, config);
+			// A callbak that should be executed after the analysis is done:
+			AnalysisCompletedListener listener = new AnalysisCompletedListener() {
 
-			// Display clusters in a new modal dialog box
-			if (analyzeTask.isCompletedSuccessfully()) {
-				if (analyzeTask.getClusters().length > 0) {
-					resultId++;
-					resultPanel = new MCODEResultsPanel(analyzeTask.getClusters(), analyzeTask.getAlg(), network,
-														analyzeTask.getImageList(), resultId);
+				@Override
+				public void handleEvent(final AnalysisCompletedEvent e) {
+					SwingUtilities.invokeLater(new Runnable() {
+						
+						@Override
+						public void run() {
+							// Display clusters in a new modal dialog box
+							if (e.isSuccessful()) {
+								if (e.getClusters().length > 0) {
+									// TODO (?)
+//									resultFound = true;
+									resultId++;
+									resultPanel = new MCODEResultsPanel(e.getClusters(),
+																		alg, network, e.getImageList(), resultId);
 
-					registrar.registerService(resultPanel, CytoPanelComponent.class, new Properties());
-				} else {
-					JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-												  "No clusters were found.\n"
-														  + "You can try changing the MCODE parameters or\n"
-														  + "modifying your node selection if you are using\n"
-														  + "a selection-specific scope.",
-												  "No Results",
-												  JOptionPane.WARNING_MESSAGE);
+									registrar.registerService(resultPanel, CytoPanelComponent.class, new Properties());
+								} else {
+									JOptionPane
+											.showMessageDialog(swingApplication.getJFrame(),
+															   "No clusters were found.\n"
+																	   + "You can try changing the MCODE parameters or\n"
+																	   + "modifying your node selection if you are using\n"
+																	   + "a selection-specific scope.",
+															   "No Results",
+															   JOptionPane.WARNING_MESSAGE);
+								}
+							}
+						}
+					});
 				}
-			}
+			};
+			
+			// Run MCODE
+			MCODEAnalyzeTaskFactory analyzeTaskFactory = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg,
+																					 mcodeUtil, listener);
+			taskManager.execute(analyzeTaskFactory);
 		}
-
-		//		//this if statemet ensures that the east cytopanel is not loaded if there are no results in it
-		//		if (resultFound || (analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultPanel) >= 0)) {
-		//			//focus the result panel
-		//			int index = cytoPanel.indexOfComponent(resultPanel);
-		//			cytoPanel.setSelectedIndex(index);
-		//			cytoPanel.setState(CytoPanelState.DOCK);
-		//
-		//			// Add the MCODE visual style but don't make it active by default.
-		//			VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
-		//			VisualStyle currentStyle = vmm.getVisualStyle();
-		//			vmm.setVisualStyle(MCODEVS);
-		//			vmm.setVisualStyle(currentStyle);
-		//			vmm.applyAppearances();
-		//		}
+		
+		// TODO
+		// This if statemet ensures that the east cytopanel is not loaded if there are no results in it
+		//				if (resultFound || (analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultPanel) >= 0)) {
+		//					//focus the result panel
+		//					int index = cytoPanel.indexOfComponent(resultPanel);
+		//					cytoPanel.setSelectedIndex(index);
+		//					cytoPanel.setState(CytoPanelState.DOCK);
+		//		
+		//					// Add the MCODE visual style but don't make it active by default.
+		//					VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
+		//					VisualStyle currentStyle = vmm.getVisualStyle();
+		//					vmm.setVisualStyle(MCODEVS);
+		//					vmm.setVisualStyle(currentStyle);
+		//					vmm.applyAppearances();
+		//				}
 	}
 
 	@Override

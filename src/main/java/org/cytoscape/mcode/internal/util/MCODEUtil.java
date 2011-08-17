@@ -1,20 +1,28 @@
 package org.cytoscape.mcode.internal.util;
 
-import javax.swing.*;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 
-import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.view.MCODELoader;
+import org.cytoscape.mcode.internal.view.SpringEmbeddedLayouter;
+import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
-
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.NumberFormat;
-import java.util.*;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.model.subnetwork.CyRootNetwork;
+import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
+import org.cytoscape.model.subnetwork.CySubNetwork;
+import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewFactory;
+import org.cytoscape.view.model.View;
+import org.cytoscape.view.presentation.RenderingEngineFactory;
+import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -57,10 +65,24 @@ import java.util.*;
  */
 public class MCODEUtil {
 
-    private static boolean INTERRUPTED = false;
-    private static Image placeHolderImage = null;
+	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
+	private final CyNetworkViewFactory networkViewFactory;
+	private final CyRootNetworkFactory rootNetworkFactory;
+	
+    private boolean interrupted;
+    private Image placeHolderImage;
 
-    /**
+    
+    
+	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
+	                 final CyNetworkViewFactory networkViewFactory,
+					 final CyRootNetworkFactory rootNetworkFactory) {
+		this.renderingEngineFactory = renderingEngineFactory;
+		this.networkViewFactory = networkViewFactory;
+		this.rootNetworkFactory = rootNetworkFactory;
+	}
+
+	/**
      * Convert a network to an image.  This is used by the MCODEResultsPanel.
      *
      * @param loader Graphic loader displaying progress and process
@@ -71,37 +93,40 @@ public class MCODEUtil {
      * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
      * @return The resulting image
      */
-//    public static ImageName convertNetworkToImage(MCODELoader loader, MCODECluster cluster, int height, int width, SpringEmbeddedLayouter layouter, boolean layoutNecessary) {
-//        DGraphView view;
-//        ImageName image;
-//
-//        //Progress reporters.  There are three basic tasks, the progress of each is calculated and then combined
-//        //using the respective weighting to get an overall progress
-//        //global progress
-//        int weightSetupNodes = 20;  // setting up the nodes and edges is deemed as 25% of the whole task
-//        int weightSetupEdges = 5;
-//        int weightLayout = 75;      // layout it is 70%
-//        int goalTotal = weightSetupNodes + weightSetupEdges;
-//        if (layoutNecessary) {
-//            goalTotal += weightLayout;
-//        }
-//        double progress = 0;        // keeps track of progress as a percent of the totalGoal
-//
-//        view = generateGraphView(cluster.getGPCluster());
-//
-//        for (Iterator in = view.getNodeViewsIterator(); in.hasNext();) {
-//            if (INTERRUPTED) {
-//                System.err.println("Interrupted: Node Setup");
-//                //before we shortcircuit the method we reset the interruption so that the method can run without
-//                //problems the next time around
-//                if (layouter != null) layouter.resetDoLayout();
-//                resetLoading();
-//                return null;
-//            }
-//            
-//            NodeView nv = (NodeView) in.next();
-//
-//            //Otherwise we give it new generic data
+	public Image convertNetworkToImage(final MCODELoader loader,
+									   final MCODECluster cluster,
+									   final int height,
+									   final int width,
+									   SpringEmbeddedLayouter layouter,
+									   boolean layoutNecessary) {
+        final CyNetworkView view;
+        final Image image;
+
+        //Progress reporters.  There are three basic tasks, the progress of each is calculated and then combined
+        //using the respective weighting to get an overall progress
+        //global progress
+        int weightSetupNodes = 20;  // setting up the nodes and edges is deemed as 25% of the whole task
+        int weightSetupEdges = 5;
+        int weightLayout = 75;      // layout it is 70%
+        int goalTotal = weightSetupNodes + weightSetupEdges;
+        if (layoutNecessary) {
+            goalTotal += weightLayout;
+        }
+        double progress = 0;        // keeps track of progress as a percent of the totalGoal
+
+        view = generateGraphView(cluster.getNetwork());
+
+        for (View<CyNode> nv : view.getNodeViews()) {
+            if (interrupted) {
+                System.err.println("Interrupted: Node Setup");
+                // before we short-circuit the method we reset the interruption so that the method can run without
+                // problems the next time around
+                if (layouter != null) layouter.resetDoLayout();
+                resetLoading();
+                return null;
+            }
+// TODO            
+            // Otherwise we give it new generic data
 //            String label = nv.getNode().getIdentifier();
 //            nv.getLabel().setText(label);
 //            nv.setWidth(40);
@@ -113,108 +138,129 @@ public class MCODEUtil {
 //            }
 //            nv.setUnselectedPaint(Color.RED);
 //            nv.setBorderPaint(Color.BLACK);
-//
-//            //First we check if the MCODECluster already has a node view of this node (posing the more generic condition
-//            //first prevents the program from throwing a null pointer exception in the second condition)
-//            if (cluster.getView() != null && cluster.getView().getNodeView(nv.getNode().getRootGraphIndex()) != null) {
-//                //If it does, then we take the layout position that was already generated for it
-//                nv.setXPosition(cluster.getView().getNodeView(nv.getNode().getRootGraphIndex()).getXPosition());
-//                nv.setYPosition(cluster.getView().getNodeView(nv.getNode().getRootGraphIndex()).getYPosition());
-//            } else {
-//                //Otherwise, randomize node positions before layout so that they don't all layout in a line
-//                //(so they don't fall into a local minimum for the SpringEmbedder)
-//                //If the SpringEmbedder implementation changes, this code may need to be removed
-//                //size is small for many default drawn graphs, thus +100
-//                nv.setXPosition((view.getCanvas().getWidth() + 100) * Math.random());
-//                nv.setYPosition((view.getCanvas().getHeight() + 100) * Math.random());
-//                if (!layoutNecessary) {
-//                    goalTotal += weightLayout;
-//                    progress /= (goalTotal / (goalTotal - weightLayout));
-//                    layoutNecessary = true;
-//                }
-//            }
-//            if (loader != null) {
-//                progress += 100.0 * (1.0 / (double) view.nodeCount()) * ((double) weightSetupNodes / (double) goalTotal);
-//                loader.setProgress((int) progress, "Setup: nodes");
-//            }
-//        }
-//
-//        for (Iterator ie = view.getEdgeViewsIterator(); ie.hasNext();) {
-//            if (INTERRUPTED) {
-//                System.err.println("Interrupted: Edge Setup");
-//                if (layouter != null) layouter.resetDoLayout();
-//                resetLoading();
-//                return null;
-//            }
-//            EdgeView ev = (EdgeView) ie.next();
+
+            final double x;
+            final double y;
+            
+            // First we check if the MCODECluster already has a node view of this node (posing the more generic condition
+            // first prevents the program from throwing a null pointer exception in the second condition)
+            if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
+                //If it does, then we take the layout position that was already generated for it
+            	x = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
+                y = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
+            } else {
+                // Otherwise, randomize node positions before layout so that they don't all layout in a line
+                // (so they don't fall into a local minimum for the SpringEmbedder)
+                // If the SpringEmbedder implementation changes, this code may need to be removed
+                // size is small for many default drawn graphs, thus +100
+                x = (view.getVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH) + 100) * Math.random();
+                y = (view.getVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT) + 100) * Math.random();
+                
+                if (!layoutNecessary) {
+                    goalTotal += weightLayout;
+                    progress /= (goalTotal / (goalTotal - weightLayout));
+                    layoutNecessary = true;
+                }
+            }
+            
+            nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x);
+            nv.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, y);
+            
+            if (loader != null) {
+                progress += 100.0 * (1.0 / (double) view.getNodeViews().size()) * ((double) weightSetupNodes / (double) goalTotal);
+                loader.setProgress((int) progress, "Setup: nodes");
+            }
+        }
+
+        for (View<CyEdge> ev : view.getEdgeViews()) {
+            if (interrupted) {
+                System.err.println("Interrupted: Edge Setup");
+                if (layouter != null) layouter.resetDoLayout();
+                resetLoading();
+                return null;
+            }
+// TODO            
 //            ev.setUnselectedPaint(Color.BLUE);
 //            ev.setTargetEdgeEnd(EdgeView.BLACK_ARROW);
 //            ev.setTargetEdgeEndPaint(Color.CYAN);
 //            ev.setSourceEdgeEndPaint(Color.CYAN);
 //            ev.setStroke(new BasicStroke(5f));
-//
-//            if (loader != null) {
-//                progress += 100.0 * (1.0 / (double) view.edgeCount()) * ((double) weightSetupEdges / (double) goalTotal);
-//                loader.setProgress((int) progress, "Setup: edges");
-//            }
-//        }
-//        if (layoutNecessary) {
-//            if (layouter == null) {
-//                layouter = new SpringEmbeddedLayouter();
-//            }
-//            layouter.setGraphView(view);
-//            //The doLayout method should return true if the process completes without interruption
-//            if (!layouter.doLayout(weightLayout, goalTotal, progress, loader)) {
-//                //Otherwise, if layout is not completed, set the interruption to false, and return null, not an image
-//                resetLoading();
-//                return null;
-//            }
-//        }
-//
-//        view.getCanvas().setSize(width, height);
-//        view.fitContent();
-//        image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-//        final Graphics2D g = (Graphics2D) image.getGraphics();
-//        view.getCanvas().paint(g);
-//
+
+            if (loader != null) {
+                progress += 100.0 * (1.0 / (double) view.getEdgeViews().size()) * ((double) weightSetupEdges / (double) goalTotal);
+                loader.setProgress((int) progress, "Setup: edges");
+            }
+        }
+        if (layoutNecessary) {
+            if (layouter == null) {
+                layouter = new SpringEmbeddedLayouter();
+            }
+            layouter.setGraphView(view);
+            //The doLayout method should return true if the process completes without interruption
+            if (!layouter.doLayout(weightLayout, goalTotal, progress, loader)) {
+                //Otherwise, if layout is not completed, set the interruption to false, and return null, not an image
+                resetLoading();
+                return null;
+            }
+        }
+
+        view.setVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH, new Double(width));
+        view.setVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT, new Double(height));
+        
+        view.fitContent();
+        image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        final Graphics2D g = (Graphics2D) image.getGraphics();
+        view.updateView();
+
+// TODO
 //        image = view.getCanvas(DGraphView.Canvas.NETWORK_CANVAS).getImage();
-//
-//        double largestSide = view.getCanvas().getWidth();
-//        if (view.getCanvas().getHeight() > largestSide) {
-//            largestSide = view.getCanvas().getHeight();
-//        }
-//        if (view.getNodeViewCount() >= 1) {
-//            cluster.setView(view);
-//        }
-//        layouter.resetDoLayout();
-//        resetLoading();
-//        return (image);
-//    }
-//
-//	private static DGraphView generateGraphView(GraphPerspective gp) {
-//        DGraphView view = new DGraphView(gp);
-//
-//        final int[] nodes = gp.getNodeIndicesArray();
-//        for (int i = 0; i < nodes.length; i++) {
-//            view.addNodeView(nodes[i]);
-//        }
-//
-//        final int[] edges = gp.getEdgeIndicesArray();
-//        for (int i = 0; i < edges.length; i++) {
-//            view.addEdgeView(edges[i]);
-//        }
-//
-//		return view;
-//	}
-//
-//    public static void interruptLoading() {
-//        INTERRUPTED = true;
-//    }
-//
-//    public static void resetLoading() {
-//        INTERRUPTED = false;
-//    }
-//
+
+        if (view.getNodeViews().size() > 0) {
+            cluster.setView(view);
+        }
+        
+        layouter.resetDoLayout();
+        resetLoading();
+        
+        return image;
+    }
+	
+	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
+		final CyRootNetwork root = rootNetworkFactory.convert(net);
+		final Set<CyEdge> edges = new HashSet<CyEdge>();
+		
+		for (CyNode n : nodes) {
+			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY)); 
+			
+			// Get only the edges that connect nodes that belong to the subnetwork:
+			for (CyEdge e : adjacentEdges) {
+				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
+					edges.add(e);
+				}
+			}
+		}
+		
+		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
+
+		return subNet;
+	}
+
+    public void interruptLoading() {
+        interrupted = true;
+    }
+
+    public void resetLoading() {
+        interrupted = false;
+    }
+    
+	private CyNetworkView generateGraphView(final CyNetwork net) {
+		final CyRootNetwork root = rootNetworkFactory.convert(net);
+		final CySubNetwork subNet = root.addSubNetwork(net.getNodeList(), net.getEdgeList());
+		final CyNetworkView newView = networkViewFactory.getNetworkView(subNet, false);
+
+		return newView;
+	}
+
 //    /**
 //     * Generates an image of a place holder saying "Too big to show".
 //     *
@@ -222,7 +268,7 @@ public class MCODEUtil {
 //     * @param height height of the image
 //     * @return place holder
 //     */
-//    public static ImageName getPlaceHolderImage(int width, int height) {
+//    public ImageName getPlaceHolderImage(int width, int height) {
 //        //We only want to generate a place holder image once so that memory is not eaten up
 //        if (placeHolderImage == null) {
 //            ImageName image;
@@ -261,44 +307,44 @@ public class MCODEUtil {
 //     * @param sourceNetwork The original network that contained the cluster
 //     * @return The network representing the cluster
 //     */
-//    public static GraphPerspective convertClusterToNetwork(ArrayList cluster, CyNetwork sourceNetwork) {
+//    public GraphPerspective convertClusterToNetwork(ArrayList cluster, CyNetwork sourceNetwork) {
 //        GraphPerspective gpCluster;
 //        int[] clusterArray = convertIntArrayList2array(cluster);
 //        gpCluster = sourceNetwork.createGraphPerspective(clusterArray);
 //        return gpCluster;
 //    }
-//
-//    /**
-//     * Converts a list of MCODE generated clusters to a list of networks that is sorted by the score of the cluster
-//     *
-//     * @param clusters   List of MCODE generated clusters
-//     * @return A sorted array of cluster objects based on cluster score.
-//     */
-//    public static MCODECluster[] sortClusters(MCODECluster[] clusters) {
-//        Arrays.sort(clusters, new Comparator() {
-//            //sorting clusters by decreasing score
-//            public int compare(Object o1, Object o2) {
-//                double d1 = ((MCODECluster) o1).getClusterScore();
-//                double d2 = ((MCODECluster) o2).getClusterScore();
-//                if (d1 == d2) {
-//                    return 0;
-//                } else if (d1 < d2) {
-//                    return 1;
-//                } else {
-//                    return -1;
-//                }
-//            }
-//        });
-//        return clusters;
-//    }
-//
+
+    /**
+     * Converts a list of MCODE generated clusters to a list of networks that is sorted by the score of the cluster
+     *
+     * @param clusters   List of MCODE generated clusters
+     * @return A sorted array of cluster objects based on cluster score.
+     */
+    public MCODECluster[] sortClusters(MCODECluster[] clusters) {
+        Arrays.sort(clusters, new Comparator<MCODECluster>() {
+            //sorting clusters by decreasing score
+            public int compare(MCODECluster c1, MCODECluster c2) {
+                double d1 = c1.getClusterScore();
+                double d2 = c2.getClusterScore();
+                if (d1 == d2) {
+                    return 0;
+                } else if (d1 < d2) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+        });
+        return clusters;
+    }
+// TODO
 //    /**
 //     * A utility method to convert ArrayList to int[]
 //     *
 //     * @param alInput ArrayList input
 //     * @return int array
 //     */
-//    private static int[] convertIntArrayList2array(ArrayList alInput) {
+//    private int[] convertIntArrayList2array(ArrayList alInput) {
 //        int[] outputNodeIndices = new int[alInput.size()];
 //        int j = 0;
 //        for (Iterator i = alInput.iterator(); i.hasNext(); j++) {
@@ -313,7 +359,7 @@ public class MCODEUtil {
 //     * @param gpInput The input graph perspective to get the names from
 //     * @return A concatenated set of all node names (separated by a comma)
 //     */
-//    public static StringBuffer getNodeNameList(GraphPerspective gpInput) {
+//    public StringBuffer getNodeNameList(GraphPerspective gpInput) {
 //        Iterator i = gpInput.nodesIterator();
 //        StringBuffer sb = new StringBuffer();
 //        while (i.hasNext()) {
@@ -335,7 +381,7 @@ public class MCODEUtil {
 //     * @param fileName  The file name to write to
 //     * @return True if the file was written, false otherwise
 //     */
-//	public static boolean exportMCODEResults(MCODEAlgorithm alg,
+//	public boolean exportMCODEResults(MCODEAlgorithm alg,
 //											 MCODECluster[] clusters,
 //											 CyNetwork network,
 //											 String fileName) {

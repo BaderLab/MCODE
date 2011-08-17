@@ -1,12 +1,12 @@
 package org.cytoscape.mcode.internal;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
-import org.cytoscape.session.CyApplicationManager;
 
 public abstract class AbstractMCODEAction extends AbstractCyAction {
 
