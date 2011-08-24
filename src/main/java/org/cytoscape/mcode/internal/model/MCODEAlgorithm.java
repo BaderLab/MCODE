@@ -167,12 +167,12 @@ public class MCODEAlgorithm {
 	 * during the attribute setting method.
 	 *
 	 * @param rootGraphIndex Integer which is used to identify the nodes in the score-sorted tree map
-	 * @param resultTitle Title of the results for which we are retrieving a node score
+	 * @param resultId Id of the results for which we are retrieving a node score
 	 * @return node score as a Double
 	 */
-	public Double getNodeScore(int rootGraphIndex, String resultTitle) {
+	public Double getNodeScore(int rootGraphIndex, int resultId) {
 		Double nodeScore = new Double(0.0);
-		Map<Double, List<Integer>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultTitle);
+		Map<Double, List<Integer>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
 
 		for (Iterator<Double> score = nodeScoreSortedMap.keySet().iterator(); score.hasNext();) {
 			nodeScore = score.next();
@@ -254,7 +254,7 @@ public class MCODEAlgorithm {
 			// Save score for later use in TreeMap
 			// Add a list of nodes to each score in case nodes have the same score
 			if (nodeScoreSortedMap.containsKey(new Double(nodeScore))) {
-				//already have a node with this score, add it to the list
+				// Already have a node with this score, add it to the list
 				al = nodeScoreSortedMap.get(new Double(nodeScore));
 				al.add(n.getIndex());
 			} else {
@@ -347,8 +347,7 @@ public class MCODEAlgorithm {
 					currentCluster = new MCODECluster();
 					currentCluster.setSeedNode(currentNode);//store the current node as the seed node
 					// We store the current node seen hash map for later exploration purposes
-					Map<Integer, Boolean> nodeSeenHashMapSnapShot = new HashMap<Integer, Boolean>((Map) nodeSeenHashMap
-							.clone());
+					Map<Integer, Boolean> nodeSeenHashMapSnapShot = new HashMap<Integer, Boolean>(nodeSeenHashMap);
 
 					// Here we use the original node score cutoff
 					List<Integer> alCluster = getClusterCore(currentNode,
@@ -586,11 +585,11 @@ public class MCODEAlgorithm {
 
 		int[] neighborIndexes = new int[neighbors.size()];
 		int i = 0;
-		
+
 		for (CyNode n : neighbors) {
 			neighborIndexes[i++] = n.getIndex();
 		}
-		
+
 		// Add original node to extract complete neighborhood
 		Arrays.sort(neighborIndexes);
 
@@ -745,14 +744,15 @@ public class MCODEAlgorithm {
 	 * @return true
 	 */
 	private boolean fluffClusterBoundary(List<Integer> cluster,
-										 Map nodeSeenHashMap,
+										 Map<Integer, Boolean> nodeSeenHashMap,
 										 Map<Integer, NodeInfo> nodeInfoHashMap) {
 		Integer currentNode = null, nodeNeighbor = null;
-		//create a temp list of nodes to add to avoid concurrently modifying 'cluster'
+		// Create a temp list of nodes to add to avoid concurrently modifying 'cluster'
 		List<Integer> nodesToAdd = new ArrayList<Integer>();
 
-		//Keep a separate internal nodeSeenHashMap because nodes seen during a fluffing should not be marked as permanently seen,
-		//they can be included in another cluster's fluffing step.
+		// Keep a separate internal nodeSeenHashMap because nodes seen during a fluffing
+		// should not be marked as permanently seen,
+		// they can be included in another cluster's fluffing step.
 		Map<Integer, Boolean> nodeSeenHashMapInternal = new HashMap<Integer, Boolean>();
 
 		//add all current neighbour's neighbours into cluster (if they have high enough clustering coefficients) and mark them all as seen

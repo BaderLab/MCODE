@@ -48,9 +48,16 @@
 	</bean>
 	
 	<bean id="mcodeUtil" class="org.cytoscape.mcode.internal.util.MCODEUtil">
-		<constructor-arg ref="dingNavigationPresentationFactoryServiceRef" />
+		<constructor-arg ref="dingRenderingEngineFactoryServiceRef" />
 		<constructor-arg ref="cyNetworkViewFactoryServiceRef" />
+		<constructor-arg ref="cyNetworkViewManagerServiceRef" />
+		<constructor-arg ref="cyNetworkManagerServiceRef" />
 		<constructor-arg ref="cyRootNetworkFactoryServiceRef" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="visualStyleFactoryServiceRef" />
+		<constructor-arg ref="visualMappingManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="cyEventHelperServiceRef" />
 	</bean>
 	
 	<!-- Other beans -->

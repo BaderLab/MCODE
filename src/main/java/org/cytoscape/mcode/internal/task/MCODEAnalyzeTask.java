@@ -59,12 +59,12 @@ public class MCODEAnalyzeTask implements Task {
 	private final int analyze;
 	private final int resultId;
 	private final AnalysisCompletedListener listener;
-	
+
 	private boolean interrupted;
 	private CyNetwork network;
 	private MCODECluster[] clusters;
 	private Image imageList[];
-	
+
 	/**
 	 * Scores and finds clusters in a given network
 	 *
@@ -97,12 +97,12 @@ public class MCODEAnalyzeTask implements Task {
 		}
 
 		boolean success = false;
-		
+
 		try {
-			//run MCODE scoring algorithm - node scores are saved in the alg object
+			// Run MCODE scoring algorithm - node scores are saved in the alg object
 			alg.setTaskMonitor(taskMonitor, network.getSUID());
 
-			//only (re)score the graph if the scoring parameters have been changed
+			// Only (re)score the graph if the scoring parameters have been changed
 			if (analyze == MCODEAnalyzeAction.RESCORE) {
 				taskMonitor.setProgress(0);
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
@@ -127,7 +127,7 @@ public class MCODEAnalyzeTask implements Task {
 			taskMonitor.setProgress(0);
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
 
-			//also create all the images here for the clusters, since it can be a time consuming operation
+			// Also create all the images here for the clusters, since it can be a time consuming operation
 			clusters = mcodeUtil.sortClusters(clusters);
 			imageList = new Image[clusters.length];
 			int imageSize = MCODECurrentParameters.getResultParams(resultId).getDefaultRowHeight();
@@ -136,7 +136,14 @@ public class MCODEAnalyzeTask implements Task {
 				if (interrupted) {
 					return;
 				}
-				imageList[i] = mcodeUtil.convertNetworkToImage(null, clusters[i], imageSize, imageSize, null, true);
+
+				imageList[i] = mcodeUtil.convertNetworkToImage(network,
+															   null,
+															   clusters[i],
+															   imageSize,
+															   imageSize,
+															   null,
+															   true);
 				taskMonitor.setProgress((i * 100) / clusters.length);
 			}
 

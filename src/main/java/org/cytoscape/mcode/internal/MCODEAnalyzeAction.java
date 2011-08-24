@@ -12,7 +12,10 @@ import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedListener;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
@@ -21,11 +24,10 @@ import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
-import org.cytoscape.mcode.internal.view.MCODEVisualStyle;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.view.model.View;
+import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.events.NetworkViewAddedEvent;
 import org.cytoscape.view.model.events.NetworkViewAddedListener;
 import org.cytoscape.view.model.events.NetworkViewDestroyedEvent;
@@ -93,8 +95,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	int analyze = FIRST_TIME;
 	int resultId = 1;
 
-	MCODEVisualStyle MCODEVS;
-
 	public MCODEAnalyzeAction(final String title,
 							  final CyApplicationManager applicationManager,
 							  final CySwingApplication swingApplication,
@@ -117,21 +117,17 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	 */
 	@Override
 	public void actionPerformed(ActionEvent event) {
-		String callerID = "MCODEAnalyzeAction.actionPerformed";
 		String interruptedMessage = "";
-
 		// Get the selected network
-		final View<CyNetwork> netView = applicationManager.getCurrentNetworkView();
+		final CyNetwork network = applicationManager.getCurrentNetwork();
+		final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
 
 		// This should never happen, because the action should be disabled,
 		// but let's keep this extra check anyway 
-		if (netView == null) {
-			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-										  "You must have a network view to run this plugin.");
+		if (network == null) {
+			JOptionPane.showMessageDialog(swingApplication.getJFrame(), "You must have a network to run this plugin.");
 			return;
 		}
-
-		final CyNetwork network = netView.getModel();
 
 		// MCODE needs a network of at least 1 node
 		if (network.getNodeCount() < 1) {
@@ -217,8 +213,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
 		}
 
-		boolean resultFound = false;
-
 		if (analyze == INTERRUPTION) {
 			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 										  interruptedMessage,
@@ -231,17 +225,19 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 				@Override
 				public void handleEvent(final AnalysisCompletedEvent e) {
 					SwingUtilities.invokeLater(new Runnable() {
-						
+
 						@Override
 						public void run() {
+							boolean resultFound = false;
+
 							// Display clusters in a new modal dialog box
 							if (e.isSuccessful()) {
 								if (e.getClusters().length > 0) {
-									// TODO (?)
-//									resultFound = true;
+									resultFound = true;
+									resultPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network,
+																		networkView, e.getImageList(), resultId,
+																		swingApplication, registrar);
 									resultId++;
-									resultPanel = new MCODEResultsPanel(e.getClusters(),
-																		alg, network, e.getImageList(), resultId);
 
 									registrar.registerService(resultPanel, CytoPanelComponent.class, new Properties());
 								} else {
@@ -255,32 +251,37 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 															   JOptionPane.WARNING_MESSAGE);
 								}
 							}
+
+							CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
+
+							// This if statement ensures that the east cytopanel is not loaded if there are no results in it
+							if (resultFound ||
+								(analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultPanel) >= 0)) {
+								// Focus the result panel
+								int index = cytoPanel.indexOfComponent(resultPanel);
+								cytoPanel.setSelectedIndex(index);
+
+								if (cytoPanel.getState() == CytoPanelState.HIDE)
+									cytoPanel.setState(CytoPanelState.DOCK);
+
+								// TODO
+								// Add the MCODE visual style but don't make it active by default.
+								//								VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
+								//								VisualStyle currentStyle = vmm.getVisualStyle();
+								//								vmm.setVisualStyle(MCODEVS);
+								//								vmm.setVisualStyle(currentStyle);
+								//								vmm.applyAppearances();
+							}
 						}
 					});
 				}
 			};
-			
+
 			// Run MCODE
 			MCODEAnalyzeTaskFactory analyzeTaskFactory = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg,
 																					 mcodeUtil, listener);
 			taskManager.execute(analyzeTaskFactory);
 		}
-		
-		// TODO
-		// This if statemet ensures that the east cytopanel is not loaded if there are no results in it
-		//				if (resultFound || (analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultPanel) >= 0)) {
-		//					//focus the result panel
-		//					int index = cytoPanel.indexOfComponent(resultPanel);
-		//					cytoPanel.setSelectedIndex(index);
-		//					cytoPanel.setState(CytoPanelState.DOCK);
-		//		
-		//					// Add the MCODE visual style but don't make it active by default.
-		//					VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
-		//					VisualStyle currentStyle = vmm.getVisualStyle();
-		//					vmm.setVisualStyle(MCODEVS);
-		//					vmm.setVisualStyle(currentStyle);
-		//					vmm.applyAppearances();
-		//				}
 	}
 
 	@Override

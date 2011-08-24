@@ -16,8 +16,17 @@
 	<osgi:reference id="cyApplicationManagerServiceRef"
 		interface="org.cytoscape.application.CyApplicationManager" />
 		
+	<osgi:reference id="cyEventHelperServiceRef"
+		interface="org.cytoscape.event.CyEventHelper" />
+		
 	<osgi:reference id="cyNetworkViewFactoryServiceRef"
 		interface="org.cytoscape.view.model.CyNetworkViewFactory" />
+		
+	<osgi:reference id="cyNetworkManagerServiceRef"
+		interface="org.cytoscape.model.CyNetworkManager" />
+		
+	<osgi:reference id="cyNetworkViewManagerServiceRef"
+		interface="org.cytoscape.view.model.CyNetworkViewManager" />
         
     <osgi:reference id="cyRootNetworkFactoryServiceRef"
         interface="org.cytoscape.model.subnetwork.CyRootNetworkFactory" />
@@ -28,10 +37,9 @@
     <osgi:reference id="cySwingApplicationServiceRef"
         interface="org.cytoscape.application.swing.CySwingApplication" />
 
-    <!-- Rendering Engine factory for navigation views -->
-    <osgi:reference id="dingNavigationPresentationFactoryServiceRef"
+    <osgi:reference id="dingRenderingEngineFactoryServiceRef"
         interface="org.cytoscape.view.presentation.RenderingEngineFactory"
-        filter="(id=dingNavigation)" />
+        filter="(id=ding)" />
         
     <osgi:reference id="openBrowserServiceRef"
         interface="org.cytoscape.util.swing.OpenBrowser" />
@@ -39,6 +47,9 @@
     <osgi:reference id="taskManagerServiceRef"
         interface="org.cytoscape.work.TaskManager" />
 
+    <osgi:reference id="visualStyleFactoryServiceRef"
+        interface="org.cytoscape.view.vizmap.VisualStyleFactory" />
+        
     <osgi:reference id="visualMappingManagerServiceRef"
         interface="org.cytoscape.view.vizmap.VisualMappingManager" />
 
