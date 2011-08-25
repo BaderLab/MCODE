@@ -1,6 +1,7 @@
 package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
+import java.util.Collection;
 
 import javax.swing.JOptionPane;
 
@@ -10,7 +11,7 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.application.swing.CytoPanelState;
-import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
@@ -23,13 +24,16 @@ public class MCODECloseAction extends AbstractMCODEAction {
 	private static final long serialVersionUID = -8309835257402089360L;
 
 	private final CyServiceRegistrar registrar;
+	private final MCODEUtil mcodeUtil;
 
 	public MCODECloseAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
-							final CyServiceRegistrar registrar) {
+							final CyServiceRegistrar registrar,
+							final MCODEUtil mcodeUtil) {
 		super(name, applicationManager, swingApplication);
 		this.registrar = registrar;
+		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Plugins.MCODE");
 	}
 
@@ -43,9 +47,9 @@ public class MCODECloseAction extends AbstractMCODEAction {
 
 		//First we must make sure that the plugin is opened
 		if (isOpened()) {
-			MCODEResultsPanel resultsPanel = getResultsPanel();
+			Collection<MCODEResultsPanel> resultPanels = getResultPanels();
 
-			if (resultsPanel != null) {
+			if (resultPanels.size() > 0) {
 				String message = "You are about to close the MCODE plugin.\nDo you wish to continue?";
 				int result = JOptionPane.showOptionDialog(swingApplication.getJFrame(),
 														  new Object[] { message },
@@ -56,10 +60,11 @@ public class MCODECloseAction extends AbstractMCODEAction {
 														  null,
 														  null);
 				if (result == JOptionPane.YES_OPTION) {
-					int resultId = resultsPanel.getResultId();
-					MCODECurrentParameters.removeResultParams(resultId);
-
-					registrar.unregisterService(resultsPanel, CytoPanelComponent.class);
+					for (MCODEResultsPanel p : resultPanels) {
+						int resultId = p.getResultId();
+						mcodeUtil.getCurrentParameters().removeResultParams(resultId);
+						registrar.unregisterService(p, CytoPanelComponent.class);
+					}
 
 					if (cytoPanel.getCytoPanelComponentCount() == 0) {
 						cytoPanel.setState(CytoPanelState.HIDE);
@@ -72,6 +77,8 @@ public class MCODECloseAction extends AbstractMCODEAction {
 			if (mainPanel != null) {
 				registrar.unregisterService(mainPanel, CytoPanelComponent.class);
 			}
+
+			mcodeUtil.reset();
 		}
 	}
 

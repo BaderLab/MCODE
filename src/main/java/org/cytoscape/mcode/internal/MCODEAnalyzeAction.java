@@ -2,9 +2,7 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
@@ -19,7 +17,6 @@ import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedListener;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
-import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
@@ -87,9 +84,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	private final TaskManager taskManager;
 	private final MCODEUtil mcodeUtil;
 
-	//Keeps track of networks (id is key) and their respective algorithms
-	private Map<Long, MCODEAlgorithm> networkManager;
-
 	private MCODEResultsPanel resultPanel;
 
 	int analyze = FIRST_TIME;
@@ -107,7 +101,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 		this.mcodeUtil = mcodeUtil;
 
 		enableFor = "networkAndView";
-		networkManager = new HashMap<Long, MCODEAlgorithm>();
 	}
 
 	/**
@@ -160,14 +153,14 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 		// of that network (so as to determine if rescoring/refinding is required for
 		// this network without interference by parameters of other networks)
 		// otherwise we construct a new alg class
-		if (networkManager.containsKey(network.getSUID())) {
-			alg = networkManager.get(network.getSUID());
+		if (mcodeUtil.containsNetworkAlgorithm(network.getSUID())) {
+			alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 			// Get a copy of the last saved parameters for comparison with the current ones
-			savedParamsCopy = MCODECurrentParameters.getInstance().getParamsCopy(network.getSUID());
+			savedParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(network.getSUID());
 		} else {
 			alg = new MCODEAlgorithm(null, mcodeUtil);
-			savedParamsCopy = MCODECurrentParameters.getInstance().getParamsCopy(null);
-			networkManager.put(network.getSUID(), alg);
+			savedParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(null);
+			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
 			analyze = FIRST_TIME;
 		}
 
@@ -180,7 +173,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff() || analyze == FIRST_TIME) {
 			analyze = RESCORE;
 			System.err.println("Analysis: score network, find clusters");
-			MCODECurrentParameters.getInstance().setParams(currentParamsCopy, resultId, network.getSUID());
+			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else if (!currentParamsCopy.getScope().equals(savedParamsCopy.getScope()) ||
 				   (!currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK) && currentParamsCopy
 						   .getSelectedNodes() != savedParamsCopy.getSelectedNodes()) ||
@@ -196,11 +189,11 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 						   .getFluffNodeDensityCutoff())))) {
 			analyze = REFIND;
 			System.err.println("Analysis: find clusters");
-			MCODECurrentParameters.getInstance().setParams(currentParamsCopy, resultId, network.getSUID());
+			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else {
 			analyze = INTERRUPTION;
 			interruptedMessage = "The parameters you specified\nhave not changed.";
-			MCODECurrentParameters.getInstance().setParams(currentParamsCopy, resultId, network.getSUID());
+			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		}
 
 		// Finally we save the current parameters

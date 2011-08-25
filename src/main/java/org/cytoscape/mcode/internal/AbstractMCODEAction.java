@@ -1,5 +1,8 @@
 package org.cytoscape.mcode.internal;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.application.swing.CySwingApplication;
@@ -30,7 +33,7 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	 * @return Cytoscape's results panel
 	 */
 	protected CytoPanel getResultsCytoPanel() {
-		return swingApplication.getCytoPanel(CytoPanelName.WEST);
+		return swingApplication.getCytoPanel(CytoPanelName.EAST);
 	}
 
 	/**
@@ -49,18 +52,19 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	}
 
 	/**
-	 * @return The results panel of the plugin if it is opened, and null otherwise
+	 * @return The result panels of the plugin if it is opened, or an empty collection otherwise
 	 */
-	protected MCODEResultsPanel getResultsPanel() {
+	protected Collection<MCODEResultsPanel> getResultPanels() {
+		Collection<MCODEResultsPanel> panels = new ArrayList<MCODEResultsPanel>();
 		CytoPanel cytoPanel = getResultsCytoPanel();
 		int count = cytoPanel.getCytoPanelComponentCount();
 
 		for (int i = 0; i < count; i++) {
 			if (cytoPanel.getComponentAt(i) instanceof MCODEResultsPanel)
-				return (MCODEResultsPanel) cytoPanel.getComponentAt(i);
+				panels.add((MCODEResultsPanel) cytoPanel.getComponentAt(i));
 		}
 
-		return null;
+		return panels;
 	}
 
 	/**

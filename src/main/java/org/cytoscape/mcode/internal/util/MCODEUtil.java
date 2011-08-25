@@ -1,7 +1,6 @@
 package org.cytoscape.mcode.internal.util;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -13,14 +12,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JInternalFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -29,6 +30,7 @@ import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
+import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.view.MCODELoader;
 import org.cytoscape.mcode.internal.view.SpringEmbeddedLayouter;
 import org.cytoscape.model.CyEdge;
@@ -106,6 +108,9 @@ public class MCODEUtil {
 	private boolean interrupted;
 	private Image placeHolderImage;
 	private VisualStyle style; // visual style used by the MCODE plugin
+	private MCODECurrentParameters currentParameters;
+	//Keeps track of networks (id is key) and their respective algorithms
+	private Map<Long, MCODEAlgorithm> networkAlgorithms;
 
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 					 final CyNetworkViewFactory networkViewFactory,
@@ -127,26 +132,48 @@ public class MCODEUtil {
 		this.visualMappingMgr = visualMappingMgr;
 		this.swingApplication = swingApplication;
 		this.eventHelper = eventHelper;
+
+		this.reset();
+	}
+
+	public void reset() {
+		currentParameters = new MCODECurrentParameters();
+		networkAlgorithms = new HashMap<Long, MCODEAlgorithm>();
+	}
+
+	public MCODECurrentParameters getCurrentParameters() {
+		return currentParameters;
+	}
+
+	public boolean containsNetworkAlgorithm(long suid) {
+		return networkAlgorithms.containsKey(suid);
+	}
+	
+	public MCODEAlgorithm getNetworkAlgorithm(long suid) {
+		return networkAlgorithms.get(suid);
+	}
+	
+	public void addNetworkAlgorithm(long suid, MCODEAlgorithm alg) {
+		networkAlgorithms.put(suid, alg);
 	}
 
 	/**
 	 * Convert a network to an image.  This is used by the MCODEResultsPanel.
-	 *
-	 * @param loader Graphic loader displaying progress and process
+	 * 
 	 * @param cluster Input network to convert to an image
 	 * @param height  Height that the resulting image should be
 	 * @param width   Width that the resulting image should be
 	 * @param layouter Reference to the layout algorithm
 	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
+	 * @param loader Graphic loader displaying progress and process
 	 * @return The resulting image
 	 */
-	public Image convertNetworkToImage(final CyNetwork network,
-									   final MCODELoader loader,
-									   final MCODECluster cluster,
-									   final int height,
-									   final int width,
-									   SpringEmbeddedLayouter layouter,
-									   boolean layoutNecessary) {
+	public Image createClusterImage(final MCODECluster cluster,
+									final int height,
+									final int width,
+									SpringEmbeddedLayouter layouter,
+									boolean layoutNecessary,
+									final MCODELoader loader) {
 		// Progress reporters.
 		// There are three basic tasks, the progress of each is calculated and then combined
 		// using the respective weighting to get an overall progress global progress
@@ -164,7 +191,7 @@ public class MCODEUtil {
 
 		final VisualStyle vs = getPluginStyle();
 		final CyNetworkView clusterView = createNetworkView(cluster.getNetwork(), vs);
-		
+
 		clusterView.setVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH, new Double(width));
 		clusterView.setVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT, new Double(height));
 
@@ -255,7 +282,8 @@ public class MCODEUtil {
 			@Override
 			public void run() {
 				try {
-					displayNetworkView(clusterView);
+					// TODO: remove this workaround when possible to get image off-screen
+					//					displayNetworkView(clusterView);
 
 					// Apply style again:
 					vs.apply(clusterView);
@@ -275,7 +303,8 @@ public class MCODEUtil {
 				} catch (Exception ex) {
 					throw new RuntimeException(ex);
 				} finally {
-					destroyNetworkViewAndModel(clusterView);
+					// TODO: remove this workaround when possible to get image off-screen
+					//					destroyNetworkViewAndModel(clusterView);
 				}
 			}
 		});
@@ -330,7 +359,7 @@ public class MCODEUtil {
 			networkMgr.destroyNetwork(view.getModel());
 		}
 	}
-	
+
 	public VisualStyle getPluginStyle() {
 		if (style == null) {
 			style = visualStyleFactory.getInstance("MCODE");
@@ -413,15 +442,21 @@ public class MCODEUtil {
 		return view != null ? visualMappingMgr.getVisualStyle(view) : null;
 	}
 
-	public void setSelected(final Collection<? extends CyTableEntry> objects, final boolean select, CyNetworkView view) {
-		for (final CyTableEntry nodeOrEdge : objects)
+	@SuppressWarnings("unchecked")
+	public void setSelected(final Collection<? extends CyTableEntry> elements, CyNetwork network, CyNetworkView view) {
+		Collection<? extends CyTableEntry> allElements = new ArrayList<CyTableEntry>(network.getNodeList());
+		allElements.addAll((Collection) network.getEdgeList());
+
+		for (final CyTableEntry nodeOrEdge : allElements) {
+			boolean select = elements.contains(nodeOrEdge);
 			nodeOrEdge.getCyRow().set(CyNetwork.SELECTED, select);
+		}
 
 		eventHelper.flushPayloadEvents();
-		
+
 		if (view != null) {
 			view.updateView();
-			eventHelper.flushPayloadEvents();
+//			eventHelper.flushPayloadEvents();
 			swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 		}
 	}

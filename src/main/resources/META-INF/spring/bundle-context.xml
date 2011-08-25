@@ -15,6 +15,7 @@
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="cyServiceRegistrarServiceRef" />
 		<constructor-arg ref="analyzeAction" />
+		<constructor-arg ref="mcodeUtil" />
 	</bean>
 	
 	<bean id="closeAction" class="org.cytoscape.mcode.internal.MCODECloseAction">
@@ -22,6 +23,7 @@
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="cyServiceRegistrarServiceRef" />
+		<constructor-arg ref="mcodeUtil" />
 	</bean>
 
 	<bean id="helpAction" class="org.cytoscape.mcode.internal.MCODEHelpAction">

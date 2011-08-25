@@ -46,18 +46,8 @@ import java.util.Map;
  */
 public class MCODECurrentParameters {
 
-	private static MCODECurrentParameters ourInstance = new MCODECurrentParameters();
-	private static Map<Long, MCODEParameterSet> currentParams = new HashMap<Long, MCODEParameterSet>();
-	private static Map<Integer, MCODEParameterSet> resultParams = new HashMap<Integer, MCODEParameterSet>();
-
-	/**
-	 * Get the one instance of this singleton class that stores the current parameters internally.
-	 * 
-	 * @return ourInstance
-	 */
-	public static MCODECurrentParameters getInstance() {
-		return ourInstance;
-	}
+	private Map<Long, MCODEParameterSet> currentParams = new HashMap<Long, MCODEParameterSet>();
+	private Map<Integer, MCODEParameterSet> resultParams = new HashMap<Integer, MCODEParameterSet>();
 
 	/**
 	 * Get a copy of the current parameters for a particular network. Only a copy of the current param object is
@@ -116,11 +106,11 @@ public class MCODECurrentParameters {
 		resultParams.put(resultId, resultParamSet);
 	}
 
-	public static MCODEParameterSet getResultParams(int resultId) {
+	public MCODEParameterSet getResultParams(int resultId) {
 		return resultParams.get(resultId).copy();
 	}
 
-	public static void removeResultParams(int resultId) {
+	public void removeResultParams(int resultId) {
 		resultParams.remove(resultId);
 	}
 }

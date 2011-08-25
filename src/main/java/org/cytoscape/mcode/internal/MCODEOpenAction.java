@@ -7,6 +7,7 @@ import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
 
@@ -19,15 +20,18 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 
 	private final CyServiceRegistrar registrar;
 	private final MCODEAnalyzeAction analyzeAction;
+	private final MCODEUtil mcodeUtil;
 
 	public MCODEOpenAction(final String name,
 						   final CyApplicationManager applicationManager,
 						   final CySwingApplication swingApplication,
 						   final CyServiceRegistrar registrar,
-						   final MCODEAnalyzeAction analyzeAction) {
+						   final MCODEAnalyzeAction analyzeAction,
+						   final MCODEUtil mcodeUtil) {
 		super(name, applicationManager, swingApplication);
 		this.registrar = registrar;
 		this.analyzeAction = analyzeAction;
+		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Plugins.MCODE");
 	}
 
@@ -43,11 +47,10 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 
 			// First we must make sure that the plugin is not already open
 			if (!isOpened()) {
-				mainPanel = new MCODEMainPanel(swingApplication);
+				mainPanel = new MCODEMainPanel(swingApplication, mcodeUtil);
 				mainPanel.addAction(analyzeAction);
 
 				registrar.registerService(mainPanel, CytoPanelComponent.class, new Properties());
-				
 				analyzeAction.updateEnableState();
 			} else {
 				mainPanel = getMainPanel();

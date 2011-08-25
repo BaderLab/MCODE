@@ -2,7 +2,6 @@ package org.cytoscape.mcode.internal.view;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -34,9 +33,9 @@ import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.util.MCODEResources;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
 
 /**
@@ -81,6 +80,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private static final long serialVersionUID = 2655227790686546553L;
 
 	private final CySwingApplication swingApplication;
+	private final MCODEUtil mcodeUtil;
 	private final List<CyAction> actions;
 
 	// Panels
@@ -126,22 +126,16 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 	/**
 	 * The actual parameter change panel that builds the UI
-	 *
-	 * @param trigger A reference to the action that triggered the initiation of this class
-	 * @param MCODEVS Reference to MCODE's visual style
 	 */
-	public MCODEMainPanel(final CySwingApplication swingApplication
-	/*MCODEMainPanelAction trigger, final MCODEVisualStyle MCODEVS*/) {
+	public MCODEMainPanel(final CySwingApplication swingApplication, final MCODEUtil mcodeUtil) {
 		this.swingApplication = swingApplication;
-		
+		this.mcodeUtil = mcodeUtil;
 		actions = new ArrayList<CyAction>();
-
-		//        this.trigger = trigger;
-		//        this.MCODEVS = MCODEVS;
+		
 		setLayout(new BorderLayout());
 
 		//get the current parameters
-		currentParamsCopy = MCODECurrentParameters.getInstance().getParamsCopy(null);
+		currentParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(null);
 		currentParamsCopy.setDefaultParams();
 
 		decFormat = new DecimalFormat();
@@ -168,7 +162,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	public void addAction(CyAction action) {
 		JButton bt = new JButton(action);
 		getBottomPanel().add(bt);
-		
+
 		this.actions.add(action);
 	}
 
@@ -196,7 +190,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	public MCODEParameterSet getCurrentParamsCopy() {
 		return currentParamsCopy;
 	}
-	
+
 	/**
 	 * Creates a JPanel containing scope radio buttons
 	 *

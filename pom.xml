@@ -141,12 +141,6 @@
 			<version>4.8.2</version>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.cytoscape</groupId>
-			<artifactId>test-support</artifactId>
-			<version>3.0.0-alpha2</version>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 </project>

@@ -113,7 +113,7 @@ public class MCODEAlgorithm {
 	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
 		this.mcodeUtil = mcodeUtil;
 		//get current parameters
-		params = MCODECurrentParameters.getInstance().getParamsCopy(networkID);
+		params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
 	}
 
 	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
@@ -122,7 +122,7 @@ public class MCODEAlgorithm {
 	}
 
 	public void setTaskMonitor(TaskMonitor taskMonitor, Long networkID) {
-		params = MCODECurrentParameters.getInstance().getParamsCopy(networkID);
+		params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
 		this.taskMonitor = taskMonitor;
 	}
 
@@ -457,7 +457,7 @@ public class MCODEAlgorithm {
 		// This method is similar to the finding method with the exception of the filtering so that the decrease of the cluster size
 		// can produce a single node, also the use of the node seen hash map is differentially applied...
 		Map<Integer, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
-		MCODEParameterSet params = MCODECurrentParameters.getResultParams(cluster.getResultId());
+		MCODEParameterSet params = mcodeUtil.getCurrentParameters().getResultParams(cluster.getResultId());
 		final Map<Integer, Boolean> nodeSeenHashMap;
 
 		// If the size slider is below the set node score cutoff we use the node seen hash map so that clusters

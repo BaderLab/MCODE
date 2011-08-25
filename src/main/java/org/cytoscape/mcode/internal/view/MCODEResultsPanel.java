@@ -168,7 +168,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.swingApplication = swingApplication;
 		this.registrar = registrar;
 
-		currentParamsCopy = MCODECurrentParameters.getResultParams(resultId);
+		currentParamsCopy = mcodeutil.getCurrentParameters().getResultParams(resultId);
 
 		JPanel clusterBrowserPanel = createClusterBrowserPanel(imageList);
 		JPanel bottomPanel = createBottomPanel();
@@ -465,13 +465,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				protected Object doInBackground() throws Exception {
 					CyNetwork newNetwork = mcodeutil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
 					newNetwork.getCyRow().set(CyNetwork.NAME, title);
-					
+
 					VisualStyle vs = mcodeutil.getNetworkViewStyle(networkView);
 					CyNetworkView newNetworkView = mcodeutil.createNetworkView(newNetwork, vs);
-					
+
 					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_X_LOCATION, 0.0);
 					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_Y_LOCATION, 0.0);
-					
+
 					mcodeutil.displayNetworkView(newNetworkView);
 
 					// Layout new cluster and fit it to window.
@@ -825,7 +825,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 													  null);
 			if (result == JOptionPane.YES_OPTION) {
 				registrar.unregisterService(trigger, CytoPanelComponent.class);
-				MCODECurrentParameters.removeResultParams(getResultId());
+				mcodeutil.getCurrentParameters().removeResultParams(getResultId());
 			}
 
 			// If there are no more tabs in the cytopanel then we hide it
@@ -931,15 +931,15 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Selects a cluster in the view that is selected by the user in the browser table
 	 * 
-	 * @param gpCluster Cluster to be selected
+	 * @param custerNetwork Cluster to be selected
 	 */
-	public void selectCluster(final CyNetwork gpCluster) {
-		if (gpCluster != null) {
+	public void selectCluster(final CyNetwork custerNetwork) {
+		if (custerNetwork != null) {
 			// Only do this if a view has been created on this network
 			if (networkView != null) {
 				// start with no selected nodes
-				mcodeutil.setSelected(networkView.getModel().getNodeList(), false, networkView);
-				mcodeutil.setSelected(gpCluster.getNodeList(), true, networkView);
+				//				mcodeutil.setSelected(network.getNodeList(), false, networkView);
+				mcodeutil.setSelected(custerNetwork.getNodeList(), network, networkView);
 
 				// TODO: is it still necessary?
 				// We want the focus to switch to the appropriate network view but only if the cytopanel is docked
@@ -948,7 +948,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				//					
 				//					 Cytoscape.getDesktop().setFocus(networkView.getSUID());
 				//				}
-				networkView.fitSelected();
 			} else {
 				// Warn user that nothing will happen in this case because there
 				// is no view to select nodes with
@@ -957,8 +956,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 											  "No Network View",
 											  JOptionPane.INFORMATION_MESSAGE);
 			}
-		} else if (networkView != null) {
-			mcodeutil.setSelected(networkView.getModel().getNodeList(), false, networkView);
+		} else {
+			mcodeutil.setSelected(new ArrayList<CyNode>(), network, networkView); // deselect all
 		}
 	}
 
@@ -1181,13 +1180,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// process was interrupted by the slider movement
 					// In that case the drawing must occur for a new cluster using the drawGraph method
 					if (drawGraph && !drawPlaceHolder) {
-						Image image = mcodeutil.convertNetworkToImage(network,
-																	  loader,
-																	  cluster,
-																	  graphPicSize,
-																	  graphPicSize,
-																	  layouter,
-																	  layoutNecessary);
+						Image image = mcodeutil.createClusterImage(cluster,
+																   graphPicSize,
+																   graphPicSize,
+																   layouter,
+																   layoutNecessary,
+																   loader);
 						// If the drawing process was interrupted, a new cluster must have been found and
 						// this will have returned null, the drawing will be recalled (with the new cluster)
 						// However, if the graphing was successful, we update

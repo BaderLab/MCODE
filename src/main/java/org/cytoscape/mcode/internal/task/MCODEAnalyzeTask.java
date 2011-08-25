@@ -130,20 +130,14 @@ public class MCODEAnalyzeTask implements Task {
 			// Also create all the images here for the clusters, since it can be a time consuming operation
 			clusters = mcodeUtil.sortClusters(clusters);
 			imageList = new Image[clusters.length];
-			int imageSize = MCODECurrentParameters.getResultParams(resultId).getDefaultRowHeight();
+			int imageSize = mcodeUtil.getCurrentParameters().getResultParams(resultId).getDefaultRowHeight();
 
 			for (int i = 0; i < clusters.length; i++) {
 				if (interrupted) {
 					return;
 				}
 
-				imageList[i] = mcodeUtil.convertNetworkToImage(network,
-															   null,
-															   clusters[i],
-															   imageSize,
-															   imageSize,
-															   null,
-															   true);
+				imageList[i] = mcodeUtil.createClusterImage(clusters[i], imageSize, imageSize, null, true, null);
 				taskMonitor.setProgress((i * 100) / clusters.length);
 			}
 
