@@ -7,7 +7,6 @@ import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedListener;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
-import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.work.Task;
@@ -62,7 +61,6 @@ public class MCODEAnalyzeTask implements Task {
 
 	private boolean interrupted;
 	private CyNetwork network;
-	private MCODECluster[] clusters;
 	private Image imageList[];
 
 	/**
@@ -97,6 +95,7 @@ public class MCODEAnalyzeTask implements Task {
 		}
 
 		boolean success = false;
+		MCODECluster[] clusters = null;
 
 		try {
 			// Run MCODE scoring algorithm - node scores are saved in the alg object

@@ -2,6 +2,7 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 import java.util.Collection;
+import java.util.Set;
 
 import javax.swing.JOptionPane;
 
@@ -14,12 +15,15 @@ import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
+import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 
 /**
  * Closes the plugin panels.
  */
-public class MCODECloseAction extends AbstractMCODEAction {
+public class MCODECloseAction extends AbstractMCODEAction implements NetworkAboutToBeDestroyedListener {
 
 	private static final long serialVersionUID = -8309835257402089360L;
 
@@ -42,9 +46,7 @@ public class MCODECloseAction extends AbstractMCODEAction {
 	 * @param event Menu Item Selected.
 	 */
 	@Override
-	public void actionPerformed(ActionEvent event) {
-		CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.WEST);
-
+	public void actionPerformed(final ActionEvent event) {
 		//First we must make sure that the plugin is opened
 		if (isOpened()) {
 			Collection<MCODEResultsPanel> resultPanels = getResultPanels();
@@ -60,11 +62,11 @@ public class MCODECloseAction extends AbstractMCODEAction {
 														  null,
 														  null);
 				if (result == JOptionPane.YES_OPTION) {
-					for (MCODEResultsPanel p : resultPanels) {
-						int resultId = p.getResultId();
-						mcodeUtil.getCurrentParameters().removeResultParams(resultId);
-						registrar.unregisterService(p, CytoPanelComponent.class);
+					for (MCODEResultsPanel panel : resultPanels) {
+						panel.discard(false);
 					}
+
+					CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.WEST);
 
 					if (cytoPanel.getCytoPanelComponentCount() == 0) {
 						cytoPanel.setState(CytoPanelState.HIDE);
@@ -85,5 +87,18 @@ public class MCODECloseAction extends AbstractMCODEAction {
 	@Override
 	public void updateEnableState() {
 		setEnabled(isOpened());
+	}
+
+	@Override
+	public void handleEvent(final NetworkAboutToBeDestroyedEvent e) {
+		if (isOpened()) {
+			CyNetwork network = e.getNetwork();
+			Set<Integer> resultIds = mcodeUtil.getNetworkResults(network.getSUID());
+
+			for (int id : resultIds) {
+				MCODEResultsPanel panel = getResultPanel(id);
+				if (panel != null) panel.discard(false);
+			}
+		}
 	}
 }

@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Paint;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -48,10 +50,16 @@ import org.cytoscape.view.model.View;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
 import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
+import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.presentation.property.RichVisualLexicon;
+import org.cytoscape.view.presentation.property.values.NodeShape;
+import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
+import org.cytoscape.view.vizmap.mappings.BoundaryRangeValues;
+import org.cytoscape.view.vizmap.mappings.ContinuousMapping;
+import org.cytoscape.view.vizmap.mappings.DiscreteMapping;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -104,13 +112,21 @@ public class MCODEUtil {
 	private final VisualMappingManager visualMappingMgr;
 	private final CySwingApplication swingApplication;
 	private final CyEventHelper eventHelper;
+	private final VisualMappingFunctionFactory discreteMappingFactory;
+	private final VisualMappingFunctionFactory continuousMappingFactory;
+	private final VisualMappingFunctionFactory passthroughMappingFactory;
 
 	private boolean interrupted;
 	private Image placeHolderImage;
-	private VisualStyle style; // visual style used by the MCODE plugin
+	private VisualStyle clusterStyle;
+	private VisualStyle pluginStyle;
 	private MCODECurrentParameters currentParameters;
-	//Keeps track of networks (id is key) and their respective algorithms
+	// Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkAlgorithms;
+	// Keeps track of networks (id is key) and their respective results (list of result ids)
+	private Map<Long, Set<Integer>> networkResults;
+
+	private int currentResultId;
 
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 					 final CyNetworkViewFactory networkViewFactory,
@@ -121,7 +137,10 @@ public class MCODEUtil {
 					 final VisualStyleFactory visualStyleFactory,
 					 final VisualMappingManager visualMappingMgr,
 					 final CySwingApplication swingApplication,
-					 final CyEventHelper eventHelper) {
+					 final CyEventHelper eventHelper,
+					 final VisualMappingFunctionFactory discreteMappingFactory,
+					 final VisualMappingFunctionFactory continuousMappingFactory,
+					 final VisualMappingFunctionFactory passthroughMappingFactory) {
 		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
 		this.rootNetworkFactory = rootNetworkFactory;
@@ -132,29 +151,89 @@ public class MCODEUtil {
 		this.visualMappingMgr = visualMappingMgr;
 		this.swingApplication = swingApplication;
 		this.eventHelper = eventHelper;
+		this.discreteMappingFactory = discreteMappingFactory;
+		this.continuousMappingFactory = continuousMappingFactory;
+		this.passthroughMappingFactory = passthroughMappingFactory;
 
 		this.reset();
 	}
 
+	public int getCurrentResultId() {
+		return currentResultId;
+	}
+
 	public void reset() {
+		currentResultId = 1;
 		currentParameters = new MCODECurrentParameters();
 		networkAlgorithms = new HashMap<Long, MCODEAlgorithm>();
+		networkResults = new HashMap<Long, Set<Integer>>();
 	}
 
 	public MCODECurrentParameters getCurrentParameters() {
 		return currentParameters;
 	}
 
-	public boolean containsNetworkAlgorithm(long suid) {
+	public boolean containsNetworkAlgorithm(final long suid) {
 		return networkAlgorithms.containsKey(suid);
 	}
-	
-	public MCODEAlgorithm getNetworkAlgorithm(long suid) {
+
+	public MCODEAlgorithm getNetworkAlgorithm(final long suid) {
 		return networkAlgorithms.get(suid);
 	}
-	
-	public void addNetworkAlgorithm(long suid, MCODEAlgorithm alg) {
+
+	public void addNetworkAlgorithm(final long suid, final MCODEAlgorithm alg) {
 		networkAlgorithms.put(suid, alg);
+	}
+
+	public boolean containsNetworkResult(final long suid) {
+		return networkResults.containsKey(suid);
+	}
+
+	public Set<Integer> getNetworkResults(final long suid) {
+		Set<Integer> ids = networkResults.get(suid);
+
+		return ids != null ? ids : new HashSet<Integer>();
+	}
+
+	public synchronized void addNetworkResult(final long suid) {
+		Set<Integer> ids = networkResults.get(suid);
+
+		if (ids == null) {
+			ids = new HashSet<Integer>();
+			networkResults.put(suid, ids);
+		}
+
+		ids.add(currentResultId++);
+	}
+
+	public boolean removeNetworkResult(final int resultId) {
+		boolean removed = false;
+		Long networkToRemove = null;
+
+		for (Entry<Long, Set<Integer>> entries : networkResults.entrySet()) {
+			Set<Integer> ids = entries.getValue();
+
+			if (ids.remove(resultId)) {
+				if (ids.isEmpty()) {
+					networkToRemove = entries.getKey();
+				}
+
+				removed = true;
+				break;
+			}
+		}
+
+		if (networkToRemove != null) {
+			removeNetworkResults(networkToRemove);
+		}
+
+		this.getCurrentParameters().removeResultParams(resultId);
+
+		return removed;
+	}
+
+	public Set<Integer> removeNetworkResults(final long suid) {
+		return networkResults.remove(suid);
 	}
 
 	/**
@@ -189,7 +268,7 @@ public class MCODEUtil {
 		// keeps track of progress as a percent of the totalGoal
 		double progress = 0;
 
-		final VisualStyle vs = getPluginStyle();
+		final VisualStyle vs = getClusterStyle();
 		final CyNetworkView clusterView = createNetworkView(cluster.getNetwork(), vs);
 
 		clusterView.setVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH, new Double(width));
@@ -360,23 +439,23 @@ public class MCODEUtil {
 		}
 	}
 
-	public VisualStyle getPluginStyle() {
-		if (style == null) {
-			style = visualStyleFactory.getInstance("MCODE");
+	public VisualStyle getClusterStyle() {
+		if (clusterStyle == null) {
+			clusterStyle = visualStyleFactory.getInstance("MCODE Cluster");
 
-			style.setDefaultValue(MinimalVisualLexicon.NODE_SIZE, 40.0);
-			style.setDefaultValue(MinimalVisualLexicon.NODE_WIDTH, 40.0);
-			style.setDefaultValue(MinimalVisualLexicon.NODE_HEIGHT, 40.0);
-			style.setDefaultValue(MinimalVisualLexicon.NODE_PAINT, Color.RED);
-			style.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.RED);
-			style.setDefaultValue(RichVisualLexicon.NODE_BORDER_PAINT, Color.BLACK);
-			style.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 5.0);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_SIZE, 40.0);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_WIDTH, 40.0);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_HEIGHT, 40.0);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_PAINT, Color.RED);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.RED);
+			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_PAINT, Color.BLACK);
+			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 5.0);
 
-			style.setDefaultValue(MinimalVisualLexicon.EDGE_PAINT, Color.BLUE);
-			style.setDefaultValue(RichVisualLexicon.EDGE_UNSELECTED_PAINT, Color.BLUE);
-			style.setDefaultValue(RichVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
-			style.setDefaultValue(RichVisualLexicon.EDGE_SELECTED_PAINT, Color.BLUE);
-			style.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_UNSELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
 
 			// TODO            
 			//            if (cluster.getSeedNode().intValue() == nv.getRootGraphIndex()) {
@@ -388,54 +467,49 @@ public class MCODEUtil {
 			//            ev.setTargetEdgeEnd(EdgeView.BLACK_ARROW);
 			//            ev.setTargetEdgeEndPaint(Color.CYAN);
 			//            ev.setSourceEdgeEndPaint(Color.CYAN);
-
-			// TODO:  change original network style?
-			// // Node Shape:
-			//		    private void createNodeShape(NodeAppearanceCalculator nac) {
-			//	        DiscreteMapping discreteMapping = new DiscreteMapping(RECT, "MCODE_Node_Status", ObjectMapping.NODE_MAPPING);
-			//	        //Node shapes are determined by three discrete classifications
-			//	        discreteMapping.putMapValue("Clustered", ELLIPSE);
-			//	        discreteMapping.putMapValue("Seed", RECT);
-			//	        discreteMapping.putMapValue("Unclustered", DIAMOND);
-			//
-			//	        Calculator nodeShapeCalculator = new BasicCalculator("Seed and Cluster Status Calculator", discreteMapping, VisualPropertyType.NODE_SHAPE);
-			//	        nac.setCalculator(nodeShapeCalculator);
-			//
-			// // NodeColor:
-			//	        nac.getDefaultAppearance().set(VisualPropertyType.NODE_FILL_COLOR, Color.WHITE);
-			//	        ContinuousMapping continuousMapping = new ContinuousMapping(Color.WHITE, ObjectMapping.NODE_MAPPING);
-			//	        continuousMapping.setControllingAttributeName("MCODE_Score", null, false);
-			//
-			//	        Interpolator fInt = new LinearNumberToColorInterpolator();
-			//	        continuousMapping.setInterpolator(fInt);
-			//
-			//	        //Node color is based on the score, the lower the score the darker the color
-			//	        Color minColor = Color.BLACK;
-			//	        Color maxColor = Color.RED;
-			//
-			//	        //Create two boundary conditions
-			//	        //First we state that everything below or equalling 0 (min) will be white, and everything above that will
-			//	        //start from black and fade into the next boundary color
-			//	        BoundaryRangeValues bv0 = new BoundaryRangeValues(Color.WHITE, Color.WHITE, minColor);
-			//	        //Now we state that anything anything below the max score will fade into red from the lower boundary color
-			//	        //and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
-			//	        BoundaryRangeValues bv2 = new BoundaryRangeValues(maxColor, maxColor, maxColor);
-			//
-			//	        //Set Data Points
-			//	        double minValue = 0.0;
-			//	        //the max value is set by MCODEVisualStyleAction based on the current result set's max score
-			//	        continuousMapping.addPoint(minValue, bv0);
-			//	        continuousMapping.addPoint(maxValue, bv2);
-			//
-			//	        Calculator nodeColorCalculator = new BasicCalculator("MCODE Score Color Calculator", continuousMapping, VisualPropertyType.NODE_FILL_COLOR);
-			//	        nac.setCalculator(nodeColorCalculator);
-			//
-			//	    public void setMaxValue(double maxValue) {
-			//	        this.maxValue = maxValue;
-			//	    }
 		}
 
-		return style;
+		return clusterStyle;
+	}
+
+	public VisualStyle getPluginStyle(double maxScore) {
+		if (pluginStyle == null) {
+			pluginStyle = visualStyleFactory.getInstance("MCODE");
+
+			// Node Shape:
+			DiscreteMapping<String, NodeShape> nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
+					.createVisualMappingFunction("MCODE_Node_Status", String.class, RichVisualLexicon.NODE_SHAPE);
+
+			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
+			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
+			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
+
+			pluginStyle.addVisualMappingFunction(nodeShapeDm);
+
+			// Node Color:
+			// The lower the score the darker the color
+			pluginStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
+
+			ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
+					.createVisualMappingFunction("MCODE_Score", Double.class, MinimalVisualLexicon.NODE_FILL_COLOR);
+
+			final Color MIN_COLOR = Color.BLACK;
+			final Color MAX_COLOR = Color.RED;
+
+			// First we state that everything below or equaling 0 (min) will be white, and everything above that will
+			// start from black and fade into the next boundary color
+			nodeColorCm.addPoint(0.0, new BoundaryRangeValues<Paint>(Color.WHITE, Color.WHITE, MIN_COLOR));
+			// Now we state that anything anything below the max score will fade into red from the lower boundary color
+			// and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
+			// The max value is set by MCODEVisualStyleAction based on the current result set's max score
+			nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<Paint>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
+
+			// TODO: create one style per score and store in a map?
+
+			pluginStyle.addVisualMappingFunction(nodeColorCm);
+		}
+
+		return pluginStyle;
 	}
 
 	public VisualStyle getNetworkViewStyle(CyNetworkView view) {
@@ -456,7 +530,7 @@ public class MCODEUtil {
 
 		if (view != null) {
 			view.updateView();
-//			eventHelper.flushPayloadEvents();
+			//			eventHelper.flushPayloadEvents();
 			swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 		}
 	}

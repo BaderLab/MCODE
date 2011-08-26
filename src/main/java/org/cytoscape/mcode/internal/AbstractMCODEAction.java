@@ -17,7 +17,9 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 
 	protected final CySwingApplication swingApplication;
 
-	public AbstractMCODEAction(String name, CyApplicationManager applicationManager, CySwingApplication swingApplication) {
+	public AbstractMCODEAction(final String name,
+							   final CyApplicationManager applicationManager,
+							   final CySwingApplication swingApplication) {
 		super(name, applicationManager);
 		this.swingApplication = swingApplication;
 	}
@@ -65,6 +67,14 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 		}
 
 		return panels;
+	}
+
+	protected MCODEResultsPanel getResultPanel(final int resultId) {
+		for (MCODEResultsPanel panel : getResultPanels()) {
+			if (panel.getResultId() == resultId) return panel;
+		}
+
+		return null;
 	}
 
 	/**

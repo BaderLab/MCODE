@@ -52,6 +52,18 @@
         
     <osgi:reference id="visualMappingManagerServiceRef"
         interface="org.cytoscape.view.vizmap.VisualMappingManager" />
+        
+    <osgi:reference id="discreteMappingFactoryServiceRef"
+        interface="org.cytoscape.view.vizmap.VisualMappingFunctionFactory"
+        filter="(mapping.type=discrete)" />
+        
+    <osgi:reference id="continuousMappingFactoryServiceRef"
+        interface="org.cytoscape.view.vizmap.VisualMappingFunctionFactory"
+        filter="(mapping.type=continuous)" />
+        
+    <osgi:reference id="passthroughMappingFactoryServiceRef"
+        interface="org.cytoscape.view.vizmap.VisualMappingFunctionFactory"
+        filter="(mapping.type=passthrough)" />
 
 	<!-- ================= Export =========================== -->
 
@@ -61,8 +73,12 @@
 	<osgi:service id="openMenuActionService" ref="openAction"
 		interface="org.cytoscape.application.swing.CyAction" />
 		
-	<osgi:service id="closeMenuActionService" ref="closeAction"
-		interface="org.cytoscape.application.swing.CyAction" />
+	<osgi:service id="closeMenuActionService" ref="closeAction">
+	<osgi:interfaces>
+	   <value>org.cytoscape.application.swing.CyAction</value>
+	   <value>org.cytoscape.model.events.NetworkAboutToBeDestroyedListener</value>
+	</osgi:interfaces>
+	</osgi:service>
 
 	<osgi:service id="helpMenuActionService" ref="helpAction"
 		interface="org.cytoscape.application.swing.CyAction" />

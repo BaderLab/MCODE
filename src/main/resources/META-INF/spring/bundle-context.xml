@@ -60,6 +60,9 @@
 		<constructor-arg ref="visualMappingManagerServiceRef" />
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="cyEventHelperServiceRef" />
+		<constructor-arg ref="discreteMappingFactoryServiceRef" />
+		<constructor-arg ref="continuousMappingFactoryServiceRef" />
+		<constructor-arg ref="passthroughMappingFactoryServiceRef" />
 	</bean>
 	
 	<!-- Other beans -->

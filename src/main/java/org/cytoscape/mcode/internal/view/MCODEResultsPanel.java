@@ -37,6 +37,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JToolTip;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -50,6 +51,7 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.application.swing.CytoPanelState;
+import org.cytoscape.mcode.internal.MCODEDiscardResultAction;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
@@ -124,10 +126,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private CyNetworkView networkView; // Keep a record of this too, if it exists
 	private MCODECollapsiblePanel explorePanel;
 	private JPanel[] exploreContent;
+	private JButton closeButton;
+
 	private MCODEParameterSet currentParamsCopy;
-	private int enumerationSelection = 0; // Keep track of selected attribute for
-	// enumeration so it stays selected for all
-	// cluster explorations
+	// Keep track of selected attribute for enumeration so it stays selected for all cluster explorations
+	private int enumerationSelection = 0;
 
 	// Graphical classes
 	private GraphDrawer drawer;
@@ -135,7 +138,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 	private final MCODEUtil mcodeutil;
 	private final CySwingApplication swingApplication;
-	private final CyServiceRegistrar registrar;
+	private final MCODEDiscardResultAction discardResultAction;
 
 	/**
 	 * Constructor for the Results Panel which displays the clusters in a
@@ -155,7 +158,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							 Image[] imageList,
 							 int resultId,
 							 final CySwingApplication swingApplication,
-							 final CyServiceRegistrar registrar) {
+							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
 
 		this.alg = alg;
@@ -166,7 +169,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
 		this.swingApplication = swingApplication;
-		this.registrar = registrar;
+		this.discardResultAction = discardResultAction;
 
 		currentParamsCopy = mcodeutil.getCurrentParameters().getResultParams(resultId);
 
@@ -205,6 +208,23 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 	public int getResultId() {
 		return this.resultId;
+	}
+
+	public void discard(final boolean requestUserConfirmation) {
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				boolean oldRequestUserConfirmation = new Boolean(discardResultAction
+						.getValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND).toString());
+
+				discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
+											 requestUserConfirmation);
+				closeButton.doClick();
+				discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
+											 oldRequestUserConfirmation);
+			}
+		});
 	}
 
 	/**
@@ -263,8 +283,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		exportButton.setToolTipText("Export result set to a text file");
 
 		// The close button
-		JButton closeButton = new JButton("Discard Result");
-		closeButton.addActionListener(new MCODEResultsPanel.CloseAction(this));
+		closeButton = new JButton(discardResultAction);
+		discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND, true);
 
 		buttonPanel.add(exportButton);
 		buttonPanel.add(closeButton);
@@ -382,7 +402,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JPanel createBottomExplorePanel(int selectedRow) {
 		JPanel panel = new JPanel();
 		JButton createChildButton = new JButton("Create Sub-Network");
-		createChildButton.addActionListener(new MCODEResultsPanel.CreateChildAction(this, selectedRow));
+		createChildButton.addActionListener(new MCODEResultsPanel.CreateSubNetworkAction(this, selectedRow));
 		panel.add(createChildButton);
 
 		return panel;
@@ -440,12 +460,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Handles the create child network press in the cluster exploration panel
 	 */
-	private class CreateChildAction extends AbstractAction {
+	private class CreateSubNetworkAction extends AbstractAction {
+
+		private static final long serialVersionUID = -7055711916961537608L;
 
 		int selectedRow;
 		MCODEResultsPanel trigger;
 
-		CreateChildAction(MCODEResultsPanel trigger, int selectedRow) {
+		CreateSubNetworkAction(MCODEResultsPanel trigger, int selectedRow) {
 			this.selectedRow = selectedRow;
 			this.trigger = trigger;
 		}
@@ -459,10 +481,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final String title = trigger.getResultId() + ": " + cluster.getClusterName() + " (Score: " +
 								 nf.format(cluster.getClusterScore()) + ")";
 			// create the child network and view
-			final SwingWorker worker = new SwingWorker() {
+			final SwingWorker<CyNetworkView, ?> worker = new SwingWorker<CyNetworkView, Object>() {
 
 				@Override
-				protected Object doInBackground() throws Exception {
+				protected CyNetworkView doInBackground() throws Exception {
 					CyNetwork newNetwork = mcodeutil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
 					newNetwork.getCyRow().set(CyNetwork.NAME, title);
 
@@ -512,7 +534,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					newNetworkView.fitContent();
 					newNetworkView.updateView();
 
-					return null;
+					return newNetworkView;
 				}
 			};
 
@@ -796,42 +818,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			// Finally we make sure that the selection is stored so that all the
 			// cluster explorations are looking at the already selected attribute
 			enumerationSelection = selectionIndex;
-		}
-	}
-
-	/**
-	 * Handles the close press for this results panel
-	 */
-	private class CloseAction extends AbstractAction {
-
-		final MCODEResultsPanel trigger;
-
-		CloseAction(final MCODEResultsPanel trigger) {
-			this.trigger = trigger;
-		}
-
-		public void actionPerformed(ActionEvent e) {
-			final CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-
-			// Must make sure the user wants to close this results panel
-			String message = "You are about to dispose of " + resultId + ".\nDo you wish to continue?";
-			int result = JOptionPane.showOptionDialog(swingApplication.getJFrame(),
-													  new Object[] { message },
-													  "Confirm",
-													  JOptionPane.YES_NO_OPTION,
-													  JOptionPane.QUESTION_MESSAGE,
-													  null,
-													  null,
-													  null);
-			if (result == JOptionPane.YES_OPTION) {
-				registrar.unregisterService(trigger, CytoPanelComponent.class);
-				mcodeutil.getCurrentParameters().removeResultParams(getResultId());
-			}
-
-			// If there are no more tabs in the cytopanel then we hide it
-			if (cytoPanel.getCytoPanelComponentCount() == 0) {
-				cytoPanel.setState(CytoPanelState.HIDE);
-			}
 		}
 	}
 

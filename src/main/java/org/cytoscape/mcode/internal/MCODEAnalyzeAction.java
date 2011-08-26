@@ -84,10 +84,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	private final TaskManager taskManager;
 	private final MCODEUtil mcodeUtil;
 
-	private MCODEResultsPanel resultPanel;
-
 	int analyze = FIRST_TIME;
-	int resultId = 1;
 
 	public MCODEAnalyzeAction(final String title,
 							  final CyApplicationManager applicationManager,
@@ -164,6 +161,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 			analyze = FIRST_TIME;
 		}
 
+		final int resultId = mcodeUtil.getCurrentResultId();
+
 		// These statements determine which portion of the algorithm needs to be conducted by
 		// testing which parameters have been modified compared to the last saved parameters.
 		// Here we ensure that only relavant parameters are looked at.  For example, fluff density
@@ -172,7 +171,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 		if (currentParamsCopy.isIncludeLoops() != savedParamsCopy.isIncludeLoops() ||
 			currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff() || analyze == FIRST_TIME) {
 			analyze = RESCORE;
-			System.err.println("Analysis: score network, find clusters");
+			System.out.println("Analysis: score network, find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else if (!currentParamsCopy.getScope().equals(savedParamsCopy.getScope()) ||
 				   (!currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK) && currentParamsCopy
@@ -188,11 +187,11 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 						   .isFluff() && currentParamsCopy.getFluffNodeDensityCutoff() != savedParamsCopy
 						   .getFluffNodeDensityCutoff())))) {
 			analyze = REFIND;
-			System.err.println("Analysis: find clusters");
+			System.out.println("Analysis: find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else {
 			analyze = INTERRUPTION;
-			interruptedMessage = "The parameters you specified\nhave not changed.";
+			interruptedMessage = "The parameters you specified have not changed.";
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		}
 
@@ -221,16 +220,26 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 
 						@Override
 						public void run() {
+							MCODEResultsPanel resultPanel = null;
 							boolean resultFound = false;
 
 							// Display clusters in a new modal dialog box
 							if (e.isSuccessful()) {
-								if (e.getClusters().length > 0) {
+								if (e.getClusters() != null && e.getClusters().length > 0) {
 									resultFound = true;
+									mcodeUtil.addNetworkResult(network.getSUID());
+
+									MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
+																												"Discard Result",
+																												resultId,
+																												applicationManager,
+																												swingApplication,
+																												registrar,
+																												mcodeUtil);
+
 									resultPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network,
 																		networkView, e.getImageList(), resultId,
-																		swingApplication, registrar);
-									resultId++;
+																		swingApplication, discardResultAction);
 
 									registrar.registerService(resultPanel, CytoPanelComponent.class, new Properties());
 								} else {
