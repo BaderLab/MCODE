@@ -60,7 +60,6 @@ import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
-import org.cytoscape.util.swing.FileChooserFilter;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
 import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
@@ -129,7 +128,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	// Graphical classes
 	private MCODELoader loader;
 
-	private final MCODEUtil mcodeutil;
+	private final MCODEUtil mcodeUtil;
 	private final CySwingApplication swingApplication;
 	private final MCODEDiscardResultAction discardResultAction;
 
@@ -145,7 +144,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	public MCODEResultsPanel(MCODECluster[] clusters,
 							 MCODEAlgorithm alg,
-							 MCODEUtil mcodeutil,
+							 MCODEUtil mcodeUtil,
 							 CyNetwork network,
 							 CyNetworkView networkView,
 							 Image[] imageList,
@@ -155,7 +154,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		setLayout(new BorderLayout());
 
 		this.alg = alg;
-		this.mcodeutil = mcodeutil;
+		this.mcodeUtil = mcodeUtil;
 		this.resultId = resultId;
 		this.clusters = clusters;
 		this.network = network;
@@ -164,7 +163,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.swingApplication = swingApplication;
 		this.discardResultAction = discardResultAction;
 
-		currentParamsCopy = mcodeutil.getCurrentParameters().getResultParams(resultId);
+		currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
 
 		JPanel clusterBrowserPanel = createClusterBrowserPanel(imageList);
 		JPanel bottomPanel = createBottomPanel();
@@ -300,6 +299,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @return panel A JPanel with the contents of the explore panel, get's
 	 *         added to the explore collapsable panel's content pane
 	 */
+	@SuppressWarnings("unchecked")
 	private JPanel createExploreContent(int selectedRow) {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -373,10 +373,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		enumerationsTable.setDefaultRenderer(StringBuffer.class, new MCODEResultsPanel.JTextAreaRenderer(0));
 		enumerationsTable.setFocusable(false);
 
-		// Create a combo box that lists all the available node attributes for
-		// enumeration
-		nodeAttributesComboBox.addActionListener(new MCODEResultsPanel.enumerateAction(enumerationsTable,
-																					   modelEnumerator, selectedRow));
+		// Create a combo box that lists all the available node attributes for enumeration
+		nodeAttributesComboBox.addActionListener(new MCODEResultsPanel.enumerateAction(modelEnumerator, selectedRow));
 
 		nodeAttributesPanel.add(nodeAttributesComboBox, BorderLayout.NORTH);
 		nodeAttributesPanel.add(tableScrollPane, BorderLayout.SOUTH);
@@ -481,16 +479,16 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 				@Override
 				protected CyNetworkView doInBackground() throws Exception {
-					CyNetwork newNetwork = mcodeutil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
+					CyNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
 					newNetwork.getCyRow().set(CyNetwork.NAME, title);
 
-					VisualStyle vs = mcodeutil.getNetworkViewStyle(networkView);
-					CyNetworkView newNetworkView = mcodeutil.createNetworkView(newNetwork, vs);
+					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
+					CyNetworkView newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
 
 					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_X_LOCATION, 0.0);
 					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_Y_LOCATION, 0.0);
 
-					mcodeutil.displayNetworkView(newNetworkView);
+					mcodeUtil.displayNetworkView(newNetworkView);
 
 					// Layout new cluster and fit it to window.
 					// Randomize node positions before layout so that they don't all layout in a line
@@ -633,6 +631,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			listIt(enumerations);
 		}
 
+		@SuppressWarnings("unchecked")
 		public void listIt(HashMap<?, ?> enumerations) {
 			// First we sort the hash map of attributes values and their occurrences
 			ArrayList<?> enumerationsSorted = sortMap(enumerations);
@@ -700,6 +699,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 *            Has values mapped to keys
 	 * @return outputList of Map.Entries
 	 */
+	@SuppressWarnings("unchecked")
 	private ArrayList sortMap(Map map) {
 		ArrayList outputList = null;
 		int count = 0;
@@ -717,10 +717,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		// Sort the entries with own comparator for the values:
 		Arrays.sort(entries, new Comparator<Map.Entry>() {
 
-			public int compareTo(Map.Entry o1, Map.Entry o2) {
-				return ((Comparable) o1.getValue()).compareTo((Comparable) o2.getValue());
-			}
-
+			@Override
 			public int compare(Map.Entry o1, Map.Entry o2) {
 				return ((Comparable) o1.getValue()).compareTo((Comparable) o2.getValue());
 			}
@@ -741,15 +738,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private class enumerateAction extends AbstractAction {
 
-		JTable enumerationsTable;
 		int selectedRow;
 		MCODEResultsPanel.MCODEResultsEnumeratorTableModel modelEnumerator;
 
-		enumerateAction(JTable enumerationsTable,
-						MCODEResultsPanel.MCODEResultsEnumeratorTableModel modelEnumerator,
-						int selectedRow) {
+		enumerateAction(MCODEResultsPanel.MCODEResultsEnumeratorTableModel modelEnumerator, int selectedRow) {
 			this.selectedRow = selectedRow;
-			this.enumerationsTable = enumerationsTable;
 			this.modelEnumerator = modelEnumerator;
 		}
 
@@ -817,19 +810,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private class ExportAction extends AbstractAction {
 
 		public void actionPerformed(ActionEvent e) {
-			// Call save method in MCODE get the file name
-			Collection<FileChooserFilter> filters = new ArrayList<FileChooserFilter>();
-			filters.add(new FileChooserFilter("BioPAX format", "rdf"));
-			// TODO
-			//			File file = FileUtil.getFile((Component) e.getSource(),
-			//										 "Export Graph as Interactions",
-			//										 FileUtil.SAVE,
-			//										 filters);
-			//
-			//			if (file != null) {
-			//				String fileName = file.getAbsolutePath();
-			//				mcodeutil.exportMCODEResults(alg, clusters, network, fileName);
-			//			}
+			mcodeUtil.exportMCODEResults(alg, clusters, network);
 		}
 	}
 
@@ -914,8 +895,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			// Only do this if a view has been created on this network
 			if (networkView != null) {
 				// start with no selected nodes
-				//				mcodeutil.setSelected(network.getNodeList(), false, networkView);
-				mcodeutil.setSelected(custerNetwork.getNodeList(), network, networkView);
+				//				mcodeUtil.setSelected(network.getNodeList(), false, networkView);
+				mcodeUtil.setSelected(custerNetwork.getNodeList(), network, networkView);
 
 				// TODO: is it still necessary?
 				// We want the focus to switch to the appropriate network view but only if the cytopanel is docked
@@ -933,7 +914,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 											  JOptionPane.INFORMATION_MESSAGE);
 			}
 		} else {
-			mcodeutil.setSelected(new ArrayList<CyNode>(), network, networkView); // deselect all
+			mcodeUtil.setSelected(new ArrayList<CyNode>(), network, networkView); // deselect all
 		}
 	}
 
@@ -1156,7 +1137,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// process was interrupted by the slider movement
 					// In that case the drawing must occur for a new cluster using the drawGraph method
 					if (drawGraph && !drawPlaceHolder) {
-						Image image = mcodeutil.createClusterImage(cluster,
+						Image image = mcodeUtil.createClusterImage(cluster,
 																   graphPicSize,
 																   graphPicSize,
 																   layouter,
@@ -1185,7 +1166,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						placeHolderDrawn = false;
 					} else if (drawPlaceHolder && !placeHolderDrawn) {
 						// draw place holder, only once though (as per the if statement)
-						Image image = mcodeutil.getPlaceHolderImage(graphPicSize, graphPicSize);
+						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
 						// Update the table
 						table.setValueAt(new ImageIcon(image), cluster.getRank(), 0);
 						// select the cluster
@@ -1212,7 +1193,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		public void interruptDrawing() {
 			drawGraph = false;
 			layouter.interruptDoLayout();
-			mcodeutil.interruptLoading();
+			mcodeUtil.interruptLoading();
 		}
 	}
 }

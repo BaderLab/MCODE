@@ -43,10 +43,13 @@ import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTableEntry;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
 import org.cytoscape.model.subnetwork.CySubNetwork;
+import org.cytoscape.util.swing.FileChooserFilter;
+import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -120,6 +123,7 @@ public class MCODEUtil {
 	private final CyEventHelper eventHelper;
 	private final VisualMappingFunctionFactory discreteMappingFactory;
 	private final VisualMappingFunctionFactory continuousMappingFactory;
+	private final FileUtil fileUtil;
 
 	private boolean interrupted;
 	private Image placeHolderImage;
@@ -144,7 +148,8 @@ public class MCODEUtil {
 					 final CySwingApplication swingApplication,
 					 final CyEventHelper eventHelper,
 					 final VisualMappingFunctionFactory discreteMappingFactory,
-					 final VisualMappingFunctionFactory continuousMappingFactory) {
+					 final VisualMappingFunctionFactory continuousMappingFactory,
+					 final FileUtil fileUtil) {
 		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
 		this.rootNetworkFactory = rootNetworkFactory;
@@ -157,6 +162,7 @@ public class MCODEUtil {
 		this.eventHelper = eventHelper;
 		this.discreteMappingFactory = discreteMappingFactory;
 		this.continuousMappingFactory = continuousMappingFactory;
+		this.fileUtil = fileUtil;
 
 		this.reset();
 	}
@@ -469,10 +475,9 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_HEIGHT, 40.0);
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_PAINT, Color.RED);
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.RED);
-			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_PAINT, Color.BLACK);
-			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 5.0);
+			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 0.0);
 
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_WIDTH, 2.0);
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_WIDTH, 5.0);
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_UNSELECTED_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
@@ -648,7 +653,14 @@ public class MCODEUtil {
 		StringBuffer sb = new StringBuffer();
 
 		for (CyNode node : network.getNodeList()) {
-			sb.append(node.getSUID());
+			CyRow row = node.getCyRow();
+			String id = "" + node.getSUID();
+
+			if (row.isSet(CyNetwork.NAME)) {
+				id = row.get(CyNetwork.NAME, String.class);
+			}
+
+			sb.append(id);
 			sb.append(", ");
 		}
 
@@ -666,46 +678,65 @@ public class MCODEUtil {
 	 * @param fileName  The file name to write to
 	 * @return True if the file was written, false otherwise
 	 */
-	public boolean exportMCODEResults(MCODEAlgorithm alg, MCODECluster[] clusters, CyNetwork network, String fileName) {
-		if (alg == null || clusters == null || network == null || fileName == null) {
+	public boolean exportMCODEResults(MCODEAlgorithm alg, MCODECluster[] clusters, CyNetwork network) {
+		if (alg == null || clusters == null || network == null) {
 			return false;
 		}
 
-		String lineSep = System.getProperty("line.separator");
+		final String lineSep = System.getProperty("line.separator");
+		String fileName = null;
+		FileWriter fout = null;
 
 		try {
-			File file = new File(fileName);
-			FileWriter fout = new FileWriter(file);
-			//write header
-			fout.write("MCODE Plugin Results" + lineSep);
-			fout.write("Date: " + DateFormat.getDateTimeInstance().format(new Date()) + lineSep + lineSep);
-			fout.write("Parameters:" + lineSep + alg.getParams().toString() + lineSep);
-			fout.write("Cluster	Score (Density*#Nodes)\tNodes\tEdges\tNode IDs" + lineSep);
+			// Call save method in MCODE get the file name
+			Collection<FileChooserFilter> filters = new ArrayList<FileChooserFilter>();
+			filters.add(new FileChooserFilter("BioPAX format", "rdf"));
+			File file = fileUtil.getFile(swingApplication.getJFrame(),
+										 "Export Graph as Interactions",
+										 FileUtil.SAVE,
+										 filters);
 
-			// get sub-networks for all clusters, score and rank them
-			// convert the ArrayList to an array of GraphPerspectives and sort it by cluster score
-			for (int i = 0; i < clusters.length; i++) {
-				CyNetwork clusterNetwork = clusters[i].getNetwork();
-				fout.write((i + 1) + "\t"); //rank
-				NumberFormat nf = NumberFormat.getInstance();
-				nf.setMaximumFractionDigits(3);
-				fout.write(nf.format(clusters[i].getClusterScore()) + "\t");
-				// cluster size - format: (# prot, # intx)
-				fout.write(clusterNetwork.getNodeCount() + "\t");
-				fout.write(clusterNetwork.getEdgeCount() + "\t");
-				// create a string of node names - this can be long
-				fout.write(getNodeNameList(clusterNetwork) + lineSep);
+			if (file != null) {
+				fileName = file.getAbsolutePath();
+				fout = new FileWriter(file);
+
+				// Write header
+				fout.write("MCODE Plugin Results" + lineSep);
+				fout.write("Date: " + DateFormat.getDateTimeInstance().format(new Date()) + lineSep + lineSep);
+				fout.write("Parameters:" + lineSep + alg.getParams().toString() + lineSep);
+				fout.write("Cluster	Score (Density*#Nodes)\tNodes\tEdges\tNode IDs" + lineSep);
+
+				// Get sub-networks for all clusters, score and rank them
+				// convert the ArrayList to an array of GraphPerspectives and sort it by cluster score
+				for (int i = 0; i < clusters.length; i++) {
+					CyNetwork clusterNetwork = clusters[i].getNetwork();
+					fout.write((i + 1) + "\t"); //rank
+					NumberFormat nf = NumberFormat.getInstance();
+					nf.setMaximumFractionDigits(3);
+					fout.write(nf.format(clusters[i].getClusterScore()) + "\t");
+					// cluster size - format: (# prot, # intx)
+					fout.write(clusterNetwork.getNodeCount() + "\t");
+					fout.write(clusterNetwork.getEdgeCount() + "\t");
+					// create a string of node names - this can be long
+					fout.write(getNodeNameList(clusterNetwork) + lineSep);
+				}
+				return true;
 			}
-
-			fout.close();
-
-			return true;
 		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null,
 										  e.toString(),
 										  "Error Writing to \"" + fileName + "\"",
 										  JOptionPane.ERROR_MESSAGE);
-			return false;
+		} finally {
+			if (fout != null) {
+				try {
+					fout.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
+
+		return false;
 	}
 }

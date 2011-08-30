@@ -70,6 +70,7 @@
 		<constructor-arg ref="cyEventHelperServiceRef" />
 		<constructor-arg ref="discreteMappingFactoryServiceRef" />
 		<constructor-arg ref="continuousMappingFactoryServiceRef" />
+		<constructor-arg ref="fileUtilServiceRef" />
 	</bean>
 	
 	<!-- Other beans -->

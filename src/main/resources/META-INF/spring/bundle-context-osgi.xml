@@ -41,6 +41,9 @@
         interface="org.cytoscape.view.presentation.RenderingEngineFactory"
         filter="(id=ding)" />
         
+    <osgi:reference id="fileUtilServiceRef"
+        interface="org.cytoscape.util.swing.FileUtil" />
+        
     <osgi:reference id="openBrowserServiceRef"
         interface="org.cytoscape.util.swing.OpenBrowser" />
         
