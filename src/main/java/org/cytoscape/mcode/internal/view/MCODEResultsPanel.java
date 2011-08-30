@@ -47,14 +47,11 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.mcode.internal.MCODEDiscardResultAction;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
-import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.util.MCODEResources;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
@@ -63,7 +60,6 @@ import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
-import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.FileChooserFilter;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
@@ -107,9 +103,8 @@ import org.cytoscape.view.vizmap.VisualStyle;
 /**
  * Reports the results of MCODE cluster finding. This class sets up the UI.
  */
+@SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
-
-	private static final long serialVersionUID = -5143585327294821490L;
 
 	private int resultId;
 	private MCODEAlgorithm alg;
@@ -119,7 +114,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	// table size parameters
 	private final int graphPicSize = 80;
 	private final int defaultRowHeight = graphPicSize + 8;
-	private int preferredTableWidth = 0; // incremented below
 	// Actual cluster data
 	private CyNetwork network; // Keep a record of the original input record for use in
 	// the table row selection listener
@@ -133,7 +127,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private int enumerationSelection = 0;
 
 	// Graphical classes
-	private GraphDrawer drawer;
 	private MCODELoader loader;
 
 	private final MCODEUtil mcodeutil;
@@ -179,7 +172,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		add(clusterBrowserPanel, BorderLayout.CENTER);
 		add(bottomPanel, BorderLayout.SOUTH);
 
-		drawer = new GraphDrawer();
 		loader = new MCODELoader(table, graphPicSize, graphPicSize);
 
 		this.setSize(this.getMinimumSize());
@@ -208,6 +200,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 	public int getResultId() {
 		return this.resultId;
+	}
+
+	public CyNetworkView getNetworkView() {
+		return networkView;
 	}
 
 	public void discard(final boolean requestUserConfirmation) {
@@ -418,9 +414,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	public double setNodeAttributesAndGetMaxScore() {
 		network.getDefaultNodeTable().deleteColumn("MCODE_Cluster");
 		network.getDefaultNodeTable().deleteColumn("MCODE_Node_Status");
+		network.getDefaultNodeTable().deleteColumn("MCODE_Score");
 
 		network.getDefaultNodeTable().createListColumn("MCODE_Cluster", String.class, false);
 		network.getDefaultNodeTable().createColumn("MCODE_Node_Status", String.class, false);
+		network.getDefaultNodeTable().createColumn("MCODE_Score", Double.class, false);
 
 		for (CyNode n : network.getNodeList()) {
 			int rgi = n.getIndex();
@@ -462,8 +460,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private class CreateSubNetworkAction extends AbstractAction {
 
-		private static final long serialVersionUID = -7055711916961537608L;
-
 		int selectedRow;
 		MCODEResultsPanel trigger;
 
@@ -480,7 +476,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final CyNetwork clusterNetwork = cluster.getNetwork();
 			final String title = trigger.getResultId() + ": " + cluster.getClusterName() + " (Score: " +
 								 nf.format(cluster.getClusterScore()) + ")";
-			// create the child network and view
+			// Create the child network and view
 			final SwingWorker<CyNetworkView, ?> worker = new SwingWorker<CyNetworkView, Object>() {
 
 				@Override
@@ -546,8 +542,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * Handles the data to be displayed in the cluster browser table
 	 */
 	private class MCODEClusterBrowserTableModel extends AbstractTableModel {
-
-		private static final long serialVersionUID = -134271440356382245L;
 
 		// Create column headings
 		String[] columnNames = { "Network", "Details" };
@@ -635,13 +629,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 		// data
 
-		public MCODEResultsEnumeratorTableModel(HashMap enumerations) {
+		public MCODEResultsEnumeratorTableModel(HashMap<?, ?> enumerations) {
 			listIt(enumerations);
 		}
 
-		public void listIt(HashMap enumerations) {
+		public void listIt(HashMap<?, ?> enumerations) {
 			// First we sort the hash map of attributes values and their occurrences
-			ArrayList enumerationsSorted = sortMap(enumerations);
+			ArrayList<?> enumerationsSorted = sortMap(enumerations);
 			// Then we put it into the data array in reverse order so that the
 			// most frequent attribute value is on top
 			Object[][] newData = new Object[enumerationsSorted.size()][columnNames.length];
@@ -721,18 +715,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 
 		// Sort the entries with own comparator for the values:
-		Arrays.sort(entries, new Comparator() {
+		Arrays.sort(entries, new Comparator<Map.Entry>() {
 
-			public int compareTo(Object o1, Object o2) {
-				Map.Entry le = (Map.Entry) o1;
-				Map.Entry re = (Map.Entry) o2;
-				return ((Comparable) le.getValue()).compareTo((Comparable) re.getValue());
+			public int compareTo(Map.Entry o1, Map.Entry o2) {
+				return ((Comparable) o1.getValue()).compareTo((Comparable) o2.getValue());
 			}
 
-			public int compare(Object o1, Object o2) {
-				Map.Entry le = (Map.Entry) o1;
-				Map.Entry re = (Map.Entry) o2;
-				return ((Comparable) le.getValue()).compareTo((Comparable) re.getValue());
+			public int compare(Map.Entry o1, Map.Entry o2) {
+				return ((Comparable) o1.getValue()).compareTo((Comparable) o2.getValue());
 			}
 		});
 

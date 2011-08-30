@@ -1,6 +1,8 @@
 package org.cytoscape.mcode.internal.util;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -25,6 +27,8 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
@@ -47,6 +51,8 @@ import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.View;
+import org.cytoscape.view.model.VisualLexicon;
+import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
 import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
@@ -114,7 +120,6 @@ public class MCODEUtil {
 	private final CyEventHelper eventHelper;
 	private final VisualMappingFunctionFactory discreteMappingFactory;
 	private final VisualMappingFunctionFactory continuousMappingFactory;
-	private final VisualMappingFunctionFactory passthroughMappingFactory;
 
 	private boolean interrupted;
 	private Image placeHolderImage;
@@ -139,8 +144,7 @@ public class MCODEUtil {
 					 final CySwingApplication swingApplication,
 					 final CyEventHelper eventHelper,
 					 final VisualMappingFunctionFactory discreteMappingFactory,
-					 final VisualMappingFunctionFactory continuousMappingFactory,
-					 final VisualMappingFunctionFactory passthroughMappingFactory) {
+					 final VisualMappingFunctionFactory continuousMappingFactory) {
 		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
 		this.rootNetworkFactory = rootNetworkFactory;
@@ -153,7 +157,6 @@ public class MCODEUtil {
 		this.eventHelper = eventHelper;
 		this.discreteMappingFactory = discreteMappingFactory;
 		this.continuousMappingFactory = continuousMappingFactory;
-		this.passthroughMappingFactory = passthroughMappingFactory;
 
 		this.reset();
 	}
@@ -285,6 +288,7 @@ public class MCODEUtil {
 				return null;
 			}
 
+			// Node position
 			final double x;
 			final double y;
 
@@ -314,6 +318,14 @@ public class MCODEUtil {
 			nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x);
 			nv.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, y);
 
+			// Node shape
+			if (cluster.getSeedNode() == nv.getModel().getIndex()) {
+				nv.setLockedValue(RichVisualLexicon.NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
+			} else {
+				nv.setLockedValue(RichVisualLexicon.NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
+			}
+
+			// Update loader
 			if (loader != null) {
 				progress += 100.0 * (1.0 / (double) clusterView.getNodeViews().size()) *
 							((double) weightSetupNodes / (double) goalTotal);
@@ -321,19 +333,21 @@ public class MCODEUtil {
 			}
 		}
 
-		for (View<CyEdge> ev : clusterView.getEdgeViews()) {
-			if (interrupted) {
-				System.err.println("Interrupted: Edge Setup");
-				if (layouter != null) layouter.resetDoLayout();
-				resetLoading();
+		if (clusterView.getEdgeViews() != null) {
+			for (int i = 0; i < clusterView.getEdgeViews().size(); i++) {
+				if (interrupted) {
+					System.err.println("Interrupted: Edge Setup");
+					if (layouter != null) layouter.resetDoLayout();
+					resetLoading();
 
-				return null;
-			}
+					return null;
+				}
 
-			if (loader != null) {
-				progress += 100.0 * (1.0 / (double) clusterView.getEdgeViews().size()) *
-							((double) weightSetupEdges / (double) goalTotal);
-				loader.setProgress((int) progress, "Setup: edges");
+				if (loader != null) {
+					progress += 100.0 * (1.0 / (double) clusterView.getEdgeViews().size()) *
+								((double) weightSetupEdges / (double) goalTotal);
+					loader.setProgress((int) progress, "Setup: edges");
+				}
 			}
 		}
 
@@ -361,18 +375,27 @@ public class MCODEUtil {
 			@Override
 			public void run() {
 				try {
-					// TODO: remove this workaround when possible to get image off-screen
-					//					displayNetworkView(clusterView);
+					final Dimension size = new Dimension(width, height);
 
-					// Apply style again:
+					JPanel panel = new JPanel();
+					panel.setPreferredSize(size);
+					panel.setSize(size);
+					panel.setMinimumSize(size);
+					panel.setMaximumSize(size);
+					panel.setBackground((Color) vs.getDefaultValue(MinimalVisualLexicon.NETWORK_BACKGROUND_PAINT));
+
+					JWindow window = new JWindow();
+					window.getContentPane().add(panel, BorderLayout.CENTER);
+
+					RenderingEngine<CyNetwork> re = renderingEngineFactory.getInstance(panel, clusterView);
+
 					vs.apply(clusterView);
 					clusterView.fitContent();
 					clusterView.updateView();
+					window.pack();
+					window.repaint();
 
-					//		RenderingEngine<CyNetwork> re = renderingEngineFactory.getInstance(panel, clusterView);
-					RenderingEngine<CyNetwork> re = applicationMgr.getCurrentRenderingEngine();
-					//		image = re.createImage(width, height);
-					//				g.scale(1, 1);
+					re.createImage(width, height);
 					re.printCanvas(g);
 					g.dispose();
 
@@ -381,9 +404,6 @@ public class MCODEUtil {
 					}
 				} catch (Exception ex) {
 					throw new RuntimeException(ex);
-				} finally {
-					// TODO: remove this workaround when possible to get image off-screen
-					//					destroyNetworkViewAndModel(clusterView);
 				}
 			}
 		});
@@ -439,6 +459,7 @@ public class MCODEUtil {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public VisualStyle getClusterStyle() {
 		if (clusterStyle == null) {
 			clusterStyle = visualStyleFactory.getInstance("MCODE Cluster");
@@ -451,22 +472,21 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_PAINT, Color.BLACK);
 			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 5.0);
 
+			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_WIDTH, 2.0);
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_UNSELECTED_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_SELECTED_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
 
-			// TODO            
-			//            if (cluster.getSeedNode().intValue() == nv.getRootGraphIndex()) {
-			//                nv.setShape(NodeView.RECTANGLE);
-			//            } else {
-			//                nv.setShape(NodeView.ELLIPSE);
-			//            }
-			//
-			//            ev.setTargetEdgeEnd(EdgeView.BLACK_ARROW);
-			//            ev.setTargetEdgeEndPaint(Color.CYAN);
-			//            ev.setSourceEdgeEndPaint(Color.CYAN);
+			VisualLexicon lexicon = applicationMgr.getCurrentRenderingEngine().getVisualLexicon();
+			VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
+
+			if (vp != null) {
+				Object arrowValue = vp.parseSerializableString("ARROW");
+				if (arrowValue != null) clusterStyle.setDefaultValue(vp, arrowValue);
+			}
 		}
 
 		return clusterStyle;
@@ -485,35 +505,43 @@ public class MCODEUtil {
 			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
 
 			pluginStyle.addVisualMappingFunction(nodeShapeDm);
-
-			// Node Color:
-			// The lower the score the darker the color
-			pluginStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
-
-			ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-					.createVisualMappingFunction("MCODE_Score", Double.class, MinimalVisualLexicon.NODE_FILL_COLOR);
-
-			final Color MIN_COLOR = Color.BLACK;
-			final Color MAX_COLOR = Color.RED;
-
-			// First we state that everything below or equaling 0 (min) will be white, and everything above that will
-			// start from black and fade into the next boundary color
-			nodeColorCm.addPoint(0.0, new BoundaryRangeValues<Paint>(Color.WHITE, Color.WHITE, MIN_COLOR));
-			// Now we state that anything anything below the max score will fade into red from the lower boundary color
-			// and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
-			// The max value is set by MCODEVisualStyleAction based on the current result set's max score
-			nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<Paint>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
-
-			// TODO: create one style per score and store in a map?
-
-			pluginStyle.addVisualMappingFunction(nodeColorCm);
 		}
+
+		// Node Color:
+		pluginStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
+
+		// Important: Always recreate this mapping function with the new score.
+		pluginStyle.removeVisualMappingFunction(MinimalVisualLexicon.NODE_FILL_COLOR);
+
+		// The lower the score the darker the color
+		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
+				.createVisualMappingFunction("MCODE_Score", Double.class, MinimalVisualLexicon.NODE_FILL_COLOR);
+
+		final Color MIN_COLOR = Color.BLACK;
+		final Color MAX_COLOR = Color.RED;
+
+		// First we state that everything below or equaling 0 (min) will be white, and everything above that will
+		// start from black and fade into the next boundary color
+		nodeColorCm.addPoint(0.0, new BoundaryRangeValues<Paint>(Color.WHITE, Color.WHITE, MIN_COLOR));
+		// Now we state that anything anything below the max score will fade into red from the lower boundary color
+		// and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
+		// The max value is set by MCODEVisualStyleAction based on the current result set's max score
+		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<Paint>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
+
+		pluginStyle.addVisualMappingFunction(nodeColorCm);
 
 		return pluginStyle;
 	}
 
 	public VisualStyle getNetworkViewStyle(CyNetworkView view) {
 		return view != null ? visualMappingMgr.getVisualStyle(view) : null;
+	}
+
+	public void registerVisualStyle(VisualStyle style) {
+		// Add it once only!
+		if (!visualMappingMgr.getAllVisualStyles().contains(style)) {
+			visualMappingMgr.addVisualStyle(style);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -530,7 +558,6 @@ public class MCODEUtil {
 
 		if (view != null) {
 			view.updateView();
-			//			eventHelper.flushPayloadEvents();
 			swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 		}
 	}
@@ -614,7 +641,7 @@ public class MCODEUtil {
 	/**
 	 * Utility method to get the names of all the nodes in a GraphPerspective
 	 *
-	 * @param network The input graph perspective to get the names from
+	 * @param network The input graph network to get the names from
 	 * @return A concatenated set of all node names (separated by a comma)
 	 */
 	public String getNodeNameList(CyNetwork network) {

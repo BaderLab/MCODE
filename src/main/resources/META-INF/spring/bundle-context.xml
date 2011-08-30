@@ -49,6 +49,14 @@
 		<constructor-arg ref="mcodeUtil" />
 	</bean>
 	
+	<bean id="visualStyleAction" class="org.cytoscape.mcode.internal.MCODEVisualStyleAction">
+		<constructor-arg value="Apply MCODE style" />
+		<constructor-arg ref="cyApplicationManagerServiceRef" />
+		<constructor-arg ref="cySwingApplicationServiceRef" />
+		<constructor-arg ref="visualMappingManagerServiceRef" />
+		<constructor-arg ref="mcodeUtil" />
+	</bean>
+	
 	<bean id="mcodeUtil" class="org.cytoscape.mcode.internal.util.MCODEUtil">
 		<constructor-arg ref="dingRenderingEngineFactoryServiceRef" />
 		<constructor-arg ref="cyNetworkViewFactoryServiceRef" />
@@ -62,7 +70,6 @@
 		<constructor-arg ref="cyEventHelperServiceRef" />
 		<constructor-arg ref="discreteMappingFactoryServiceRef" />
 		<constructor-arg ref="continuousMappingFactoryServiceRef" />
-		<constructor-arg ref="passthroughMappingFactoryServiceRef" />
 	</bean>
 	
 	<!-- Other beans -->

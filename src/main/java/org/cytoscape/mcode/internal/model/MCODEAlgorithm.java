@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -166,24 +165,22 @@ public class MCODEAlgorithm {
 	 * Gets the calculated node score of a node from a given result.  Used in MCODEResultsPanel
 	 * during the attribute setting method.
 	 *
-	 * @param rootGraphIndex Integer which is used to identify the nodes in the score-sorted tree map
+	 * @param nodeIndex Integer which is used to identify the nodes in the score-sorted tree map
 	 * @param resultId Id of the results for which we are retrieving a node score
 	 * @return node score as a Double
 	 */
-	public Double getNodeScore(int rootGraphIndex, int resultId) {
-		Double nodeScore = new Double(0.0);
+	public double getNodeScore(int nodeIndex, int resultId) {
 		Map<Double, List<Integer>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
 
-		for (Iterator<Double> score = nodeScoreSortedMap.keySet().iterator(); score.hasNext();) {
-			nodeScore = score.next();
+		for (double nodeScore : nodeScoreSortedMap.keySet()) {
 			List<Integer> nodes = nodeScoreSortedMap.get(nodeScore);
 
-			if (nodes.contains(rootGraphIndex)) {
+			if (nodes.contains(nodeIndex)) {
 				return nodeScore;
 			}
 		}
 
-		return nodeScore;
+		return 0.0;
 	}
 
 	/**
@@ -216,31 +213,24 @@ public class MCODEAlgorithm {
 			return;
 		}
 
-		//initialize
+		// Initialize
 		long msTimeBefore = System.currentTimeMillis();
 		Map<Integer, NodeInfo> nodeInfoHashMap = new HashMap<Integer, NodeInfo>(inputNetwork.getNodeCount());
 
-		//will store Doubles (score) as the key, Lists as values
-		SortedMap<Double, List<Integer>> nodeScoreSortedMap = new TreeMap<Double, List<Integer>>(
-																								 new Comparator<Double>() {
+		// Sort Doubles in descending order
+		Comparator<Double> scoreComparator = new Comparator<Double>() {
 
-																									 //sort Doubles in descending order
-																									 public int compare(Double d1,
-																														Double d2) {
-																										 if (d1 == d2) {
-																											 return 0;
-																										 } else if (d1 < d2) {
-																											 return 1;
-																										 } else {
-																											 return -1;
-																										 }
-																									 }
-																								 });
+			@Override
+			public int compare(Double d1, Double d2) {
+				return d2.compareTo(d1);
+			}
+		};
+		// Will store Doubles (score) as the key, Lists of node indexes as values
+		SortedMap<Double, List<Integer>> nodeScoreSortedMap = new TreeMap<Double, List<Integer>>(scoreComparator);
 
-		//iterate over all nodes and calculate MCODE score
+		// Iterate over all nodes and calculate MCODE score
 		NodeInfo nodeInfo = null;
-		double nodeScore;
-		List<Integer> al;
+		List<Integer> al = null;
 		int i = 0;
 
 		List<CyNode> nodes = inputNetwork.getNodeList();
@@ -249,19 +239,20 @@ public class MCODEAlgorithm {
 			nodeInfo = calcNodeInfo(inputNetwork, n.getIndex());
 			nodeInfoHashMap.put(n.getIndex(), nodeInfo);
 			// Score node
-			nodeScore = scoreNode(nodeInfo);
+			double nodeScore = scoreNode(nodeInfo);
 
 			// Save score for later use in TreeMap
 			// Add a list of nodes to each score in case nodes have the same score
-			if (nodeScoreSortedMap.containsKey(new Double(nodeScore))) {
+			if (nodeScoreSortedMap.containsKey(nodeScore)) {
 				// Already have a node with this score, add it to the list
-				al = nodeScoreSortedMap.get(new Double(nodeScore));
+				al = nodeScoreSortedMap.get(nodeScore);
 				al.add(n.getIndex());
 			} else {
 				al = new ArrayList<Integer>();
 				al.add(n.getIndex());
-				nodeScoreSortedMap.put(new Double(nodeScore), al);
+				nodeScoreSortedMap.put(nodeScore, al);
 			}
+
 			if (taskMonitor != null) {
 				i++;
 				taskMonitor.setProgress((i * 100) / inputNetwork.getNodeCount());
@@ -602,11 +593,11 @@ public class MCODEAlgorithm {
 			neighborhood = neighborIndexes;
 		}
 
-		//extract neighborhood subgraph
+		// extract neighborhood subgraph
 		CySubNetwork gpNodeNeighborhood = mcodeUtil.createSubNetwork(inputNetwork, neighbors);
 
 		if (gpNodeNeighborhood == null) {
-			//this shouldn't happen
+			// this shouldn't happen
 			System.err.println("In " + callerID + ": gpNodeNeighborhood was null.");
 			return null;
 		}
@@ -691,7 +682,7 @@ public class MCODEAlgorithm {
 										   double nodeScoreCutoff,
 										   int maxDepthFromStart,
 										   Map<Integer, NodeInfo> nodeInfoHashMap) {
-		//base cases for recursion
+		// base cases for recursion
 		if (nodeSeenHashMap.containsKey(startNode)) {
 			return true; //don't recheck a node
 		}
@@ -702,24 +693,24 @@ public class MCODEAlgorithm {
 			return true; //don't exceed given depth from start node
 		}
 
-		//Initialization
+		// Initialization
 		Integer currentNeighbor;
 		int numNodeNeighbors = nodeInfoHashMap.get(startNode).numNodeNeighbors;
 		int i = 0;
 
 		for (i = 0; i < numNodeNeighbors; i++) {
-			//go through all currentNode neighbors to check their core density for cluster inclusion
+			// go through all currentNode neighbors to check their core density for cluster inclusion
 			currentNeighbor = nodeInfoHashMap.get(startNode).nodeNeighbors[i];
 
 			if ((!nodeSeenHashMap.containsKey(currentNeighbor)) &&
 				(nodeInfoHashMap.get(currentNeighbor).score >= (startNodeScore - startNodeScore * nodeScoreCutoff))) {
 
-				//add current neighbor
+				// add current neighbor
 				if (!cluster.contains(currentNeighbor)) {
 					cluster.add(currentNeighbor);
 				}
 
-				//try to extend cluster at this node
+				// try to extend cluster at this node
 				getClusterCoreInternal(currentNeighbor,
 									   nodeSeenHashMap,
 									   startNodeScore,
@@ -755,7 +746,7 @@ public class MCODEAlgorithm {
 		// they can be included in another cluster's fluffing step.
 		Map<Integer, Boolean> nodeSeenHashMapInternal = new HashMap<Integer, Boolean>();
 
-		//add all current neighbour's neighbours into cluster (if they have high enough clustering coefficients) and mark them all as seen
+		// add all current neighbour's neighbours into cluster (if they have high enough clustering coefficients) and mark them all as seen
 		for (int i = 0; i < cluster.size(); i++) {
 			currentNode = cluster.get(i);
 
@@ -771,7 +762,7 @@ public class MCODEAlgorithm {
 			}
 		}
 
-		//Add fluffed nodes to cluster
+		// Add fluffed nodes to cluster
 		if (nodesToAdd.size() > 0) {
 			cluster.addAll(nodesToAdd.subList(0, nodesToAdd.size()));
 		}
@@ -790,7 +781,7 @@ public class MCODEAlgorithm {
 			return true;
 		}
 
-		//filter if the cluster does not satisfy the user specified k-core
+		// filter if the cluster does not satisfy the user specified k-core
 		CyNetwork gpCore = getKCore(gpClusterGraph, params.getKCore());
 
 		if (gpCore == null) {
@@ -885,7 +876,7 @@ public class MCODEAlgorithm {
 			return null;
 		}
 
-		//filter all nodes with degree less than k until convergence
+		// filter all nodes with degree less than k until convergence
 		boolean firstLoop = true;
 		CyNetwork outputNetwork = null;
 
@@ -925,7 +916,7 @@ public class MCODEAlgorithm {
 					firstLoop = false;
 				}
 			} else {
-				//stop the loop
+				// stop the loop
 				break;
 			}
 		}

@@ -220,7 +220,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 
 						@Override
 						public void run() {
-							MCODEResultsPanel resultPanel = null;
+							MCODEResultsPanel resultsPanel = null;
 							boolean resultFound = false;
 
 							// Display clusters in a new modal dialog box
@@ -237,11 +237,11 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 																												registrar,
 																												mcodeUtil);
 
-									resultPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network,
+									resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network,
 																		networkView, e.getImageList(), resultId,
 																		swingApplication, discardResultAction);
 
-									registrar.registerService(resultPanel, CytoPanelComponent.class, new Properties());
+									registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 								} else {
 									JOptionPane
 											.showMessageDialog(swingApplication.getJFrame(),
@@ -258,21 +258,13 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 
 							// This if statement ensures that the east cytopanel is not loaded if there are no results in it
 							if (resultFound ||
-								(analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultPanel) >= 0)) {
+								(analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultsPanel) >= 0)) {
 								// Focus the result panel
-								int index = cytoPanel.indexOfComponent(resultPanel);
+								int index = cytoPanel.indexOfComponent(resultsPanel);
 								cytoPanel.setSelectedIndex(index);
 
 								if (cytoPanel.getState() == CytoPanelState.HIDE)
 									cytoPanel.setState(CytoPanelState.DOCK);
-
-								// TODO
-								// Add the MCODE visual style but don't make it active by default.
-								//								VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
-								//								VisualStyle currentStyle = vmm.getVisualStyle();
-								//								vmm.setVisualStyle(MCODEVS);
-								//								vmm.setVisualStyle(currentStyle);
-								//								vmm.applyAppearances();
 							}
 						}
 					});

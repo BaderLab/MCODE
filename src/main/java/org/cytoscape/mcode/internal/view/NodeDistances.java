@@ -1,10 +1,18 @@
 package org.cytoscape.mcode.internal.view;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import javax.swing.SwingWorker;
 
 import org.cytoscape.model.CyEdge;
+import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 
 /**
@@ -21,7 +29,7 @@ public class NodeDistances implements MonitorableTask {
 	public static final int INFINITY = Integer.MAX_VALUE;
 
 	protected List<CyNode> nodesList;
-//	protected GraphPerspective perspective;
+	protected CyNetwork network;
 	protected int[][] distances;
 	protected boolean directed;
 
@@ -36,21 +44,14 @@ public class NodeDistances implements MonitorableTask {
 	/**
 	 * The main constructor
 	 * 
-	 * @param nodesList
-	 *            List of nodes ordered by the index map
-	 * @param perspective
-	 *            The <code>giny.model.GraphPerspective</code> in which the
-	 *            nodes reside
-	 * @param nodeIndexToMatrixIndexMap
-	 *            An index map that maps your root graph indices to the returned
-	 *            matrix indices
+	 * @param nodesList List of nodes ordered by the index map
+	 * @param network The <code>giny.model.GraphPerspective</code> in which the nodes reside
+	 * @param nodeIndexToMatrixIndexMap An index map that maps your root graph indices to the returned matrix indices
 	 */
-	public NodeDistances(List<CyNode> nodesList,
-//						 GraphPerspective perspective,
-						 Map<Integer, Integer> nodeIndexToMatrixIndexMap) {
+	public NodeDistances(List<CyNode> nodesList, CyNetwork network, Map<Integer, Integer> nodeIndexToMatrixIndexMap) {
 		this.nodesList = nodesList;
 		this.nodeIndexToMatrixIndexMap = nodeIndexToMatrixIndexMap;
-//		this.perspective = perspective;
+		this.network = network;
 		this.distances = new int[nodesList.size()][];
 		this.directed = false;
 	}
@@ -64,6 +65,7 @@ public class NodeDistances implements MonitorableTask {
 	 *            spawning the thread that performs the task
 	 */
 	@Override
+	@SuppressWarnings("unchecked")
 	public void start(boolean return_when_done) {
 		final SwingWorker worker = new SwingWorker() {
 
@@ -76,8 +78,14 @@ public class NodeDistances implements MonitorableTask {
 		worker.execute();
 
 		if (return_when_done) {
-			// TODO
-//			worker.get(); // maybe use finished() instead
+			try {
+				// maybe use finished() instead
+				worker.get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -152,13 +160,7 @@ public class NodeDistances implements MonitorableTask {
 
 		CyNode[] nodes = new CyNode[nodesList.size()];
 
-		// TODO: REMOVE
-		// System.err.println( "Calculating all node distances.. for: "
-		// +nodesList.size()+" and "+nodes.length );
-
-		// We don't have to make new Integers all the time, so we store the
-		// index
-		// Objects in this array for reuse.
+		// We don't have to make new Integers all the time, so we store the index objects in this array for reuse
 		Integer[] integers = new Integer[nodes.length];
 
 		// Fill the nodes array with the nodes in their proper index locations.
@@ -171,6 +173,7 @@ public class NodeDistances implements MonitorableTask {
 			if (from_node == null) {
 				continue;
 			}
+
 			index = nodeIndexToMatrixIndexMap.get(from_node.getIndex());
 
 			if ((index < 0) || (index >= nodes.length)) {
@@ -219,11 +222,6 @@ public class NodeDistances implements MonitorableTask {
 				continue;
 			}
 
-			// TODO: REMOVE
-			// System.err.print( "Calculating node distances from graph node " +
-			// from_node );
-			// System.err.flush();
-
 			// Make the distances row and initialize it.
 			if (distances[from_node_index] == null) {
 				distances[from_node_index] = new int[nodes.length];
@@ -264,29 +262,21 @@ public class NodeDistances implements MonitorableTask {
 						}
 						distance_through_to_node = to_node_distance + distances[index][i];
 						if (distance_through_to_node <= distances[from_node_index][i]) {
-							// Any immediate neighbor of a node that's already
-							// been
-							// calculated for that does not already have a
-							// shorter path
-							// calculated from from_node never will, and is thus
-							// complete.
+							// Any immediate neighbor of a node that's already been
+							// calculated for that does not already have a shorter path
+							// calculated from from_node never will, and is thus complete.
 							if (distances[index][i] == 1) {
 								completed_nodes[i] = true;
 							}
 							distances[from_node_index][i] = distance_through_to_node;
 						}
-					} // End for every node, update the distance using the
-					// distance from
-					// to_node.
+					} // End for every node, update the distance using the distance from to_node.
 					// So now we don't need to put any neighbors on the queue or
-					// anything, since they've already been taken care of by the
-					// previous
-					// calculation.
+					// anything, since they've already been taken care of by the previous calculation.
 					continue;
-				} // End if to_node has already had all of its distances
-				// calculated.
+				} // End if to_node has already had all of its distances calculated.
 
-				//neighbors = perspective.neighborsList(to_node).iterator();
+				// neighbors = network.neighborsList(to_node).iterator();
 				neighbors = getNeighbors(to_node);
 
 				for (CyNode neighbor : neighbors) {
@@ -299,9 +289,7 @@ public class NodeDistances implements MonitorableTask {
 					neighbor_index = ((Integer) nodeIndexToMatrixIndexMap.get(new Integer(neighbor.getIndex())))
 							.intValue();
 
-					// If this neighbor was not in the incoming List, we cannot
-					// include
-					// it in any paths.
+					// If this neighbor was not in the incoming List, we cannot include it in any paths.
 					if (nodes[neighbor_index] == null) {
 						distances[from_node_index][neighbor_index] = Integer.MAX_VALUE;
 						continue;
@@ -318,33 +306,18 @@ public class NodeDistances implements MonitorableTask {
 						distances[from_node_index][neighbor_index] = (to_node_distance + 1);
 						queue.addLast(integers[neighbor_index]);
 					}
-
-					// TODO: REMOVE
-					// System.out.print( "." );
-					// System.out.flush();
-
 				} // For each of the next nodes' neighbors
-				// TODO: REMOVE
-				// System.out.print( "|" );
-				// System.out.flush();
 			} // For each to_node, in order of their (present) distances
 
-			// TODO: REMOVE
-			/*
-			 * System.err.println( "done." );
-			 */
 			this.currentProgress++;
 			double percentDone = (this.currentProgress * 100) / this.lengthOfTask;
 			this.statusMessage = "Completed " + percentDone + "%.";
 		} // For each from_node
 
-		// TODO: REMOVE
-		// System.err.println( "..Done calculating all node distances." );
-
 		this.done = true;
 		this.currentProgress = this.lengthOfTask; // why?
 		return distances;
-	}// calculate
+	}
 
 	/**
 	 * @return the <code>int[][]</code> 2D array of calculated distances or null
@@ -352,32 +325,28 @@ public class NodeDistances implements MonitorableTask {
 	 */
 	public int[][] getDistances() {
 		return this.distances;
-	}// getDistances
+	}
 
 	private Collection<CyNode> getNeighbors(CyNode node) {
 		final Set<CyNode> result = new HashSet<CyNode>();
-		// TODO
-//		final int[] adjArray = perspective.getAdjacentEdgeIndicesArray(node.getIndex(), true, true, true);
-//
-//		if (adjArray == null || adjArray.length == 0) return result;
-//
-//		int targetIndex = node.getIndex();
-//		CyEdge curEdge;
-//
-//		for (int i = 0; i < adjArray.length; i++) {
-//			curEdge = Cytoscape.getRootGraph().getEdge(adjArray[i]);
-//
-//			if (curEdge.getSource().getIndex() != targetIndex) {
-//				result.add(curEdge.getSource());
-//				continue;
-//			}
-//
-//			if (curEdge.getTarget().getIndex() != targetIndex) result.add(curEdge.getTarget());
-//		}
+		final Collection<CyEdge> edges = network.getAdjacentEdgeList(node, CyEdge.Type.ANY);
+
+		if (edges == null || edges.size() == 0) return result;
+
+		int targetIndex = node.getIndex();
+
+		for (CyEdge curEdge : edges) {
+			if (curEdge.getSource().getIndex() != targetIndex) {
+				result.add(curEdge.getSource());
+				continue;
+			}
+
+			if (curEdge.getTarget().getIndex() != targetIndex) result.add(curEdge.getTarget());
+		}
 
 		return result;
 	}
-	
+
 	class NodeDistancesTask {
 
 		NodeDistancesTask() {

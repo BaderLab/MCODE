@@ -60,10 +60,6 @@
     <osgi:reference id="continuousMappingFactoryServiceRef"
         interface="org.cytoscape.view.vizmap.VisualMappingFunctionFactory"
         filter="(mapping.type=continuous)" />
-        
-    <osgi:reference id="passthroughMappingFactoryServiceRef"
-        interface="org.cytoscape.view.vizmap.VisualMappingFunctionFactory"
-        filter="(mapping.type=passthrough)" />
 
 	<!-- ================= Export =========================== -->
 
@@ -92,6 +88,13 @@
         <osgi:interfaces>
             <value>org.cytoscape.view.model.events.NetworkViewAddedListener</value>
             <value>org.cytoscape.view.model.events.NetworkViewDestroyedListener</value>
+         </osgi:interfaces>
+    </osgi:service>
+    
+    <osgi:service id="visualStyleActionService" ref="visualStyleAction">
+        <osgi:interfaces>
+            <value>org.cytoscape.application.swing.CyAction</value>
+            <value>org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener</value>
          </osgi:interfaces>
     </osgi:service>
     

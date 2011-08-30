@@ -75,9 +75,8 @@ import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
 /**
  * The parameter change cytpanel which the user can use to select scope and change the scoring and finding parameters
  */
+@SuppressWarnings("serial")
 public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
-
-	private static final long serialVersionUID = 2655227790686546553L;
 
 	private final CySwingApplication swingApplication;
 	private final MCODEUtil mcodeUtil;
@@ -97,25 +96,22 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private MCODECollapsiblePanel clusterFindingPanel;
 	private MCODECollapsiblePanel customizeClusterFindingPanel;
 
-	//Parameters for MCODE
+	// Parameters for MCODE
 	private MCODEParameterSet currentParamsCopy; // stores current parameters - populates panel fields
-
-	//    MCODEMainPanelAction trigger;
-	//    MCODEVisualStyle MCODEVS;
 
 	DecimalFormat decFormat; // used in the formatted text fields
 
 	JPanel clusterFindingContent;
 	JPanel customizeClusterFindingContent;
 
-	//resetable UI elements
+	// resetable UI elements
 
-	//Scoring
+	// Scoring
 	JCheckBox includeLoopsCheckBox;
 	JFormattedTextField degreeCutOffFormattedTextField;
 	JFormattedTextField kCoreFormattedTextField;
 	JFormattedTextField nodeScoreCutoffFormattedTextField;
-	//cluster finding
+	// cluster finding
 	JRadioButton optimizeOption; // only for network scope
 	JRadioButton customizeOption;
 	JCheckBox preprocessCheckBox; // only for node and node set scopes
@@ -131,18 +127,15 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		this.swingApplication = swingApplication;
 		this.mcodeUtil = mcodeUtil;
 		actions = new ArrayList<CyAction>();
-		
+
 		setLayout(new BorderLayout());
 
-		//get the current parameters
-		currentParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(null);
+		// get the current parameters
+		currentParamsCopy = this.mcodeUtil.getCurrentParameters().getParamsCopy(null);
 		currentParamsCopy.setDefaultParams();
 
 		decFormat = new DecimalFormat();
 		decFormat.setParseIntegerOnly(true);
-
-		//        CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-		//        cytoPanel.addCytoPanelListener(new MCODEVisualStyleAction(cytoPanel, MCODEVS));
 
 		// Create the three main panels: scope, advanced options, and bottom
 		// Add all the vertically alligned components to the main panel
@@ -708,6 +701,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 			if (source == degreeCutOffFormattedTextField) {
 				Number value = (Number) degreeCutOffFormattedTextField.getValue();
+				
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setDegreeCutoff(value.intValue());
 				} else {
@@ -717,6 +711,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				}
 			} else if (source == nodeScoreCutoffFormattedTextField) {
 				Number value = (Number) nodeScoreCutoffFormattedTextField.getValue();
+				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					currentParamsCopy.setNodeScoreCutoff(value.doubleValue());
 				} else {
@@ -726,6 +721,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				}
 			} else if (source == kCoreFormattedTextField) {
 				Number value = (Number) kCoreFormattedTextField.getValue();
+				
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setKCore(value.intValue());
 				} else {
@@ -735,6 +731,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				}
 			} else if (source == maxDepthFormattedTextField) {
 				Number value = (Number) maxDepthFormattedTextField.getValue();
+				
 				if ((value != null) && (value.intValue() > 0)) {
 					currentParamsCopy.setMaxDepthFromStart(value.intValue());
 				} else {
@@ -744,6 +741,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				}
 			} else if (source == fluffNodeDensityCutOffFormattedTextField) {
 				Number value = (Number) fluffNodeDensityCutOffFormattedTextField.getValue();
+				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					currentParamsCopy.setFluffNodeDensityCutoff(value.doubleValue());
 				} else {
@@ -752,6 +750,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					invalid = true;
 				}
 			}
+			
 			if (invalid) {
 				JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 											  message,

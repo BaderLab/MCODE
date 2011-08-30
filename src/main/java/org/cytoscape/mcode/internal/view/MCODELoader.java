@@ -50,6 +50,8 @@ import java.awt.image.BufferedImage;
  */
 public class MCODELoader extends ImageIcon implements Runnable {
     
+	private static final long serialVersionUID = 3709336791661338561L;
+	
 	JTable table; //cluster browser table reference
     int selectedRow; //row of cluster
     ImageIcon graphImage; //picture of the graph as is before loading

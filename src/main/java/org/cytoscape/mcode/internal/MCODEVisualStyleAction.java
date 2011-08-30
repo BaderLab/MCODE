@@ -1,6 +1,17 @@
 package org.cytoscape.mcode.internal;
 
-import org.cytoscape.application.swing.CytoPanel;
+import java.awt.Component;
+import java.awt.event.ActionEvent;
+
+import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
+import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
+import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
+import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyle;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -42,44 +53,68 @@ import org.cytoscape.application.swing.CytoPanel;
  * A controller for the MCODE attributes used for visualization. Only the onComponentSelected method is
  * used in this listener to determine when a result has been selected.
  */
-public class MCODEVisualStyleAction /*implements CytoPanelListener*/ {
+public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoPanelComponentSelectedListener {
 
-	private CytoPanel cytoPanel;
-// TODO
-//	public MCODEVisualStyleAction(CytoPanel cytoPanel, MCODEVisualStyle MCODEVS) {
-//		this.cytoPanel = cytoPanel;
-//		this.MCODEVS = MCODEVS;
-//	}
-//
-//	/**
-//	 * Whenever a result tab is selected in the east CytoPanel, the MCODE attributes
-//	 * have to be rewritten to correspond to that particular result. At the same time the
-//	 * Visual Style has to redraw the network given the new attributes.
-//	 *
-//	 * @param componentIndex The index of the component that was selected in the east Cytopanel.  This action only occurs if the component is an instance of the MCODEResultsPanel
-//	 */
-//	@Override
-//	public void onComponentSelected(int componentIndex) {
-//		//When the user selects a tab in the east cytopanel we want to see if it is a results panel
-//		//and if it is we want to re-draw the network with the MCODE visual style and reselect the
-//		//cluster that may be selected in the results panel
-//		Component component = cytoPanel.getSelectedComponent();
-//		if (component instanceof MCODEResultsPanel) {
-//			//to re-initialize the calculators we need the highest score of this particular result set
-//			double maxScore = ((MCODEResultsPanel) component).setNodeAttributesAndGetMaxScore();
-//			//we also need the selected row if one is selected at all
-//			((MCODEResultsPanel) component).selectCluster(null);
-//			int selectedRow = ((MCODEResultsPanel) component).getClusterBrowserTable().getSelectedRow();
-//			((MCODEResultsPanel) component).getClusterBrowserTable().clearSelection();
-//			if (selectedRow >= 0) {
-//				((MCODEResultsPanel) component).getClusterBrowserTable().setRowSelectionInterval(selectedRow,
-//																								 selectedRow);
-//			}
-//
-//			MCODEVS.setMaxValue(maxScore);
-//			MCODEVS.initCalculators();
-//			VisualMappingManager vmm = Cytoscape.getVisualMappingManager();
-//			vmm.applyNodeAppearances();
-//		}
-//	}
+	private static final long serialVersionUID = -6884537645922099638L;
+
+	private final VisualMappingManager visualMappingMgr;
+	private final MCODEUtil mcodeUtil;
+
+	public MCODEVisualStyleAction(final String title,
+								  final CyApplicationManager applicationManager,
+								  final CySwingApplication swingApplication,
+								  final VisualMappingManager visualMappingMgr,
+								  final MCODEUtil mcodeUtil) {
+		super(title, applicationManager, swingApplication);
+		this.visualMappingMgr = visualMappingMgr;
+		this.mcodeUtil = mcodeUtil;
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent event) {
+		// TODO Auto-generated method stub
+	}
+
+	/**
+	 * Whenever an MCODE result tab is selected in the east CytoPanel, the MCODE attributes
+	 * have to be rewritten to correspond to that particular result. At the same time the
+	 * Visual Style has to redraw the network given the new attributes.
+	 */
+	@Override
+	public void handleEvent(CytoPanelComponentSelectedEvent event) {
+		// When the user selects a tab in the east cytopanel we want to see if it is a results panel
+		// and if it is we want to re-draw the network with the MCODE visual style and reselect the
+		// cluster that may be selected in the results panel
+		Component component = event.getCytoPanel().getSelectedComponent();
+
+		if (component instanceof MCODEResultsPanel) {
+			MCODEResultsPanel resultsPanel = (MCODEResultsPanel) component;
+
+			// To re-initialize the calculators we need the highest score of this particular result set
+			double maxScore = resultsPanel.setNodeAttributesAndGetMaxScore();
+			// We also need the selected row if one is selected at all
+			resultsPanel.selectCluster(null);
+			int selectedRow = resultsPanel.getClusterBrowserTable().getSelectedRow();
+			resultsPanel.getClusterBrowserTable().clearSelection();
+
+			if (selectedRow >= 0) {
+				resultsPanel.getClusterBrowserTable().setRowSelectionInterval(selectedRow, selectedRow);
+			}
+
+			// Get updated plugin style
+			VisualStyle pluginStyle = mcodeUtil.getPluginStyle(maxScore);
+			// Register the plugin style but don't make it active by default
+			mcodeUtil.registerVisualStyle(pluginStyle);
+
+			// Update the network view if there is one and it is using the plugin style
+			CyNetworkView netView = resultsPanel.getNetworkView();
+			
+			if (netView != null) {
+				if (visualMappingMgr.getVisualStyle(netView) == pluginStyle) {
+					pluginStyle.apply(netView);
+					netView.updateView();
+				}
+			}
+		}
+	}
 }
