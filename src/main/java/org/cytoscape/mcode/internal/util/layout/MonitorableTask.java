@@ -1,4 +1,4 @@
-package org.cytoscape.mcode.internal.view;
+package org.cytoscape.mcode.internal.util.layout;
 
 import java.lang.String;
 
@@ -9,7 +9,6 @@ import java.lang.String;
  * Note: this was copied from giny.util because it is being phased out.  Eventually
  * the layout API will be available to use (TODO: remove when layout API is available)
  */
-// Ohmagawd!  This is a wonderfully complex and poorly documented interface.
 public interface MonitorableTask {
 
   /**

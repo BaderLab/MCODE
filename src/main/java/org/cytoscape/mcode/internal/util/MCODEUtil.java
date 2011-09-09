@@ -37,8 +37,8 @@ import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
+import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
-import org.cytoscape.mcode.internal.view.SpringEmbeddedLayouter;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
@@ -204,7 +204,7 @@ public class MCODEUtil {
 		return ids != null ? ids : new HashSet<Integer>();
 	}
 
-	public synchronized void addNetworkResult(final long suid) {
+	public void addNetworkResult(final long suid) {
 		Set<Integer> ids = networkResults.get(suid);
 
 		if (ids == null) {
@@ -267,8 +267,8 @@ public class MCODEUtil {
 		// using the respective weighting to get an overall progress global progress
 		int weightSetupNodes = 20; // setting up the nodes and edges is deemed as 25% of the whole task
 		int weightSetupEdges = 5;
-		int weightLayout = 75; // layout it is 70%
-		int goalTotal = weightSetupNodes + weightSetupEdges;
+		double weightLayout = 75.0; // layout it is 70%
+		double goalTotal = weightSetupNodes + weightSetupEdges;
 
 		if (layoutNecessary) {
 			goalTotal += weightLayout;
@@ -644,7 +644,7 @@ public class MCODEUtil {
 	}
 
 	/**
-	 * Utility method to get the names of all the nodes in a GraphPerspective
+	 * Utility method to get the names of all the nodes in a CyNetwork
 	 *
 	 * @param network The input graph network to get the names from
 	 * @return A concatenated set of all node names (separated by a comma)
@@ -690,7 +690,7 @@ public class MCODEUtil {
 		try {
 			// Call save method in MCODE get the file name
 			Collection<FileChooserFilter> filters = new ArrayList<FileChooserFilter>();
-			filters.add(new FileChooserFilter("BioPAX format", "rdf"));
+			filters.add(new FileChooserFilter("BioPAX format", "txt"));
 			File file = fileUtil.getFile(swingApplication.getJFrame(),
 										 "Export Graph as Interactions",
 										 FileUtil.SAVE,
@@ -707,7 +707,7 @@ public class MCODEUtil {
 				fout.write("Cluster	Score (Density*#Nodes)\tNodes\tEdges\tNode IDs" + lineSep);
 
 				// Get sub-networks for all clusters, score and rank them
-				// convert the ArrayList to an array of GraphPerspectives and sort it by cluster score
+				// convert the ArrayList to an array of CyNetworks and sort it by cluster score
 				for (int i = 0; i < clusters.length; i++) {
 					CyNetwork clusterNetwork = clusters[i].getNetwork();
 					fout.write((i + 1) + "\t"); //rank

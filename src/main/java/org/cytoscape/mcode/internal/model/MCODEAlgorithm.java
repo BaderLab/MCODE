@@ -64,7 +64,7 @@ public class MCODEAlgorithm {
 	private TaskMonitor taskMonitor = null;
 
 	//data structure for storing information required for each node
-	private class NodeInfo {
+	private static class NodeInfo {
 
 		double density; //neighborhood density
 		int numNodeNeighbors; //number of node neighbors
@@ -111,8 +111,7 @@ public class MCODEAlgorithm {
 	 */
 	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
 		this.mcodeUtil = mcodeUtil;
-		//get current parameters
-		params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
+		this.params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
 	}
 
 	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
@@ -121,7 +120,7 @@ public class MCODEAlgorithm {
 	}
 
 	public void setTaskMonitor(TaskMonitor taskMonitor, Long networkID) {
-		params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
+		this.params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
 		this.taskMonitor = taskMonitor;
 	}
 
@@ -255,7 +254,7 @@ public class MCODEAlgorithm {
 
 			if (taskMonitor != null) {
 				i++;
-				taskMonitor.setProgress((i * 100) / inputNetwork.getNodeCount());
+				taskMonitor.setProgress((i * 100) / (double) inputNetwork.getNodeCount());
 			}
 		}
 
@@ -353,11 +352,11 @@ public class MCODEAlgorithm {
 						}
 
 						// Create an input graph for the filter and haircut methods
-						CyNetwork gpCluster = createGraphPerspective(alCluster, inputNetwork);
+						CyNetwork clusterNetwork = createClusterNetwork(alCluster, inputNetwork);
 
-						if (!filterCluster(gpCluster)) {
+						if (!filterCluster(clusterNetwork)) {
 							if (params.isHaircut()) {
-								haircutCluster(gpCluster, alCluster);
+								haircutCluster(clusterNetwork, alCluster);
 							}
 
 							if (params.isFluff()) {
@@ -365,8 +364,8 @@ public class MCODEAlgorithm {
 							}
 
 							currentCluster.setALCluster(alCluster);
-							gpCluster = createGraphPerspective(alCluster, inputNetwork);
-							currentCluster.setNetwork(gpCluster);
+							clusterNetwork = createClusterNetwork(alCluster, inputNetwork);
+							currentCluster.setNetwork(clusterNetwork);
 							currentCluster.setClusterScore(scoreCluster(currentCluster));
 							currentCluster.setNodeSeenHashMap(nodeSeenHashMapSnapShot);//store the list of all the nodes that have already been seen and incorporated in other clusters
 							currentCluster.setResultId(resultId);
@@ -471,10 +470,10 @@ public class MCODEAlgorithm {
 		}
 
 		// Create an input graph for the filter and haircut methods
-		CyNetwork gpCluster = createGraphPerspective(alCluster, inputNetwork);
+		CyNetwork clusterNetwork = createClusterNetwork(alCluster, inputNetwork);
 
 		if (params.isHaircut()) {
-			haircutCluster(gpCluster, alCluster);
+			haircutCluster(clusterNetwork, alCluster);
 		}
 
 		if (params.isFluff()) {
@@ -482,14 +481,14 @@ public class MCODEAlgorithm {
 		}
 
 		cluster.setALCluster(alCluster);
-		gpCluster = createGraphPerspective(alCluster, inputNetwork);
-		cluster.setNetwork(gpCluster);
+		clusterNetwork = createClusterNetwork(alCluster, inputNetwork);
+		cluster.setNetwork(clusterNetwork);
 		cluster.setClusterScore(scoreCluster(cluster));
 
 		return cluster;
 	}
 
-	private CyNetwork createGraphPerspective(List<Integer> alCluster, CyNetwork inputNetwork) {
+	private CyNetwork createClusterNetwork(List<Integer> alCluster, CyNetwork inputNetwork) {
 		Set<CyNode> nodes = new HashSet<CyNode>();
 
 		for (int index : alCluster) {
@@ -497,9 +496,9 @@ public class MCODEAlgorithm {
 			nodes.add(n);
 		}
 
-		CyNetwork gpCluster = mcodeUtil.createSubNetwork(inputNetwork, nodes);
+		CyNetwork clusterNetwork = mcodeUtil.createSubNetwork(inputNetwork, nodes);
 
-		return gpCluster;
+		return clusterNetwork;
 	}
 
 	/**
@@ -524,7 +523,7 @@ public class MCODEAlgorithm {
 	 * Score a cluster.  Currently this ranks larger, denser clusters higher, although
 	 * in the future other scoring functions could be created
 	 *
-	 * @param cluster - The GINY GraphPerspective version of the cluster
+	 * @param cluster
 	 * @return The score of the cluster
 	 */
 	public double scoreCluster(MCODECluster cluster) {
@@ -613,17 +612,16 @@ public class MCODEAlgorithm {
 		nodeInfo.numNodeNeighbors = neighborhood.length;
 
 		// Calculate the highest k-core
-		CyNetwork gpCore = null;
 		Integer k = null;
 		Object[] returnArray = getHighestKCore(gpNodeNeighborhood);
 		k = (Integer) returnArray[0];
-		gpCore = (CyNetwork) returnArray[1];
+		CyNetwork kCore = (CyNetwork) returnArray[1];
 		nodeInfo.coreLevel = k.intValue();
 
 		// Calculate the core density - amplifies the density of heavily interconnected regions and attenuates
 		// that of less connected regions
-		if (gpCore != null) {
-			nodeInfo.coreDensity = calcDensity(gpCore, params.isIncludeLoops());
+		if (kCore != null) {
+			nodeInfo.coreDensity = calcDensity(kCore, params.isIncludeLoops());
 		}
 
 		// Record neighbor array for later use in cluster detection step
@@ -773,40 +771,36 @@ public class MCODEAlgorithm {
 	/**
 	 * Checks if the cluster needs to be filtered according to heuristics in this method
 	 *
-	 * @param gpClusterGraph The cluster to check if it passes the filter
+	 * @param clusterNetwork The cluster to check if it passes the filter
 	 * @return true if cluster should be filtered, false otherwise
 	 */
-	private boolean filterCluster(CyNetwork gpClusterGraph) {
-		if (gpClusterGraph == null) {
+	private boolean filterCluster(CyNetwork clusterNetwork) {
+		if (clusterNetwork == null) {
 			return true;
 		}
 
 		// filter if the cluster does not satisfy the user specified k-core
-		CyNetwork gpCore = getKCore(gpClusterGraph, params.getKCore());
+		CyNetwork kCore = getKCore(clusterNetwork, params.getKCore());
 
-		if (gpCore == null) {
-			return true;
-		}
-
-		return false;
+		return kCore == null;
 	}
 
 	/**
 	 * Gives the cluster a haircut (removed singly connected nodes by taking a 2-core)
 	 *
-	 * @param gpClusterGraph The cluster graph
+	 * @param clusterNetwork The cluster graph
 	 * @param cluster        The cluster node ID list (in the original graph)
 	 * @return true
 	 */
-	private boolean haircutCluster(CyNetwork gpClusterGraph, List<Integer> cluster) {
+	private boolean haircutCluster(CyNetwork clusterNetwork, List<Integer> cluster) {
 		// get 2-core
-		CyNetwork gpCore = getKCore(gpClusterGraph, 2);
+		CyNetwork kCore = getKCore(clusterNetwork, 2);
 
-		if (gpCore != null) {
+		if (kCore != null) {
 			// clear the cluster and add all 2-core nodes back into it
 			cluster.clear();
 			// must add back the nodes in a way that preserves gpInputGraph node indices
-			for (CyNode n : gpCore.getNodeList()) {
+			for (CyNode n : kCore.getNodeList()) {
 				cluster.add(n.getIndex());
 			}
 		}
@@ -927,32 +921,32 @@ public class MCODEAlgorithm {
 	/**
 	 * Find the highest k-core in the input graph.
 	 *
-	 * @param gpInputGraph The input network
+	 * @param network The input network
 	 * @return Returns the k-value and the core as an Object array.
 	 *         The first object is the highest k value i.e. objectArray[0]
-	 *         The second object is the highest k-core as a GraphPerspective i.e. objectArray[1]
+	 *         The second object is the highest k-core as a CyNetwork i.e. objectArray[1]
 	 */
-	public Object[] getHighestKCore(CyNetwork gpInputGraph) {
+	public Object[] getHighestKCore(CyNetwork network) {
 		String callerID = "MCODEAlgorithm.getHighestKCore";
 
-		if (gpInputGraph == null) {
-			System.err.println("In " + callerID + ": gpInputGraph was null.");
+		if (network == null) {
+			System.err.println("In " + callerID + ": network was null.");
 			return (null);
 		}
 
 		int i = 1;
-		CyNetwork gpCurCore = null, gpPrevCore = null;
+		CyNetwork curNet = null, prevNet = null;
 
-		while ((gpCurCore = getKCore(gpInputGraph, i)) != null) {
-			gpInputGraph = gpCurCore;
-			gpPrevCore = gpCurCore;
+		while ((curNet = getKCore(network, i)) != null) {
+			network = curNet;
+			prevNet = curNet;
 			i++;
 		}
 
-		Integer k = new Integer(i - 1);
+		Integer k = i - 1;
 		Object[] returnArray = new Object[2];
 		returnArray[0] = k;
-		returnArray[1] = gpPrevCore; //in the last iteration, gpCurCore is null (loop termination condition)
+		returnArray[1] = prevNet; //in the last iteration, curNet is null (loop termination condition)
 
 		return returnArray;
 	}

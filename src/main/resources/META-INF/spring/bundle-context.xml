@@ -8,7 +8,7 @@
 		http://www.springframework.org/schema/context/spring-context-2.5.xsd">
 
 	<!-- Actions -->
-	
+
 	<bean id="openAction" class="org.cytoscape.mcode.internal.MCODEOpenAction">
 		<constructor-arg value="Open MCODE" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
@@ -17,7 +17,7 @@
 		<constructor-arg ref="analyzeAction" />
 		<constructor-arg ref="mcodeUtil" />
 	</bean>
-	
+
 	<bean id="closeAction" class="org.cytoscape.mcode.internal.MCODECloseAction">
 		<constructor-arg value="Close MCODE" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
@@ -32,14 +32,16 @@
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="openBrowserServiceRef" />
 	</bean>
-	
+
 	<bean id="aboutAction" class="org.cytoscape.mcode.internal.MCODEAboutAction">
 		<constructor-arg value="About" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
 		<constructor-arg ref="cySwingApplicationServiceRef" />
 		<constructor-arg ref="openBrowserServiceRef" />
+		<constructor-arg value="${project.version}" />
+		<constructor-arg value="${buildDate}" />
 	</bean>
-	
+
 	<bean id="analyzeAction" class="org.cytoscape.mcode.internal.MCODEAnalyzeAction">
 		<constructor-arg value="Analyze current network" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
@@ -48,7 +50,7 @@
 		<constructor-arg ref="taskManagerServiceRef" />
 		<constructor-arg ref="mcodeUtil" />
 	</bean>
-	
+
 	<bean id="visualStyleAction" class="org.cytoscape.mcode.internal.MCODEVisualStyleAction">
 		<constructor-arg value="Apply MCODE style" />
 		<constructor-arg ref="cyApplicationManagerServiceRef" />
@@ -56,7 +58,7 @@
 		<constructor-arg ref="visualMappingManagerServiceRef" />
 		<constructor-arg ref="mcodeUtil" />
 	</bean>
-	
+
 	<bean id="mcodeUtil" class="org.cytoscape.mcode.internal.util.MCODEUtil">
 		<constructor-arg ref="dingRenderingEngineFactoryServiceRef" />
 		<constructor-arg ref="cyNetworkViewFactoryServiceRef" />
@@ -72,7 +74,7 @@
 		<constructor-arg ref="continuousMappingFactoryServiceRef" />
 		<constructor-arg ref="fileUtilServiceRef" />
 	</bean>
-	
+
 	<!-- Other beans -->
 
 </beans>

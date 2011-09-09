@@ -1,4 +1,4 @@
-package org.cytoscape.mcode.internal.view;
+package org.cytoscape.mcode.internal.util.layout;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -17,8 +17,8 @@ import org.cytoscape.model.CyNode;
 
 /**
  * Calculates the all-pairs-shortest-paths (APSP) of a set of
- * <code>giny.model.Node</code> objects that reside in a
- * <code>giny.model.GraphPerspective</code>. Note: this was copied from
+ * <code>org.cytoscape.model.CyNode</code> objects that reside in a
+ * <code>org.cytoscape.model.CyNetwork</code>. Note: this was copied from
  * giny.util because it is being phased out. Eventually the layout API will be
  * available to use (TODO: remove when layout API is available)
  * 
@@ -45,7 +45,7 @@ public class NodeDistances implements MonitorableTask {
 	 * The main constructor
 	 * 
 	 * @param nodesList List of nodes ordered by the index map
-	 * @param network The <code>giny.model.GraphPerspective</code> in which the nodes reside
+	 * @param network The <code>org.cytoscape.model.CyNetwork</code> in which the nodes reside
 	 * @param nodeIndexToMatrixIndexMap An index map that maps your root graph indices to the returned matrix indices
 	 */
 	public NodeDistances(List<CyNode> nodesList, CyNetwork network, Map<Integer, Integer> nodeIndexToMatrixIndexMap) {
@@ -189,8 +189,7 @@ public class NodeDistances implements MonitorableTask {
 				return null;
 			}
 			nodes[index] = from_node;
-			Integer in = new Integer(index);
-			integers[index] = in;
+			integers[index] = index;
 		}
 
 		LinkedList<Integer> queue = new LinkedList<Integer>();
@@ -286,8 +285,7 @@ public class NodeDistances implements MonitorableTask {
 						return this.distances;
 					}
 
-					neighbor_index = ((Integer) nodeIndexToMatrixIndexMap.get(new Integer(neighbor.getIndex())))
-							.intValue();
+					neighbor_index = nodeIndexToMatrixIndexMap.get(neighbor.getIndex());
 
 					// If this neighbor was not in the incoming List, we cannot include it in any paths.
 					if (nodes[neighbor_index] == null) {
@@ -310,7 +308,7 @@ public class NodeDistances implements MonitorableTask {
 			} // For each to_node, in order of their (present) distances
 
 			this.currentProgress++;
-			double percentDone = (this.currentProgress * 100) / this.lengthOfTask;
+			double percentDone = (this.currentProgress * 100) / (double) this.lengthOfTask;
 			this.statusMessage = "Completed " + percentDone + "%.";
 		} // For each from_node
 

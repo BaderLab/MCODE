@@ -302,7 +302,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 																	 new MCODEMainPanel.FormattedTextFieldAction());
 			String degreeCutOffTip = "Sets the minimum number of\n" + "edges for a node to be scored.";
 			degreeCutOffFormattedTextField.setToolTipText(degreeCutOffTip);
-			degreeCutOffFormattedTextField.setText((new Integer(currentParamsCopy.getDegreeCutoff()).toString()));
+			degreeCutOffFormattedTextField.setText(String.valueOf(currentParamsCopy.getDegreeCutoff()));
 
 			JPanel degreeCutOffPanel = new JPanel() {
 
@@ -420,7 +420,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			String kCoreTip = "Filters out clusters lacking a\n" + "maximally inter-connected core\n"
 							  + "of at least k edges per node.";
 			kCoreFormattedTextField.setToolTipText(kCoreTip);
-			kCoreFormattedTextField.setText((new Integer(currentParamsCopy.getKCore()).toString()));
+			kCoreFormattedTextField.setText(String.valueOf(currentParamsCopy.getKCore()));
 
 			JPanel kCorePanel = new JPanel(new BorderLayout()) {
 
@@ -540,7 +540,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			String maxDepthTip = "Limits the cluster size by setting the\n" + "maximum search distance from a seed\n"
 								 + "node (100 virtually means no limit).";
 			maxDepthFormattedTextField.setToolTipText(maxDepthTip);
-			maxDepthFormattedTextField.setText((new Integer(currentParamsCopy.getMaxDepthFromStart()).toString()));
+			maxDepthFormattedTextField.setText(String.valueOf(currentParamsCopy.getMaxDepthFromStart()));
 
 			JPanel maxDepthPanel = new JPanel(new BorderLayout()) {
 
@@ -705,7 +705,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setDegreeCutoff(value.intValue());
 				} else {
-					source.setValue(new Integer(2));
+					source.setValue(2);
 					message += "The degree cutoff must be greater than 1.";
 					invalid = true;
 				}
@@ -725,7 +725,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setKCore(value.intValue());
 				} else {
-					source.setValue(new Integer(2));
+					source.setValue(2);
 					message += "The K-Core must be greater than 1.";
 					invalid = true;
 				}
@@ -735,7 +735,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				if ((value != null) && (value.intValue() > 0)) {
 					currentParamsCopy.setMaxDepthFromStart(value.intValue());
 				} else {
-					source.setValue(new Integer(1));
+					source.setValue(1);
 					message += "The maximum depth must be greater than 0.";
 					invalid = true;
 				}

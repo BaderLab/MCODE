@@ -51,20 +51,26 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	private static final long serialVersionUID = -8445425993916988045L;
 
 	private final OpenBrowser openBrowser;
+	private final String version;
+	private final String buildDate;
 
 	public MCODEAboutAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
-							final OpenBrowser openBrowser) {
+							final OpenBrowser openBrowser,
+							final String version,
+							final String buildDate) {
 		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
+		this.version = version;
+		this.buildDate = buildDate;
 		setPreferredMenu("Plugins.MCODE");
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//display about box
-		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser);
+		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, version, buildDate);
 		aboutDialog.pack();
 		aboutDialog.setVisible(true);
 	}

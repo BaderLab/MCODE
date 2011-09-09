@@ -5,12 +5,14 @@
 	<properties>
 		<bundle.symbolicName>org.cytoscape.mcode.mcode-plugin</bundle.symbolicName>
 		<bundle.namespace>org.cytoscape.mcode</bundle.namespace>
+		<maven.build.timestamp.format>MMMM yyyy</maven.build.timestamp.format>
+		<buildDate>${maven.build.timestamp}</buildDate>
 	</properties>
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.cytoscape.mcode</groupId>
 	<artifactId>mcode-plugin</artifactId>
-	<version>1.4.0-alpha1-SNAPSHOT</version>
+	<version>1.4.0-alpha2-SNAPSHOT</version>
 
 	<name>${bundle.symbolicName} [${bundle.namespace}]</name>
 
@@ -20,6 +22,17 @@
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.xml</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+				</excludes>
 			</resource>
 		</resources>
 		<!-- Cytoscape requires Java 1.6 -->
@@ -98,32 +111,37 @@
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>application-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>swing-application-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>session-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>swing-util-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>vizmap-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>service-api</artifactId>
-			<version>3.0.0-alpha6-SNAPSHOT</version>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>layout-api</artifactId>
+			<version>3.0.0-alpha7-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Logging -->

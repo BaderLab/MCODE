@@ -1,4 +1,4 @@
-package org.cytoscape.mcode.internal.view;
+package org.cytoscape.mcode.internal.util.layout;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.cytoscape.mcode.internal.view.MCODELoader;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.view.model.CyNetworkView;
@@ -99,7 +100,7 @@ public class SpringEmbeddedLayouter {
 	 * @param loader Loading animation which displays the progress of this process
 	 * @return true if the layout was completed without interruption, false otherwise
 	 */
-	public boolean doLayout(int weightLayout, int goalTotal, double progress, MCODELoader loader) {
+	public boolean doLayout(double weightLayout, double goalTotal, double progress, MCODELoader loader) {
 		// Initialize the layouting.
 		nodeCount = graphView.getModel().getNodeCount();
 		edgeCount = graphView.getModel().getEdgeCount();
@@ -562,7 +563,7 @@ public class SpringEmbeddedLayouter {
 		return new ArrayList<PartialDerivatives>();
 	}
 
-	class PartialDerivatives {
+	static class PartialDerivatives {
 
 		protected View<CyNode> nodeView;
 		public double x;
@@ -610,7 +611,7 @@ public class SpringEmbeddedLayouter {
 		}
 	}
 
-	class PotentialEnergy {
+	static class PotentialEnergy {
 
 		public double totalEnergy = 0.0;
 

@@ -56,6 +56,7 @@ import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.util.MCODEResources;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
+import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
@@ -105,14 +106,15 @@ import org.cytoscape.view.vizmap.VisualStyle;
 @SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
+	// table size parameters
+	private static final int graphPicSize = 80;
+	private static final int defaultRowHeight = graphPicSize + 8;
+	
 	private int resultId;
 	private MCODEAlgorithm alg;
 	private MCODECluster[] clusters;
 	private JTable table;
 	private MCODEResultsPanel.MCODEClusterBrowserTableModel modelBrowser;
-	// table size parameters
-	private final int graphPicSize = 80;
-	private final int defaultRowHeight = graphPicSize + 8;
 	// Actual cluster data
 	private CyNetwork network; // Keep a record of the original input record for use in
 	// the table row selection listener
@@ -172,6 +174,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		add(bottomPanel, BorderLayout.SOUTH);
 
 		loader = new MCODELoader(table, graphPicSize, graphPicSize);
+		loader.start();
 
 		this.setSize(this.getMinimumSize());
 	}
@@ -210,7 +213,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			@Override
 			public void run() {
-				boolean oldRequestUserConfirmation = new Boolean(discardResultAction
+				boolean oldRequestUserConfirmation = Boolean.valueOf(discardResultAction
 						.getValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND).toString());
 
 				discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
@@ -325,10 +328,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 		// Set labels ranging from 0 to 100
 		Dictionary<Integer, JLabel> labelTable = new Hashtable<Integer, JLabel>();
-		labelTable.put(new Integer(0), new JLabel("Min"));
-		labelTable.put(new Integer(1000), new JLabel("Max"));
+		labelTable.put(0, new JLabel("Min"));
+		labelTable.put(1000, new JLabel("Max"));
 		// Make a special label for the initial position
-		labelTable.put(new Integer((int) (currentParamsCopy.getNodeScoreCutoff() * 1000)), new JLabel("^"));
+		labelTable.put((int) (currentParamsCopy.getNodeScoreCutoff() * 1000), new JLabel("^"));
 
 		sizeSlider.setLabelTable(labelTable);
 		sizeSlider.setFont(new Font("Arial", Font.PLAIN, 8));
@@ -495,11 +498,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// (so they don't fall into a local minimum for the SpringEmbedder)
 					// If the SpringEmbedder implementation changes, this code may need to be removed
 					boolean layoutNecessary = false;
-
+					CyNetworkView clusterView = cluster.getView();
+					
 					for (View<CyNode> nv : newNetworkView.getNodeViews()) {
-						if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
+						CyNode node = nv.getModel();
+						View<CyNode> cnv = clusterView != null ? clusterView.getNodeView(node) : null;
+						
+						if (cnv != null) {
 							// If it does, then we take the layout position that was already generated for it
-							View<CyNode> cnv = cluster.getView().getNodeView(nv.getModel());
 							double x = cnv.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
 							double y = cnv.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
 							nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x);
@@ -597,7 +603,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		StringBuffer details = new StringBuffer();
 
 		details.append("Rank: ");
-		details.append((new Integer(cluster.getRank() + 1)).toString());
+		details.append(String.valueOf(cluster.getRank() + 1));
 
 		details.append("\n");
 		details.append("Score: ");
@@ -643,7 +649,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			for (Iterator i = enumerationsSorted.iterator(); i.hasNext();) {
 				Map.Entry mp = (Map.Entry) i.next();
 				newData[c][0] = new StringBuffer(mp.getKey().toString());
-				newData[c][1] = new String(mp.getValue().toString());
+				newData[c][1] = mp.getValue().toString();
 				c--;
 			}
 
@@ -785,11 +791,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							if (!attributeEnumerations.containsKey(value)) {
 								// If the attribute value appears for the first
 								// time, we give it an enumeration of 1 and add it to the enumerations
-								attributeEnumerations.put(value, new Integer(1));
+								attributeEnumerations.put(value, 1);
 							} else {
 								// If it already appeared before, we want to add to the enumeration of the value
 								Integer enumeration = (Integer) attributeEnumerations.get(value);
-								enumeration = new Integer(enumeration.intValue() + 1);
+								enumeration = enumeration.intValue() + 1;
 								attributeEnumerations.put(value, enumeration);
 							}
 						}
@@ -921,7 +927,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * A text area renderer that creates a line wrapped, non-editable text area
 	 */
-	private class JTextAreaRenderer extends JTextArea implements TableCellRenderer {
+	private static class JTextAreaRenderer extends JTextArea implements TableCellRenderer {
 
 		int minHeight;
 

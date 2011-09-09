@@ -137,7 +137,7 @@ public class MCODEAnalyzeTask implements Task {
 				}
 
 				imageList[i] = mcodeUtil.createClusterImage(clusters[i], imageSize, imageSize, null, true, null);
-				taskMonitor.setProgress((i * 100) / clusters.length);
+				taskMonitor.setProgress((i * 100) / (double) clusters.length);
 			}
 
 			success = true;
@@ -162,6 +162,6 @@ public class MCODEAnalyzeTask implements Task {
 	 * @return human readable task title.
 	 */
 	public String getTitle() {
-		return new String("MCODE Network Cluster Detection");
+		return "MCODE Network Cluster Detection";
 	}
 }

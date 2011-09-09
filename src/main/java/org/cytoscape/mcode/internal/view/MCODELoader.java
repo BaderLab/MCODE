@@ -103,7 +103,7 @@ public class MCODELoader extends ImageIcon implements Runnable {
         loading = false;
 
         t = new Thread(this);
-        t.start();
+        
     }
 
     /**
@@ -125,6 +125,7 @@ public class MCODELoader extends ImageIcon implements Runnable {
         loading = true;
     }
 
+    @Override
     public void run() {
         try {
             while (true) {
@@ -228,7 +229,7 @@ public class MCODELoader extends ImageIcon implements Runnable {
         //at the start of each frame we want to first draw the least transparent polygon in the same position on the rotating kisk
         double degreesForTrail = degreesForDisk;
         //Here we find the center of the table cell
-        Point2D center = new Point2D.Double(loader.getWidth() / 2, loader.getHeight() / 2);
+        Point2D center = new Point2D.Double(loader.getWidth() / 2.0, loader.getHeight() / 2.0);
         //these two points will represent the outer ends of the polygon, spinning around the center
         Point2D pointOnCircumference1 = new Point2D.Double();
         Point2D pointOnCircumference2 = new Point2D.Double();
@@ -355,4 +356,8 @@ public class MCODELoader extends ImageIcon implements Runnable {
         this.progress = progress;
         this.process = process;
     }
+
+	public void start() {
+		t.start();
+	}
 }

@@ -58,14 +58,20 @@ public class MCODEAboutDialog extends JDialog {
 	private static final long serialVersionUID = 635333288924094273L;
 
 	private final OpenBrowser openBrowser;
+	private final String version;
+	private final String buildDate;
 
 	/** Main panel for dialog box */
 	private JEditorPane mainContainer;
 
 	public MCODEAboutDialog(final CySwingApplication swingApplication,
-							final OpenBrowser openBrowser) {
+							final OpenBrowser openBrowser,
+							final String version,
+							final String buildDate) {
 		super(swingApplication.getJFrame(), "About MCODE", false);
 		this.openBrowser = openBrowser;
+		this.version = version;
+		this.buildDate = buildDate;
 
 		setResizable(false);
 		setContentPane(getMainContainer());
@@ -88,10 +94,10 @@ public class MCODEAboutDialog extends JDialog {
 
 			String text = "<html><body>" +
 						  logoCode +
-						  "<P align=center><b>MCODE (Molecular Complex Detection) v1.32 (Jun 2011)</b><BR>" +
+						  "<P align=center><b>MCODE (Molecular Complex Detection) v" + version + " (" + buildDate + ")</b><BR>" +
 						  "A Cytoscape PlugIn<BR><BR>" +
 
-						  "Version 1.32 by <a href='http://www.baderlab.org/'>Bader Lab</a>, University of Toronto<BR>" +
+						  "Version " + version + " by <a href='http://www.baderlab.org/'>Bader Lab</a>, University of Toronto<BR>" +
 						  "Version 1.2 by Vuk Pavlovic (<a href='http://www.baderlab.org/'>Bader Lab</a>, University of Toronto)<BR>" +
 						  "Version 1.1 and 1.0 by Gary Bader (while in the <a href='http://cbio.mskcc.org/'>Sander Lab</a>,<BR>" +
 						  "Memorial Sloan-Kettering Cancer Center)<BR><BR>" +

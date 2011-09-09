@@ -43,7 +43,7 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 		if (panel != null) {
 			int resultId = panel.getResultId();
 			Integer confirmed = JOptionPane.YES_OPTION;
-			boolean requestUserConfirmation = new Boolean(getValue(REQUEST_USER_CONFIRMATION_COMMAND).toString());
+			boolean requestUserConfirmation = Boolean.valueOf(getValue(REQUEST_USER_CONFIRMATION_COMMAND).toString());
 
 			if (requestUserConfirmation) {
 				// Must make sure the user wants to close this results panel
