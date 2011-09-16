@@ -89,8 +89,8 @@
     
     <osgi:service id="analyzeActionService" ref="analyzeAction">
         <osgi:interfaces>
-            <value>org.cytoscape.view.model.events.NetworkViewAddedListener</value>
-            <value>org.cytoscape.view.model.events.NetworkViewDestroyedListener</value>
+            <value>org.cytoscape.model.events.NetworkAddedListener</value>
+            <value>org.cytoscape.model.events.NetworkDestroyedListener</value>
          </osgi:interfaces>
     </osgi:service>
     

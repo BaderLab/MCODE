@@ -690,7 +690,7 @@ public class MCODEUtil {
 		try {
 			// Call save method in MCODE get the file name
 			Collection<FileChooserFilter> filters = new ArrayList<FileChooserFilter>();
-			filters.add(new FileChooserFilter("BioPAX format", "txt"));
+			filters.add(new FileChooserFilter("Text format", "txt"));
 			File file = fileUtil.getFile(swingApplication.getJFrame(),
 										 "Export Graph as Interactions",
 										 FileUtil.SAVE,

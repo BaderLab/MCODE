@@ -23,12 +23,12 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.events.NetworkAddedEvent;
+import org.cytoscape.model.events.NetworkAddedListener;
+import org.cytoscape.model.events.NetworkDestroyedEvent;
+import org.cytoscape.model.events.NetworkDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
-import org.cytoscape.view.model.events.NetworkViewAddedEvent;
-import org.cytoscape.view.model.events.NetworkViewAddedListener;
-import org.cytoscape.view.model.events.NetworkViewDestroyedEvent;
-import org.cytoscape.view.model.events.NetworkViewDestroyedListener;
 import org.cytoscape.work.TaskManager;
 
 /**
@@ -70,8 +70,8 @@ import org.cytoscape.work.TaskManager;
 /**
  * Simple score and find action for MCODE. This should be the default for general users.
  */
-public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkViewAddedListener,
-		NetworkViewDestroyedListener {
+public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAddedListener,
+		NetworkDestroyedListener {
 
 	private static final long serialVersionUID = 87924889404093104L;
 
@@ -96,8 +96,9 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 		this.registrar = registrar;
 		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;
-
-		enableFor = "networkAndView";
+		
+		// The analysis should be disabled when there is no network
+		enableFor = "network";
 	}
 
 	/**
@@ -216,58 +217,49 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 
 				@Override
 				public void handleEvent(final AnalysisCompletedEvent e) {
-					SwingUtilities.invokeLater(new Runnable() {
+					MCODEResultsPanel resultsPanel = null;
+					boolean resultFound = false;
 
-						@Override
-						public void run() {
-							MCODEResultsPanel resultsPanel = null;
-							boolean resultFound = false;
+					// Display clusters in a new modal dialog box
+					if (e.isSuccessful()) {
+						if (e.getClusters() != null && e.getClusters().length > 0) {
+							resultFound = true;
+							mcodeUtil.addNetworkResult(network.getSUID());
 
-							// Display clusters in a new modal dialog box
-							if (e.isSuccessful()) {
-								if (e.getClusters() != null && e.getClusters().length > 0) {
-									resultFound = true;
-									mcodeUtil.addNetworkResult(network.getSUID());
+							MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
+																										"Discard Result",
+																										resultId,
+																										applicationManager,
+																										swingApplication,
+																										registrar,
+																										mcodeUtil);
 
-									MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
-																												"Discard Result",
-																												resultId,
-																												applicationManager,
-																												swingApplication,
-																												registrar,
-																												mcodeUtil);
+							resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network, networkView,
+																 e.getImageList(), resultId, swingApplication,
+																 discardResultAction);
 
-									resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network,
-																		networkView, e.getImageList(), resultId,
-																		swingApplication, discardResultAction);
-
-									registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-								} else {
-									JOptionPane
-											.showMessageDialog(swingApplication.getJFrame(),
-															   "No clusters were found.\n"
-																	   + "You can try changing the MCODE parameters or\n"
-																	   + "modifying your node selection if you are using\n"
-																	   + "a selection-specific scope.",
-															   "No Results",
-															   JOptionPane.WARNING_MESSAGE);
-								}
-							}
-
-							CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-
-							// This if statement ensures that the east cytopanel is not loaded if there are no results in it
-							if (resultFound ||
-								(analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultsPanel) >= 0)) {
-								// Focus the result panel
-								int index = cytoPanel.indexOfComponent(resultsPanel);
-								cytoPanel.setSelectedIndex(index);
-
-								if (cytoPanel.getState() == CytoPanelState.HIDE)
-									cytoPanel.setState(CytoPanelState.DOCK);
-							}
+							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+						} else {
+							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
+														  "No clusters were found.\n"
+																  + "You can try changing the MCODE parameters or\n"
+																  + "modifying your node selection if you are using\n"
+																  + "a selection-specific scope.",
+														  "No Results",
+														  JOptionPane.WARNING_MESSAGE);
 						}
-					});
+					}
+
+					CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
+
+					// This if statement ensures that the east cytopanel is not loaded if there are no results in it
+					if (resultFound || (analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultsPanel) >= 0)) {
+						// Focus the result panel
+						int index = cytoPanel.indexOfComponent(resultsPanel);
+						cytoPanel.setSelectedIndex(index);
+
+						if (cytoPanel.getState() == CytoPanelState.HIDE) cytoPanel.setState(CytoPanelState.DOCK);
+					}
 				}
 			};
 
@@ -279,12 +271,12 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkVi
 	}
 
 	@Override
-	public void handleEvent(NetworkViewAddedEvent e) {
+	public void handleEvent(NetworkAddedEvent e) {
 		updateEnableState();
 	}
 
 	@Override
-	public void handleEvent(NetworkViewDestroyedEvent e) {
+	public void handleEvent(NetworkDestroyedEvent e) {
 		updateEnableState();
 	}
 }
