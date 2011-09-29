@@ -13,6 +13,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -34,6 +36,7 @@ import javax.swing.SwingUtilities;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.event.CyEventHelper;
+import org.cytoscape.mcode.internal.CyActivator;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
@@ -124,6 +127,7 @@ public class MCODEUtil {
 	private final VisualMappingFunctionFactory discreteMappingFactory;
 	private final VisualMappingFunctionFactory continuousMappingFactory;
 	private final FileUtil fileUtil;
+	private final Properties props;
 
 	private boolean interrupted;
 	private Image placeHolderImage;
@@ -163,12 +167,17 @@ public class MCODEUtil {
 		this.discreteMappingFactory = discreteMappingFactory;
 		this.continuousMappingFactory = continuousMappingFactory;
 		this.fileUtil = fileUtil;
-
+		this.props = loadProperties("/mcode.properties");
+		
 		this.reset();
 	}
 
 	public int getCurrentResultId() {
 		return currentResultId;
+	}
+	
+	public String getProperty(String key) {
+		return props.getProperty(key);
 	}
 
 	public void reset() {
@@ -738,5 +747,22 @@ public class MCODEUtil {
 		}
 
 		return false;
+	}
+
+	private static Properties loadProperties(String name) {
+		Properties props = new Properties();
+
+		try {
+			InputStream in = CyActivator.class.getResourceAsStream(name);
+
+			if (in != null) {
+				props.load(in);
+				in.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return props;
 	}
 }

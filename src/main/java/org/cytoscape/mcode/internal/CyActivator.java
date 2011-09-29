@@ -1,41 +1,32 @@
 package org.cytoscape.mcode.internal;
 
-import org.cytoscape.work.TaskManager;
-import org.cytoscape.view.model.CyNetworkViewFactory;
+import java.io.InputStream;
+import java.util.Properties;
+
+import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.CyAction;
+import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
+import org.cytoscape.event.CyEventHelper;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
-import org.cytoscape.view.vizmap.VisualMappingManager;
-import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.event.CyEventHelper;
-import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.CyApplicationManager;
-import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
-import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
-import org.cytoscape.view.vizmap.VisualStyleFactory;
-import org.cytoscape.util.swing.FileUtil;
-import org.cytoscape.view.presentation.RenderingEngineFactory;
-import org.cytoscape.util.swing.OpenBrowser;
-
-import org.cytoscape.mcode.internal.util.MCODEUtil;
-import org.cytoscape.mcode.internal.MCODEVisualStyleAction;
-import org.cytoscape.mcode.internal.MCODEAboutAction;
-import org.cytoscape.mcode.internal.MCODEOpenAction;
-import org.cytoscape.mcode.internal.MCODEAnalyzeAction;
-import org.cytoscape.mcode.internal.MCODECloseAction;
-import org.cytoscape.mcode.internal.MCODEHelpAction;
-
-import org.cytoscape.model.events.NetworkAddedListener;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
-import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
-import org.cytoscape.application.swing.CyAction;
+import org.cytoscape.model.events.NetworkAddedListener;
 import org.cytoscape.model.events.NetworkDestroyedListener;
-
-import org.osgi.framework.BundleContext;
-
+import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
 import org.cytoscape.service.util.AbstractCyActivator;
-
-import java.util.Properties;
+import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.util.swing.FileUtil;
+import org.cytoscape.util.swing.OpenBrowser;
+import org.cytoscape.view.model.CyNetworkViewFactory;
+import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.presentation.RenderingEngineFactory;
+import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyleFactory;
+import org.cytoscape.work.TaskManager;
+import org.osgi.framework.BundleContext;
 
 public class CyActivator extends AbstractCyActivator {
 
@@ -76,8 +67,8 @@ public class CyActivator extends AbstractCyActivator {
 		MCODEOpenAction openAction = new MCODEOpenAction("Open MCODE", applicationManager, swingApplication, serviceRegistrar, analyzeAction, mcodeUtil);
 		MCODECloseAction closeAction = new MCODECloseAction("Close MCODE", applicationManager, swingApplication, serviceRegistrar, mcodeUtil);
 		MCODEHelpAction helpAction = new MCODEHelpAction("Help", applicationManager, swingApplication, openBrowser);
-		MCODEAboutAction aboutAction = new MCODEAboutAction("About", applicationManager, swingApplication, openBrowser, "${project.version}", "${buildDate}");
 		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", applicationManager, swingApplication, visualMappingMgr, mcodeUtil);
+		MCODEAboutAction aboutAction = new MCODEAboutAction("About", applicationManager, swingApplication, openBrowser, mcodeUtil);
 		
 		registerService(bc, openAction, CyAction.class, new Properties());
 		registerService(bc, closeAction, CyAction.class, new Properties());

@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEAboutDialog;
 import org.cytoscape.util.swing.OpenBrowser;
 
@@ -51,26 +52,23 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	private static final long serialVersionUID = -8445425993916988045L;
 
 	private final OpenBrowser openBrowser;
-	private final String version;
-	private final String buildDate;
+	private final MCODEUtil mcodeUtil;
 
 	public MCODEAboutAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
 							final OpenBrowser openBrowser,
-							final String version,
-							final String buildDate) {
+							final MCODEUtil mcodeUtil) {
 		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
-		this.version = version;
-		this.buildDate = buildDate;
+		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Plugins.MCODE");
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//display about box
-		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, version, buildDate);
+		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, mcodeUtil);
 		aboutDialog.pack();
 		aboutDialog.setVisible(true);
 	}

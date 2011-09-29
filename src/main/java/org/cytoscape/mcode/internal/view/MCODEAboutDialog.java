@@ -11,6 +11,7 @@ import javax.swing.text.html.HTMLEditorKit;
 
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.mcode.internal.util.MCODEResources;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
 import org.cytoscape.util.swing.OpenBrowser;
 
@@ -66,12 +67,12 @@ public class MCODEAboutDialog extends JDialog {
 
 	public MCODEAboutDialog(final CySwingApplication swingApplication,
 							final OpenBrowser openBrowser,
-							final String version,
-							final String buildDate) {
+							final MCODEUtil mcodeUtil) {
 		super(swingApplication.getJFrame(), "About MCODE", false);
 		this.openBrowser = openBrowser;
-		this.version = version;
-		this.buildDate = buildDate;
+		
+		version = mcodeUtil.getProperty("project.version");
+		buildDate = mcodeUtil.getProperty("buildDate");
 
 		setResizable(false);
 		setContentPane(getMainContainer());
