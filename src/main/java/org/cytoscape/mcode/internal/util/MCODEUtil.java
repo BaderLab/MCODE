@@ -24,9 +24,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -49,7 +49,7 @@ import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTableEntry;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
-import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
+import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.util.swing.FileChooserFilter;
 import org.cytoscape.util.swing.FileUtil;
@@ -116,7 +116,7 @@ public class MCODEUtil {
 
 	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
 	private final CyNetworkViewFactory networkViewFactory;
-	private final CyRootNetworkFactory rootNetworkFactory;
+	private final CyRootNetworkManager rootNetworkMgr;
 	private final CyApplicationManager applicationMgr;
 	private final CyNetworkViewManager networkViewMgr;
 	private final CyNetworkManager networkMgr;
@@ -132,7 +132,7 @@ public class MCODEUtil {
 	private boolean interrupted;
 	private Image placeHolderImage;
 	private VisualStyle clusterStyle;
-	private VisualStyle pluginStyle;
+	private VisualStyle appStyle;
 	private MCODECurrentParameters currentParameters;
 	// Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkAlgorithms;
@@ -143,7 +143,7 @@ public class MCODEUtil {
 
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 					 final CyNetworkViewFactory networkViewFactory,
-					 final CyRootNetworkFactory rootNetworkFactory,
+					 final CyRootNetworkManager rootNetworkMgr,
 					 final CyApplicationManager applicationMgr,
 					 final CyNetworkManager networkMgr,
 					 final CyNetworkViewManager networkViewMgr,
@@ -156,7 +156,7 @@ public class MCODEUtil {
 					 final FileUtil fileUtil) {
 		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
-		this.rootNetworkFactory = rootNetworkFactory;
+		this.rootNetworkMgr = rootNetworkMgr;
 		this.applicationMgr = applicationMgr;
 		this.networkMgr = networkMgr;
 		this.networkViewMgr = networkViewMgr;
@@ -402,7 +402,7 @@ public class MCODEUtil {
 					JWindow window = new JWindow();
 					window.getContentPane().add(panel, BorderLayout.CENTER);
 
-					RenderingEngine<CyNetwork> re = renderingEngineFactory.getInstance(panel, clusterView);
+					RenderingEngine<CyNetwork> re = renderingEngineFactory.createRenderingEngine(panel, clusterView);
 
 					vs.apply(clusterView);
 					clusterView.fitContent();
@@ -430,7 +430,7 @@ public class MCODEUtil {
 	}
 
 	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
-		final CyRootNetwork root = rootNetworkFactory.convert(net);
+		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
 
 		for (CyNode n : nodes) {
@@ -450,7 +450,7 @@ public class MCODEUtil {
 	}
 
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
-		final CyNetworkView view = networkViewFactory.getNetworkView(net, false);
+		final CyNetworkView view = networkViewFactory.createNetworkView(net, false);
 
 		if (vs == null) vs = visualMappingMgr.getDefaultVisualStyle();
 		visualMappingMgr.setVisualStyle(vs, view);
@@ -477,7 +477,7 @@ public class MCODEUtil {
 	@SuppressWarnings("unchecked")
 	public VisualStyle getClusterStyle() {
 		if (clusterStyle == null) {
-			clusterStyle = visualStyleFactory.getInstance("MCODE Cluster");
+			clusterStyle = visualStyleFactory.createVisualStyle("MCODE Cluster");
 
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_SIZE, 40.0);
 			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_WIDTH, 40.0);
@@ -506,30 +506,30 @@ public class MCODEUtil {
 		return clusterStyle;
 	}
 
-	public VisualStyle getPluginStyle(double maxScore) {
-		if (pluginStyle == null) {
-			pluginStyle = visualStyleFactory.getInstance("MCODE");
+	public VisualStyle getAppStyle(double maxScore) {
+		if (appStyle == null) {
+			appStyle = visualStyleFactory.createVisualStyle("MCODE");
 
 			// Node Shape:
 			DiscreteMapping<String, NodeShape> nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
-					.createVisualMappingFunction("MCODE_Node_Status", String.class, RichVisualLexicon.NODE_SHAPE);
+					.createVisualMappingFunction("MCODE_Node_Status", String.class, null, RichVisualLexicon.NODE_SHAPE);
 
 			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
 			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
 			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
 
-			pluginStyle.addVisualMappingFunction(nodeShapeDm);
+			appStyle.addVisualMappingFunction(nodeShapeDm);
 		}
 
 		// Node Color:
-		pluginStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
+		appStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
 
 		// Important: Always recreate this mapping function with the new score.
-		pluginStyle.removeVisualMappingFunction(MinimalVisualLexicon.NODE_FILL_COLOR);
+		appStyle.removeVisualMappingFunction(MinimalVisualLexicon.NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
 		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-				.createVisualMappingFunction("MCODE_Score", Double.class, MinimalVisualLexicon.NODE_FILL_COLOR);
+				.createVisualMappingFunction("MCODE_Score", Double.class, null, MinimalVisualLexicon.NODE_FILL_COLOR);
 
 		final Color MIN_COLOR = Color.BLACK;
 		final Color MAX_COLOR = Color.RED;
@@ -542,9 +542,9 @@ public class MCODEUtil {
 		// The max value is set by MCODEVisualStyleAction based on the current result set's max score
 		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<Paint>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
 
-		pluginStyle.addVisualMappingFunction(nodeColorCm);
+		appStyle.addVisualMappingFunction(nodeColorCm);
 
-		return pluginStyle;
+		return appStyle;
 	}
 
 	public VisualStyle getNetworkViewStyle(CyNetworkView view) {
@@ -565,7 +565,7 @@ public class MCODEUtil {
 
 		for (final CyTableEntry nodeOrEdge : allElements) {
 			boolean select = elements.contains(nodeOrEdge);
-			nodeOrEdge.getCyRow().set(CyNetwork.SELECTED, select);
+			network.getRow(nodeOrEdge).set(CyNetwork.SELECTED, select);
 		}
 
 		eventHelper.flushPayloadEvents();
@@ -662,7 +662,7 @@ public class MCODEUtil {
 		StringBuffer sb = new StringBuffer();
 
 		for (CyNode node : network.getNodeList()) {
-			CyRow row = node.getCyRow();
+			CyRow row = network.getRow(node);
 			String id = "" + node.getSUID();
 
 			if (row.isSet(CyNetwork.NAME)) {
@@ -710,7 +710,7 @@ public class MCODEUtil {
 				fout = new FileWriter(file);
 
 				// Write header
-				fout.write("MCODE Plugin Results" + lineSep);
+				fout.write("MCODE App Results" + lineSep);
 				fout.write("Date: " + DateFormat.getDateTimeInstance().format(new Date()) + lineSep + lineSep);
 				fout.write("Parameters:" + lineSep + alg.getParams().toString() + lineSep);
 				fout.write("Cluster	Score (Density*#Nodes)\tNodes\tEdges\tNode IDs" + lineSep);

@@ -31,7 +31,7 @@ public class MCODEAnalyzeTaskFactory implements TaskFactory {
 	}
 
 	@Override
-	public TaskIterator getTaskIterator() {
+	public TaskIterator createTaskIterator() {
 		return new TaskIterator(new MCODEAnalyzeTask(network, analyze, resultId, alg, mcodeUtil, listener));
 	}
 

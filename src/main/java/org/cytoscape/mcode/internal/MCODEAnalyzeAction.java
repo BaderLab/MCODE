@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
@@ -116,7 +115,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 		// This should never happen, because the action should be disabled,
 		// but let's keep this extra check anyway 
 		if (network == null) {
-			JOptionPane.showMessageDialog(swingApplication.getJFrame(), "You must have a network to run this plugin.");
+			JOptionPane.showMessageDialog(swingApplication.getJFrame(), "You must have a network to run this app.");
 			return;
 		}
 
@@ -133,7 +132,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 		List<Integer> selectedNodes = new ArrayList<Integer>();
 
 		for (CyNode n : nodes) {
-			if (n.getCyRow().get(CyNetwork.SELECTED, Boolean.class)) {
+			if (network.getRow(n).get(CyNetwork.SELECTED, Boolean.class)) {
 				selectedNodes.add(n.getIndex());
 			}
 		}

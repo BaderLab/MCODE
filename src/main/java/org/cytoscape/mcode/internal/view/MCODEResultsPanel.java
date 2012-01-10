@@ -424,7 +424,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		for (CyNode n : network.getNodeList()) {
 			int rgi = n.getIndex();
 
-			CyRow row = n.getCyRow();
+			CyRow row = network.getRow(n);
 			row.set("MCODE_Node_Status", "Unclustered");
 
 			for (int c = 0; c < clusters.length; c++) {
@@ -483,7 +483,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				@Override
 				protected CyNetworkView doInBackground() throws Exception {
 					CyNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
-					newNetwork.getCyRow().set(CyNetwork.NAME, title);
+					newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
 
 					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
 					CyNetworkView newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
@@ -763,12 +763,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			// If its the generic 'please select' option then we don't do any enumeration
 			if (!attributeName.equals("Please Select")) {
+				final CyNetwork net = clusters[selectedRow].getNetwork();
+				
 				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
-				for (CyNode node : clusters[selectedRow].getNetwork().getNodeList()) {
+				for (CyNode node : net.getNodeList()) {
 					// The attribute value will be stored as a string no matter
 					// what it is but we need an array list because some attributes are maps or lists of any size
 					ArrayList attributeValues = new ArrayList();
-					CyRow row = node.getCyRow();
+					CyRow row = net.getRow(node);
 					Class<?> type = row.getTable().getColumn(attributeName).getType();
 
 					if (Collection.class.isAssignableFrom(type)) {

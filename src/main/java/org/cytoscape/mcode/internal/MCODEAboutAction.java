@@ -62,7 +62,7 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
 		this.mcodeUtil = mcodeUtil;
-		setPreferredMenu("Plugins.MCODE");
+		setPreferredMenu("Apps.MCODE");
 	}
 
 	@Override

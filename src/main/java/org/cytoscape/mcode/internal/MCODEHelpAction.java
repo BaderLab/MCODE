@@ -58,7 +58,7 @@ public class MCODEHelpAction extends AbstractMCODEAction {
 						   final OpenBrowser openBrowser) {
 		super(name, applicationManager, swingApplication);
 		this.openBrowser = openBrowser;
-		setPreferredMenu("Plugins.MCODE");
+		setPreferredMenu("Apps.MCODE");
 	}
 
 	@Override

@@ -1,6 +1,5 @@
 package org.cytoscape.mcode.internal;
 
-import java.io.InputStream;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
@@ -14,7 +13,7 @@ import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.model.events.NetworkAddedListener;
 import org.cytoscape.model.events.NetworkDestroyedListener;
-import org.cytoscape.model.subnetwork.CyRootNetworkFactory;
+import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.FileUtil;
@@ -43,7 +42,7 @@ public class CyActivator extends AbstractCyActivator {
 		TaskManager taskManager = getService(bc, TaskManager.class);
 		
 		CyNetworkViewFactory networkViewFactory = getService(bc, CyNetworkViewFactory.class);
-		CyRootNetworkFactory rootNetworkFactory = getService(bc, CyRootNetworkFactory.class);
+		CyRootNetworkManager rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
 		
 		CySwingApplication swingApplication = getService(bc, CySwingApplication.class);
 		RenderingEngineFactory<CyNetwork> dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
@@ -58,7 +57,7 @@ public class CyActivator extends AbstractCyActivator {
 		OpenBrowser openBrowser = getService(bc, OpenBrowser.class);
 		CyEventHelper eventHelper = getService(bc, CyEventHelper.class);
 		
-		MCODEUtil mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, networkViewFactory, rootNetworkFactory,
+		MCODEUtil mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, networkViewFactory, rootNetworkMgr,
 											applicationManager, networkMgr, networkViewMgr, visualStyleFactory,
 											visualMappingMgr, swingApplication, eventHelper, discreteMappingFactory,
 											continuousMappingFactory, fileUtil);

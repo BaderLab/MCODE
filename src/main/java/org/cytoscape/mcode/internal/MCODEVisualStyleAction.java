@@ -101,17 +101,17 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 				resultsPanel.getClusterBrowserTable().setRowSelectionInterval(selectedRow, selectedRow);
 			}
 
-			// Get updated plugin style
-			VisualStyle pluginStyle = mcodeUtil.getPluginStyle(maxScore);
-			// Register the plugin style but don't make it active by default
-			mcodeUtil.registerVisualStyle(pluginStyle);
+			// Get the updated app's style
+			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
+			// Register the app's style but don't make it active by default
+			mcodeUtil.registerVisualStyle(appStyle);
 
-			// Update the network view if there is one and it is using the plugin style
+			// Update the network view if there is one and it is using the app's style
 			CyNetworkView netView = resultsPanel.getNetworkView();
 			
 			if (netView != null) {
-				if (visualMappingMgr.getVisualStyle(netView) == pluginStyle) {
-					pluginStyle.apply(netView);
+				if (visualMappingMgr.getVisualStyle(netView) == appStyle) {
+					appStyle.apply(netView);
 					netView.updateView();
 				}
 			}

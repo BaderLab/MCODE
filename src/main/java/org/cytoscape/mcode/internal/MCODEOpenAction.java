@@ -12,7 +12,7 @@ import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
 
 /**
- * Creates a new menu item under Plugins menu section.
+ * Creates a new menu item under Apps menu section.
  */
 public class MCODEOpenAction extends AbstractMCODEAction {
 
@@ -32,7 +32,7 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 		this.registrar = registrar;
 		this.analyzeAction = analyzeAction;
 		this.mcodeUtil = mcodeUtil;
-		setPreferredMenu("Plugins.MCODE");
+		setPreferredMenu("Apps.MCODE");
 	}
 
 	/**
@@ -45,7 +45,7 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 		synchronized (this) {
 			MCODEMainPanel mainPanel = null;
 
-			// First we must make sure that the plugin is not already open
+			// First we must make sure that the app is not already open
 			if (!isOpened()) {
 				mainPanel = new MCODEMainPanel(swingApplication, mcodeUtil);
 				mainPanel.addAction(analyzeAction);

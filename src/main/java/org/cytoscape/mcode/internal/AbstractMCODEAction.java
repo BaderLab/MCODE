@@ -16,11 +16,13 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	private static final long serialVersionUID = 844755168181859513L;
 
 	protected final CySwingApplication swingApplication;
+	protected final CyApplicationManager applicationManager;
 
 	public AbstractMCODEAction(final String name,
 							   final CyApplicationManager applicationManager,
 							   final CySwingApplication swingApplication) {
-		super(name, applicationManager);
+		super(name, applicationManager, "network");
+		this.applicationManager = applicationManager;
 		this.swingApplication = swingApplication;
 	}
 
@@ -39,7 +41,7 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	}
 
 	/**
-	 * @return The main panel of the plugin if it is opened, and null otherwise
+	 * @return The main panel of the app if it is opened, and null otherwise
 	 */
 	protected MCODEMainPanel getMainPanel() {
 		CytoPanel cytoPanel = getControlCytoPanel();
@@ -54,7 +56,7 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	}
 
 	/**
-	 * @return The result panels of the plugin if it is opened, or an empty collection otherwise
+	 * @return The result panels of the app if it is opened, or an empty collection otherwise
 	 */
 	protected Collection<MCODEResultsPanel> getResultPanels() {
 		Collection<MCODEResultsPanel> panels = new ArrayList<MCODEResultsPanel>();
@@ -78,7 +80,7 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	}
 
 	/**
-	 * @return true if the plugin is opened and false otherwise
+	 * @return true if the app is opened and false otherwise
 	 */
 	protected boolean isOpened() {
 		return getMainPanel() != null;

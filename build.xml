@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="MCODE Plugin" basedir="." default="install">
+<project name="MCODE App - Cytoscape 3" basedir="." default="install">
     
     <!-- 
          This file should be created by each user when he/she needs to override particular values. 
@@ -14,17 +14,17 @@
     <property environment="env"/>
     
     <property name="build.dir" value="target"/>
-    <property name="cytoscape.plugin.dir" value="${cytoscape.home}/plugins"/>
+    <property name="cytoscape.app.dir" value="${cytoscape.home}/deploy"/>
 
     <target name="install">
-        <copy todir="${cytoscape.plugin.dir}" overwrite="true">
+        <copy todir="${cytoscape.app.dir}" overwrite="true">
             <fileset dir="${build.dir}" includes="*.jar"/>
         </copy>
     </target>
     
     <target name="info">
         <echo>*******************************************************************</echo>
-        <echo>*   This script installs the Cytoscape plugin                     *</echo>
+        <echo>*   This script installs the MCODE Cytoscape app                  *</echo>
         <echo>*******************************************************************</echo>
     </target>
     

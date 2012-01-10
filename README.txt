@@ -35,8 +35,8 @@ Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 INSTALLATION
 ================================================================================
 
-This plugin requires Cytoscape version 3.0 or higher (http://cytoscape.org/).
-TODO: explain instalation
+This app requires Cytoscape version 3.0 or higher (http://cytoscape.org/).
+TODO: explain installation
 
 ================================================================================
 BUILDING WITH APACHE MAVEN

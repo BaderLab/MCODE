@@ -21,7 +21,7 @@ import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 
 /**
- * Closes the plugin panels.
+ * Closes the app panels.
  */
 public class MCODECloseAction extends AbstractMCODEAction implements NetworkAboutToBeDestroyedListener {
 
@@ -38,7 +38,7 @@ public class MCODECloseAction extends AbstractMCODEAction implements NetworkAbou
 		super(name, applicationManager, swingApplication);
 		this.registrar = registrar;
 		this.mcodeUtil = mcodeUtil;
-		setPreferredMenu("Plugins.MCODE");
+		setPreferredMenu("Apps.MCODE");
 	}
 
 	/**
@@ -47,12 +47,12 @@ public class MCODECloseAction extends AbstractMCODEAction implements NetworkAbou
 	 */
 	@Override
 	public void actionPerformed(final ActionEvent event) {
-		//First we must make sure that the plugin is opened
+		//First we must make sure that the app is opened
 		if (isOpened()) {
 			Collection<MCODEResultsPanel> resultPanels = getResultPanels();
 
 			if (resultPanels.size() > 0) {
-				String message = "You are about to close the MCODE plugin.\nDo you wish to continue?";
+				String message = "You are about to close the MCODE app.\nDo you wish to continue?";
 				int result = JOptionPane.showOptionDialog(swingApplication.getJFrame(),
 														  new Object[] { message },
 														  "Confirm",

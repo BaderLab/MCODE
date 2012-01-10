@@ -96,14 +96,14 @@ public class MCODEAboutDialog extends JDialog {
 			String text = "<html><body>" +
 						  logoCode +
 						  "<P align=center><b>MCODE (Molecular Complex Detection) v" + version + " (" + buildDate + ")</b><BR>" +
-						  "A Cytoscape PlugIn<BR><BR>" +
+						  "A Cytoscape App<BR><BR>" +
 
 						  "Version " + version + " by <a href='http://www.baderlab.org/'>Bader Lab</a>, University of Toronto<BR>" +
 						  "Version 1.2 by Vuk Pavlovic (<a href='http://www.baderlab.org/'>Bader Lab</a>, University of Toronto)<BR>" +
 						  "Version 1.1 and 1.0 by Gary Bader (while in the <a href='http://cbio.mskcc.org/'>Sander Lab</a>,<BR>" +
 						  "Memorial Sloan-Kettering Cancer Center)<BR><BR>" +
 
-						  "If you use this plugin in your research, please cite:<BR>" +
+						  "If you use this app in your research, please cite:<BR>" +
 						  "Bader GD, Hogue CW<BR>" +
 						  "<a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=PubMed&list_uids=12525261&dopt=Abstract'>An automated method for finding molecular complexes<BR>" +
 						  "in large protein interaction networks.</a><BR>" +
