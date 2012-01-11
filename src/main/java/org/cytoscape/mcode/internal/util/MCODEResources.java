@@ -27,5 +27,4 @@ public class MCODEResources {
 	public static URL getUrl(ImageName img) {
 		return MCODEResources.class.getResource(img.toString());
 	}
-
 }

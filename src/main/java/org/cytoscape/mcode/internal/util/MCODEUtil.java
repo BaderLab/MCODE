@@ -40,6 +40,7 @@ import org.cytoscape.mcode.internal.CyActivator;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
+import org.cytoscape.mcode.internal.model.MCODEGraph;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
 import org.cytoscape.model.CyEdge;
@@ -72,6 +73,8 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.view.vizmap.mappings.BoundaryRangeValues;
 import org.cytoscape.view.vizmap.mappings.ContinuousMapping;
 import org.cytoscape.view.vizmap.mappings.DiscreteMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -140,6 +143,8 @@ public class MCODEUtil {
 	private Map<Long, Set<Integer>> networkResults;
 
 	private int currentResultId;
+	
+	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 					 final CyNetworkViewFactory networkViewFactory,
@@ -294,7 +299,7 @@ public class MCODEUtil {
 
 		for (View<CyNode> nv : clusterView.getNodeViews()) {
 			if (interrupted) {
-				System.err.println("Interrupted: Node Setup");
+				logger.error("Interrupted: Node Setup");
 				// before we short-circuit the method we reset the interruption so that the method can run without
 				// problems the next time around
 				if (layouter != null) layouter.resetDoLayout();
@@ -351,7 +356,7 @@ public class MCODEUtil {
 		if (clusterView.getEdgeViews() != null) {
 			for (int i = 0; i < clusterView.getEdgeViews().size(); i++) {
 				if (interrupted) {
-					System.err.println("Interrupted: Edge Setup");
+					logger.error("Interrupted: Edge Setup");
 					if (layouter != null) layouter.resetDoLayout();
 					resetLoading();
 
@@ -428,7 +433,7 @@ public class MCODEUtil {
 
 		return image;
 	}
-
+	
 	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
@@ -447,6 +452,26 @@ public class MCODEUtil {
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
 
 		return subNet;
+	}
+	
+	public MCODEGraph createGraph(final CyNetwork net, Collection<CyNode> nodes) {
+		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
+		final Set<CyEdge> edges = new HashSet<CyEdge>();
+		
+		for (CyNode n : nodes) {
+			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+			
+			// Get only the edges that connect nodes that belong to the subnetwork:
+			for (CyEdge e : adjacentEdges) {
+				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
+					edges.add(e);
+				}
+			}
+		}
+		
+		final MCODEGraph graph = new MCODEGraph(root, nodes, edges);
+		
+		return graph;
 	}
 
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {

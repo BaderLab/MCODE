@@ -11,6 +11,8 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskMonitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -62,6 +64,8 @@ public class MCODEAnalyzeTask implements Task {
 	private boolean interrupted;
 	private CyNetwork network;
 	private Image imageList[];
+	
+	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
 
 	/**
 	 * Scores and finds clusters in a given network
@@ -111,7 +115,7 @@ public class MCODEAnalyzeTask implements Task {
 					return;
 				}
 
-				System.err.println("Network was scored in " + alg.getLastScoreTime() + " ms.");
+				logger.error("Network was scored in " + alg.getLastScoreTime() + " ms.");
 			}
 
 			taskMonitor.setProgress(0);

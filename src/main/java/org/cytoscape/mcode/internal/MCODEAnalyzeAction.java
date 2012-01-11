@@ -29,6 +29,8 @@ import org.cytoscape.model.events.NetworkDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.TaskManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -84,6 +86,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 	private final MCODEUtil mcodeUtil;
 
 	int analyze = FIRST_TIME;
+	
+	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeAction.class);
 
 	public MCODEAnalyzeAction(final String title,
 							  final CyApplicationManager applicationManager,
@@ -165,13 +169,13 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 
 		// These statements determine which portion of the algorithm needs to be conducted by
 		// testing which parameters have been modified compared to the last saved parameters.
-		// Here we ensure that only relavant parameters are looked at.  For example, fluff density
+		// Here we ensure that only relevant parameters are looked at.  For example, fluff density
 		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
 		// the clustering parameters are relevant if the optimization is used
 		if (currentParamsCopy.isIncludeLoops() != savedParamsCopy.isIncludeLoops() ||
 			currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff() || analyze == FIRST_TIME) {
 			analyze = RESCORE;
-			System.out.println("Analysis: score network, find clusters");
+			logger.debug("Analysis: score network, find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else if (!currentParamsCopy.getScope().equals(savedParamsCopy.getScope()) ||
 				   (!currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK) && currentParamsCopy
@@ -187,7 +191,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 						   .isFluff() && currentParamsCopy.getFluffNodeDensityCutoff() != savedParamsCopy
 						   .getFluffNodeDensityCutoff())))) {
 			analyze = REFIND;
-			System.out.println("Analysis: find clusters");
+			logger.debug("Analysis: find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
 		} else {
 			analyze = INTERRUPTION;

@@ -49,7 +49,7 @@ public class MCODECluster {
 
 	private List<Integer> alCluster;
 	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unecessarily
-	private CyNetwork network;
+	private MCODEGraph graph;
 	private int seedNode;
 	private Map<Integer, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double clusterScore;
@@ -84,14 +84,18 @@ public class MCODECluster {
 		this.view = view;
 	}
 
+	public MCODEGraph getGraph() {
+		return graph;
+	}
+
+	public void setGraph(MCODEGraph graph) {
+		this.graph = graph;
+	}
+
 	public CyNetwork getNetwork() {
-		return network;
+		return graph != null ? graph.getSubNetwork() : null;
 	}
-
-	public void setNetwork(CyNetwork network) {
-		this.network = network;
-	}
-
+	
 	public double getClusterScore() {
 		return clusterScore;
 	}
