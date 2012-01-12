@@ -3,7 +3,7 @@ package org.cytoscape.mcode.internal.model;
 import java.util.List;
 import java.util.Map;
 
-import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.view.model.CyNetworkView;
 
 /**
@@ -49,7 +49,7 @@ public class MCODECluster {
 
 	private List<Integer> alCluster;
 	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unecessarily
-	private MCODEGraph graph;
+	private CySubNetwork network;
 	private int seedNode;
 	private Map<Integer, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double clusterScore;
@@ -84,18 +84,14 @@ public class MCODECluster {
 		this.view = view;
 	}
 
-	public MCODEGraph getGraph() {
-		return graph;
+	public CySubNetwork getNetwork() {
+		return network;
 	}
 
-	public void setGraph(MCODEGraph graph) {
-		this.graph = graph;
+	public void setNetwork(CySubNetwork network) {
+		this.network = network;
 	}
 
-	public CyNetwork getNetwork() {
-		return graph != null ? graph.getSubNetwork() : null;
-	}
-	
 	public double getClusterScore() {
 		return clusterScore;
 	}

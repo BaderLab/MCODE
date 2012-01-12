@@ -40,14 +40,15 @@ import org.cytoscape.mcode.internal.CyActivator;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
-import org.cytoscape.mcode.internal.model.MCODEGraph;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
+import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
+import org.cytoscape.model.CyTable;
 import org.cytoscape.model.CyTableEntry;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
@@ -433,11 +434,11 @@ public class MCODEUtil {
 
 		return image;
 	}
-	
+private int subNetCount; // TODO: delete
 	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
-
+System.out.println(">> MCODE: Creating sub-network: " + (++subNetCount)); // TODO: delete
 		for (CyNode n : nodes) {
 			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
@@ -452,26 +453,6 @@ public class MCODEUtil {
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
 
 		return subNet;
-	}
-	
-	public MCODEGraph createGraph(final CyNetwork net, Collection<CyNode> nodes) {
-		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
-		final Set<CyEdge> edges = new HashSet<CyEdge>();
-		
-		for (CyNode n : nodes) {
-			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
-			
-			// Get only the edges that connect nodes that belong to the subnetwork:
-			for (CyEdge e : adjacentEdges) {
-				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
-					edges.add(e);
-				}
-			}
-		}
-		
-		final MCODEGraph graph = new MCODEGraph(root, nodes, edges);
-		
-		return graph;
 	}
 
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
@@ -499,6 +480,29 @@ public class MCODEUtil {
 		}
 	}
 
+	public void addVirtualColumns(CySubNetwork subNetwork, CyNetwork parent) {
+		CyTable tbl = subNetwork.getDefaultNodeTable();
+		CyTable parentTbl = parent.getDefaultNodeTable();
+		
+		// Add virtual columns for all of the parent network columns (only nodes):
+		final Collection<CyColumn> columns = parentTbl.getColumns();
+		
+		for (CyColumn col : columns) {
+			final String colName = col.getName();
+			
+			if (tbl.getColumn(colName) == null)
+				tbl.addVirtualColumn(colName, colName, parentTbl, CyNode.SUID, false);
+		}
+		
+		// Add MCODE columns
+		if (tbl.getColumn("MCODE_Cluster") == null)
+			tbl.addVirtualColumn("MCODE_Cluster", "MCODE_Cluster", parentTbl, CyNetwork.SUID, false);
+		if (tbl.getColumn("MCODE_Node_Status") == null)
+			tbl.addVirtualColumn("MCODE_Node_Status", "MCODE_Node_Status", parentTbl, CyNetwork.SUID, false);
+		if (tbl.getColumn("MCODE_Score") == null)
+			tbl.addVirtualColumn("MCODE_Score", "MCODE_Score", parentTbl, CyNetwork.SUID, false);
+	}
+	
 	@SuppressWarnings("unchecked")
 	public VisualStyle getClusterStyle() {
 		if (clusterStyle == null) {
