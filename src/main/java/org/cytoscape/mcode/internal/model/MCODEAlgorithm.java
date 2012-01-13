@@ -62,8 +62,8 @@ import org.slf4j.LoggerFactory;
  */
 public class MCODEAlgorithm {
 
-	private boolean cancelled = false;
-	private TaskMonitor taskMonitor = null;
+	private boolean cancelled;
+	private TaskMonitor taskMonitor;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAlgorithm.class);
 
@@ -228,6 +228,7 @@ public class MCODEAlgorithm {
 				return d2.compareTo(d1);
 			}
 		};
+		
 		// Will store Doubles (score) as the key, Lists of node indexes as values
 		SortedMap<Double, List<Integer>> nodeScoreSortedMap = new TreeMap<Double, List<Integer>>(scoreComparator);
 
@@ -236,7 +237,7 @@ public class MCODEAlgorithm {
 		List<Integer> al = null;
 		int i = 0;
 		List<CyNode> nodes = inputNetwork.getNodeList();
-
+		
 		for (CyNode n : nodes) {
 			nodeInfo = calcNodeInfo(inputNetwork, n.getIndex());
 			nodeInfoHashMap.put(n.getIndex(), nodeInfo);
@@ -255,11 +256,13 @@ public class MCODEAlgorithm {
 			}
 
 			if (taskMonitor != null) {
-				i++;
-				taskMonitor.setProgress((i * 100) / (double) nodes.size());
+				taskMonitor.setProgress( (++i / (double) nodes.size()) );
 			}
+			
+			if (cancelled)
+				break;
 		}
-
+		
 		nodeScoreResultsMap.put(resultId, nodeScoreSortedMap);
 		nodeInfoResultsMap.put(resultId, nodeInfoHashMap);
 
@@ -316,8 +319,8 @@ public class MCODEAlgorithm {
 		long msTimeBefore = System.currentTimeMillis();
 		HashMap<Integer, Boolean> nodeSeenHashMap = new HashMap<Integer, Boolean>(); //key is node ID
 		int currentNode = -1;
-		int findingProgress = 0;
-		int findingTotal = 0;
+		double findingProgress = 0;
+		double findingTotal = 0;
 		Collection<List<Integer>> values = nodeScoreSortedMap.values(); //returns a Collection sorted by key order (descending)
 
 		// In order to track the progress without significant lags (for times when many nodes have the same score
@@ -378,13 +381,11 @@ public class MCODEAlgorithm {
 				}
 
 				if (taskMonitor != null) {
-					findingProgress++;
 					// We want to be sure that only progress changes are reported and not
 					// miniscule decimal increments so that the taskMonitor isn't overwhelmed
-					int newProgress = (findingProgress * 100) / findingTotal;
-					int oldProgress = ((findingProgress - 1) * 100) / findingTotal;
+					double newProgress = ++findingProgress / findingTotal;
 
-					if (newProgress != oldProgress) {
+					if ( Math.round(newProgress * 100) != Math.round((newProgress - 0.01) * 100) ) {
 						taskMonitor.setProgress(newProgress);
 					}
 				}
@@ -486,7 +487,7 @@ public class MCODEAlgorithm {
 		clusterNetwork = createClusterNetwork(alCluster, inputNetwork);
 		cluster.setNetwork(clusterNetwork);
 		cluster.setClusterScore(scoreCluster(cluster));
-
+		
 		return cluster;
 	}
 
@@ -806,7 +807,7 @@ public class MCODEAlgorithm {
 				cluster.add(n.getIndex());
 			}
 		}
-
+		
 		return true;
 	}
 
@@ -876,7 +877,7 @@ public class MCODEAlgorithm {
 		boolean firstLoop = true;
 		CySubNetwork outputNetwork = null;
 
-		while (true) {
+		while (true && !cancelled) {
 			int numDeleted = 0;
 			List<Integer> alCoreNodeIndices = new ArrayList<Integer>(inputNetwork.getNodeCount());
 			List<CyNode> nodes = inputNetwork.getNodeList();

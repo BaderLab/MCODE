@@ -145,6 +145,8 @@ public class MCODEUtil {
 
 	private int currentResultId;
 	
+	private Set<CySubNetwork> subNetworks;
+	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
@@ -191,6 +193,27 @@ public class MCODEUtil {
 		currentParameters = new MCODECurrentParameters();
 		networkAlgorithms = new HashMap<Long, MCODEAlgorithm>();
 		networkResults = new HashMap<Long, Set<Integer>>();
+		subNetworks = new HashSet<CySubNetwork>();
+	}	
+	
+	public void removeUnusedSubNetworks(CyNetwork network, MCODECluster[] clusters) {
+		Set<CySubNetwork> clusterNetworks = new HashSet<CySubNetwork>();
+		
+		if (clusters != null && clusters.length > 0) {
+			for (MCODECluster c : clusters) {
+				clusterNetworks.add(c.getNetwork());
+			}
+		}
+		
+		CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(network);
+		
+		for (CySubNetwork subNet : subNetworks) {
+			if (!clusterNetworks.contains(subNet)) {
+				rootNet.removeSubNetwork(subNet);
+			}
+		}
+		
+		subNetworks.clear();
 	}
 
 	public MCODECurrentParameters getCurrentParameters() {
@@ -207,6 +230,10 @@ public class MCODEUtil {
 
 	public void addNetworkAlgorithm(final long suid, final MCODEAlgorithm alg) {
 		networkAlgorithms.put(suid, alg);
+	}
+	
+	public void removeNetworkAlgorithm(final long suid) {
+		networkAlgorithms.remove(suid);
 	}
 
 	public boolean containsNetworkResult(final long suid) {
@@ -434,11 +461,11 @@ public class MCODEUtil {
 
 		return image;
 	}
-private int subNetCount; // TODO: delete
+
 	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
-System.out.println(">> MCODE: Creating sub-network: " + (++subNetCount)); // TODO: delete
+
 		for (CyNode n : nodes) {
 			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
@@ -449,9 +476,10 @@ System.out.println(">> MCODE: Creating sub-network: " + (++subNetCount)); // TOD
 				}
 			}
 		}
-
+System.out.println(">> MCODE: Creating sub-network..."); // TODO: delete
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
-
+		subNetworks.add(subNet);
+System.out.println(">> MCODE: [ sub-network created! ]"); // TODO: delete
 		return subNet;
 	}
 
@@ -471,13 +499,6 @@ System.out.println(">> MCODE: Creating sub-network: " + (++subNetCount)); // TOD
 
 		view.fitContent();
 		view.updateView();
-	}
-
-	public void destroyNetworkViewAndModel(CyNetworkView view) {
-		if (view != null) {
-			networkViewMgr.destroyNetworkView(view);
-			networkMgr.destroyNetwork(view.getModel());
-		}
 	}
 
 	public void addVirtualColumns(CySubNetwork subNetwork, CyNetwork parent) {
@@ -777,7 +798,7 @@ System.out.println(">> MCODE: Creating sub-network: " + (++subNetCount)); // TOD
 
 		return false;
 	}
-
+	
 	private static Properties loadProperties(String name) {
 		Properties props = new Properties();
 

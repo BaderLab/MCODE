@@ -107,7 +107,8 @@ public class MCODEAnalyzeTask implements Task {
 
 			// Only (re)score the graph if the scoring parameters have been changed
 			if (analyze == MCODEAnalyzeAction.RESCORE) {
-				taskMonitor.setProgress(0);
+				taskMonitor.setProgress(0.001);
+				taskMonitor.setTitle("MCODE Analysis");
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
 				alg.scoreGraph(network, resultId);
 
@@ -115,10 +116,10 @@ public class MCODEAnalyzeTask implements Task {
 					return;
 				}
 
-				logger.error("Network was scored in " + alg.getLastScoreTime() + " ms.");
+				logger.info("Network was scored in " + alg.getLastScoreTime() + " ms.");
 			}
 
-			taskMonitor.setProgress(0);
+			taskMonitor.setProgress(0.001);
 			taskMonitor.setStatusMessage("Finding Clusters (Step 2 of 3)");
 
 			clusters = alg.findClusters(network, resultId);
@@ -127,7 +128,7 @@ public class MCODEAnalyzeTask implements Task {
 				return;
 			}
 
-			taskMonitor.setProgress(0);
+			taskMonitor.setProgress(0.001);
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
 
 			// Also create all the images here for the clusters, since it can be a time consuming operation
@@ -141,13 +142,15 @@ public class MCODEAnalyzeTask implements Task {
 				}
 
 				imageList[i] = mcodeUtil.createClusterImage(clusters[i], imageSize, imageSize, null, true, null);
-				taskMonitor.setProgress((i * 100) / (double) clusters.length);
+				taskMonitor.setProgress((i+1) / (double) clusters.length);
 			}
 
 			success = true;
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		} finally {
+			mcodeUtil.removeUnusedSubNetworks(network, clusters);
+			
 			if (listener != null) {
 				listener.handleEvent(new AnalysisCompletedEvent(success, clusters, imageList));
 			}
@@ -158,6 +161,8 @@ public class MCODEAnalyzeTask implements Task {
 	public void cancel() {
 		this.interrupted = true;
 		alg.setCancelled(true);
+		mcodeUtil.removeNetworkResult(resultId);
+		mcodeUtil.removeNetworkAlgorithm(network.getSUID());
 	}
 
 	/**
