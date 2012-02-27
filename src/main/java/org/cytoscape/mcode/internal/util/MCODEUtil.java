@@ -1,5 +1,7 @@
 package org.cytoscape.mcode.internal.util;
 
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -63,9 +65,7 @@ import org.cytoscape.view.model.VisualLexicon;
 import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
-import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
-import org.cytoscape.view.presentation.property.RichVisualLexicon;
 import org.cytoscape.view.presentation.property.values.NodeShape;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
@@ -322,8 +322,8 @@ public class MCODEUtil {
 		final VisualStyle vs = getClusterStyle();
 		final CyNetworkView clusterView = createNetworkView(cluster.getNetwork(), vs);
 
-		clusterView.setVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH, new Double(width));
-		clusterView.setVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT, new Double(height));
+		clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
+		clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
 
 		for (View<CyNode> nv : clusterView.getNodeViews()) {
 			if (interrupted) {
@@ -344,17 +344,15 @@ public class MCODEUtil {
 			// first prevents the program from throwing a null pointer exception in the second condition)
 			if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
 				//If it does, then we take the layout position that was already generated for it
-				x = cluster.getView().getNodeView(nv.getModel())
-						.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
-				y = cluster.getView().getNodeView(nv.getModel())
-						.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
+				x = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_X_LOCATION);
+				y = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_Y_LOCATION);
 			} else {
 				// Otherwise, randomize node positions before layout so that they don't all layout in a line
 				// (so they don't fall into a local minimum for the SpringEmbedder)
 				// If the SpringEmbedder implementation changes, this code may need to be removed
 				// size is small for many default drawn graphs, thus +100
-				x = (clusterView.getVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH) + 100) * Math.random();
-				y = (clusterView.getVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT) + 100) * Math.random();
+				x = (clusterView.getVisualProperty(NETWORK_WIDTH) + 100) * Math.random();
+				y = (clusterView.getVisualProperty(NETWORK_HEIGHT) + 100) * Math.random();
 
 				if (!layoutNecessary) {
 					goalTotal += weightLayout;
@@ -363,14 +361,14 @@ public class MCODEUtil {
 				}
 			}
 
-			nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x);
-			nv.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, y);
+			nv.setVisualProperty(NODE_X_LOCATION, x);
+			nv.setVisualProperty(NODE_Y_LOCATION, y);
 
 			// Node shape
 			if (cluster.getSeedNode() == nv.getModel().getIndex()) {
-				nv.setLockedValue(RichVisualLexicon.NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
+				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
 			} else {
-				nv.setLockedValue(RichVisualLexicon.NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
+				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
 			}
 
 			// Update loader
@@ -430,7 +428,7 @@ public class MCODEUtil {
 					panel.setSize(size);
 					panel.setMinimumSize(size);
 					panel.setMaximumSize(size);
-					panel.setBackground((Color) vs.getDefaultValue(MinimalVisualLexicon.NETWORK_BACKGROUND_PAINT));
+					panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
 
 					JWindow window = new JWindow();
 					window.getContentPane().add(panel, BorderLayout.CENTER);
@@ -476,10 +474,10 @@ public class MCODEUtil {
 				}
 			}
 		}
-System.out.println(">> MCODE: Creating sub-network..."); // TODO: delete
+		
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
 		subNetworks.add(subNet);
-System.out.println(">> MCODE: [ sub-network created! ]"); // TODO: delete
+		
 		return subNet;
 	}
 
@@ -529,20 +527,20 @@ System.out.println(">> MCODE: [ sub-network created! ]"); // TODO: delete
 		if (clusterStyle == null) {
 			clusterStyle = visualStyleFactory.createVisualStyle("MCODE Cluster");
 
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_SIZE, 40.0);
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_WIDTH, 40.0);
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_HEIGHT, 40.0);
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_PAINT, Color.RED);
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.RED);
-			clusterStyle.setDefaultValue(RichVisualLexicon.NODE_BORDER_WIDTH, 0.0);
+			clusterStyle.setDefaultValue(NODE_SIZE, 40.0);
+			clusterStyle.setDefaultValue(NODE_WIDTH, 40.0);
+			clusterStyle.setDefaultValue(NODE_HEIGHT, 40.0);
+			clusterStyle.setDefaultValue(NODE_PAINT, Color.RED);
+			clusterStyle.setDefaultValue(NODE_FILL_COLOR, Color.RED);
+			clusterStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
 
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_WIDTH, 5.0);
-			clusterStyle.setDefaultValue(MinimalVisualLexicon.EDGE_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_UNSELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_SELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(RichVisualLexicon.EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_WIDTH, 5.0);
+			clusterStyle.setDefaultValue(EDGE_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
 
 			VisualLexicon lexicon = applicationMgr.getCurrentRenderingEngine().getVisualLexicon();
 			VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
@@ -562,7 +560,7 @@ System.out.println(">> MCODE: [ sub-network created! ]"); // TODO: delete
 
 			// Node Shape:
 			DiscreteMapping<String, NodeShape> nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
-					.createVisualMappingFunction("MCODE_Node_Status", String.class, null, RichVisualLexicon.NODE_SHAPE);
+					.createVisualMappingFunction("MCODE_Node_Status", String.class, null, NODE_SHAPE);
 
 			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
 			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
@@ -572,14 +570,14 @@ System.out.println(">> MCODE: [ sub-network created! ]"); // TODO: delete
 		}
 
 		// Node Color:
-		appStyle.setDefaultValue(MinimalVisualLexicon.NODE_FILL_COLOR, Color.WHITE);
+		appStyle.setDefaultValue(NODE_FILL_COLOR, Color.WHITE);
 
 		// Important: Always recreate this mapping function with the new score.
-		appStyle.removeVisualMappingFunction(MinimalVisualLexicon.NODE_FILL_COLOR);
+		appStyle.removeVisualMappingFunction(NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
 		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-				.createVisualMappingFunction("MCODE_Score", Double.class, null, MinimalVisualLexicon.NODE_FILL_COLOR);
+				.createVisualMappingFunction("MCODE_Score", Double.class, null, NODE_FILL_COLOR);
 
 		final Color MIN_COLOR = Color.BLACK;
 		final Color MAX_COLOR = Color.RED;

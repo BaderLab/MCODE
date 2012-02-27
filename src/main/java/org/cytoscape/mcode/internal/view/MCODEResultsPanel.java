@@ -1,5 +1,12 @@
 package org.cytoscape.mcode.internal.view;
 
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_X_LOCATION;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_Y_LOCATION;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -54,8 +61,8 @@ import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODEParameterSet;
 import org.cytoscape.mcode.internal.util.MCODEResources;
-import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
@@ -65,7 +72,6 @@ import org.cytoscape.model.CyTable;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
-import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
 import org.cytoscape.view.vizmap.VisualStyle;
 
 /**
@@ -494,8 +500,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
 					CyNetworkView newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
 
-					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_X_LOCATION, 0.0);
-					newNetworkView.setVisualProperty(MinimalVisualLexicon.NETWORK_CENTER_Y_LOCATION, 0.0);
+					newNetworkView.setVisualProperty(NETWORK_CENTER_X_LOCATION, 0.0);
+					newNetworkView.setVisualProperty(NETWORK_CENTER_Y_LOCATION, 0.0);
 
 					mcodeUtil.displayNetworkView(newNetworkView);
 
@@ -512,21 +518,21 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						
 						if (cnv != null) {
 							// If it does, then we take the layout position that was already generated for it
-							double x = cnv.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
-							double y = cnv.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
-							nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x);
-							nv.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, y);
+							double x = cnv.getVisualProperty(NODE_X_LOCATION);
+							double y = cnv.getVisualProperty(NODE_Y_LOCATION);
+							nv.setVisualProperty(NODE_X_LOCATION, x);
+							nv.setVisualProperty(NODE_Y_LOCATION, y);
 						} else {
 							// This will likely never occur.
 							// Otherwise, randomize node positions before layout so that they don't all layout in a line
 							// (so they don't fall into a local minimum for the SpringEmbedder).
 							// If the SpringEmbedder implementation changes, this code may need to be removed.
-							double w = newNetworkView.getVisualProperty(MinimalVisualLexicon.NETWORK_WIDTH);
-							double h = newNetworkView.getVisualProperty(MinimalVisualLexicon.NETWORK_HEIGHT);
+							double w = newNetworkView.getVisualProperty(NETWORK_WIDTH);
+							double h = newNetworkView.getVisualProperty(NETWORK_HEIGHT);
 
-							nv.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, w * Math.random());
+							nv.setVisualProperty(NODE_X_LOCATION, w * Math.random());
 							// height is small for many default drawn graphs, thus +100
-							nv.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, (h + 100) * Math.random());
+							nv.setVisualProperty(NODE_Y_LOCATION, (h + 100) * Math.random());
 
 							layoutNecessary = true;
 						}

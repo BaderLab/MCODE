@@ -39,7 +39,7 @@ public class CyActivator extends AbstractCyActivator {
 		CyApplicationManager applicationManager = getService(bc, CyApplicationManager.class);
 		CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
 		CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
-		TaskManager taskManager = getService(bc, TaskManager.class);
+		TaskManager<?, ?> taskManager = getService(bc, TaskManager.class);
 		
 		CyNetworkViewFactory networkViewFactory = getService(bc, CyNetworkViewFactory.class);
 		CyRootNetworkManager rootNetworkMgr = getService(bc, CyRootNetworkManager.class);

@@ -1,5 +1,10 @@
 package org.cytoscape.mcode.internal.util.layout;
 
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_HEIGHT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,7 +19,6 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
-import org.cytoscape.view.presentation.property.MinimalVisualLexicon;
 
 /**
  * An implementation of Kamada and Kawai's spring embedded layout algorithm.
@@ -274,9 +278,9 @@ public class SpringEmbeddedLayouter {
 		View<CyNode> nodeView = partials.getNodeView();
 
 		int node_view_index = nodeIndexToMatrixIndexMap.get(nodeView.getModel().getIndex());
-		double node_view_radius = nodeView.getVisualProperty(MinimalVisualLexicon.NODE_WIDTH);
-		double node_view_x = nodeView.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
-		double node_view_y = nodeView.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
+		double node_view_radius = nodeView.getVisualProperty(NODE_WIDTH);
+		double node_view_x = nodeView.getVisualProperty(NODE_X_LOCATION);
+		double node_view_y = nodeView.getVisualProperty(NODE_Y_LOCATION);
 
 		PartialDerivatives other_node_partials = null;
 		View<CyNode> other_node_view = null;
@@ -313,11 +317,11 @@ public class SpringEmbeddedLayouter {
 			}
 
 			other_node_view_index = nodeIndexToMatrixIndexMap.get(other_node_view.getModel().getIndex());
-			other_node_view_radius = Math.max(other_node_view.getVisualProperty(MinimalVisualLexicon.NODE_WIDTH),
-											  other_node_view.getVisualProperty(MinimalVisualLexicon.NODE_HEIGHT));
+			other_node_view_radius = Math.max(other_node_view.getVisualProperty(NODE_WIDTH),
+											  other_node_view.getVisualProperty(NODE_HEIGHT));
 
-			delta_x = (node_view_x - other_node_view.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION));
-			delta_y = (node_view_y - other_node_view.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION));
+			delta_x = (node_view_x - other_node_view.getVisualProperty(NODE_X_LOCATION));
+			delta_y = (node_view_y - other_node_view.getVisualProperty(NODE_Y_LOCATION));
 
 			euclidean_distance = Math.sqrt((delta_x * delta_x) + (delta_y * delta_y));
 			euclidean_distance_cubed = Math.pow(euclidean_distance, 3);
@@ -548,11 +552,11 @@ public class SpringEmbeddedLayouter {
 		double delta_y = (((-partials.y * partials.xx) - (-partials.x * partials.xy)) / denomenator);
 
 		// figure out movement
-		double x = node_view.getVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION);
-		double y = node_view.getVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION);
+		double x = node_view.getVisualProperty(NODE_X_LOCATION);
+		double y = node_view.getVisualProperty(NODE_Y_LOCATION);
 		
-		node_view.setVisualProperty(MinimalVisualLexicon.NODE_X_LOCATION, x + delta_x);
-		node_view.setVisualProperty(MinimalVisualLexicon.NODE_Y_LOCATION, y + delta_y);
+		node_view.setVisualProperty(NODE_X_LOCATION, x + delta_x);
+		node_view.setVisualProperty(NODE_Y_LOCATION, y + delta_y);
 
 		// TODO
 //		Point2D p = node_view.getOffset();
