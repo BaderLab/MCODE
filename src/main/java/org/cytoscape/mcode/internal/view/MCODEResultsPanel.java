@@ -425,7 +425,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			CyTable netNodeTbl = network.getDefaultNodeTable();
 			
 			if (netNodeTbl.getColumn("MCODE_Cluster") == null)
-				netNodeTbl.createColumn("MCODE_Cluster", String.class, false);
+				netNodeTbl.createListColumn("MCODE_Cluster", String.class, false);
 			if (netNodeTbl.getColumn("MCODE_Node_Status") == null)
 				netNodeTbl.createColumn("MCODE_Node_Status", String.class, false);
 			if (netNodeTbl.getColumn("MCODE_Score") == null)
