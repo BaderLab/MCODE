@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.util.swing.OpenBrowser;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 /**
  * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -55,8 +56,9 @@ public class MCODEHelpAction extends AbstractMCODEAction {
 	public MCODEHelpAction(final String name,
 						   final CyApplicationManager applicationManager,
 						   final CySwingApplication swingApplication,
+						   final CyNetworkViewManager netViewManager,
 						   final OpenBrowser openBrowser) {
-		super(name, applicationManager, swingApplication);
+		super(name, applicationManager, swingApplication, netViewManager);
 		this.openBrowser = openBrowser;
 		setPreferredMenu("Apps.MCODE");
 	}

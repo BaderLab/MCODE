@@ -47,7 +47,7 @@ public class MCODEParameterSet {
 	public static String NETWORK = "network";
 	public static String SELECTION = "selection";
 	private String scope;
-	private Integer[] selectedNodes;
+	private Long[] selectedNodes;
 
 	//used in scoring stage
 	private boolean includeLoops;
@@ -105,7 +105,7 @@ public class MCODEParameterSet {
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
 	public MCODEParameterSet(String scope,
-							 Integer[] selectedNodes,
+							 Long[] selectedNodes,
 							 boolean includeLoops,
 							 int degreeCutoff,
 							 int kCore,
@@ -136,7 +136,7 @@ public class MCODEParameterSet {
 	 * Method for setting all parameters to their default values
 	 */
 	public void setDefaultParams() {
-		setAllAlgorithmParams(NETWORK, new Integer[0], false, 2, 2, false, 100, 0.2, false, true, 0.1);
+		setAllAlgorithmParams(NETWORK, new Long[0], false, 2, 2, false, 100, 0.2, false, true, 0.1);
 	}
 
 	/**
@@ -155,7 +155,7 @@ public class MCODEParameterSet {
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
 	public void setAllAlgorithmParams(String scope,
-									  Integer[] selectedNodes,
+									  Long[] selectedNodes,
 									  boolean includeLoops,
 									  int degreeCutoff,
 									  int kCore,
@@ -211,11 +211,11 @@ public class MCODEParameterSet {
 		this.scope = scope;
 	}
 
-	public Integer[] getSelectedNodes() {
+	public Long[] getSelectedNodes() {
 		return selectedNodes;
 	}
 
-	public void setSelectedNodes(Integer[] selectedNodes) {
+	public void setSelectedNodes(Long[] selectedNodes) {
 		this.selectedNodes = selectedNodes;
 	}
 

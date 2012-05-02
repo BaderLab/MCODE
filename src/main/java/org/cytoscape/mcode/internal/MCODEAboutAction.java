@@ -7,6 +7,7 @@ import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEAboutDialog;
 import org.cytoscape.util.swing.OpenBrowser;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -57,9 +58,10 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	public MCODEAboutAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
+							final CyNetworkViewManager netViewManager,
 							final OpenBrowser openBrowser,
 							final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication);
+		super(name, applicationManager, swingApplication, netViewManager);
 		this.openBrowser = openBrowser;
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");

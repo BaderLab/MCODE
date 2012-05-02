@@ -19,6 +19,7 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 /**
  * Closes the app panels.
@@ -33,9 +34,10 @@ public class MCODECloseAction extends AbstractMCODEAction implements NetworkAbou
 	public MCODECloseAction(final String name,
 							final CyApplicationManager applicationManager,
 							final CySwingApplication swingApplication,
+							final CyNetworkViewManager netViewManager,
 							final CyServiceRegistrar registrar,
 							final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication);
+		super(name, applicationManager, swingApplication, netViewManager);
 		this.registrar = registrar;
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");

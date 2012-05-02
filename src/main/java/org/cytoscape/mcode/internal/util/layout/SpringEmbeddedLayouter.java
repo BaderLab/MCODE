@@ -61,9 +61,9 @@ public class SpringEmbeddedLayouter {
 	protected int layoutPass;
 
 	//maps a root graph index to a distance matrix index
-	protected Map<Integer, Integer> nodeIndexToMatrixIndexMap;
+	protected Map<Long, Integer> nodeIndexToMatrixIndexMap;
 	//maps a distance matrix index to a root graph instance
-	protected SortedMap<Integer, Integer> matrixIndexToNodeIndexMap;
+	protected SortedMap<Integer, Long> matrixIndexToNodeIndexMap;
 
 	private boolean interrupted;
 
@@ -110,16 +110,16 @@ public class SpringEmbeddedLayouter {
 		edgeCount = graphView.getModel().getEdgeCount();
 
 		// Initialize the index map
-		nodeIndexToMatrixIndexMap = new HashMap<Integer, Integer>();
-		matrixIndexToNodeIndexMap = new TreeMap<Integer, Integer>();
+		nodeIndexToMatrixIndexMap = new HashMap<Long, Integer>();
+		matrixIndexToNodeIndexMap = new TreeMap<Integer, Long>();
 
 		Iterator<CyNode> nodes = graphView.getModel().getNodeList().iterator();
 		int count = 0;
 
 		while (nodes.hasNext()) {
 			CyNode n = nodes.next();
-			nodeIndexToMatrixIndexMap.put(n.getIndex(), count);
-			matrixIndexToNodeIndexMap.put(count, n.getIndex());
+			nodeIndexToMatrixIndexMap.put(n.getSUID(), count);
+			matrixIndexToNodeIndexMap.put(count, n.getSUID());
 			count++;
 		}
 
@@ -205,11 +205,11 @@ public class SpringEmbeddedLayouter {
 
 		//create a list of nodes that has the same indices as the nodeIndexToMatrixIndexMap
 		List<CyNode> nodeList = new ArrayList<CyNode>();
-		Collection<Integer> matrixIndices = matrixIndexToNodeIndexMap.values();
+		Collection<Long> matrixIndices = matrixIndexToNodeIndexMap.values();
 		int i = 0;
 
-		for (int nodeIndex : matrixIndices) {
-			nodeList.add(i, graphView.getModel().getNode(nodeIndex));
+		for (Long nodeId : matrixIndices) {
+			nodeList.add(i, graphView.getModel().getNode(nodeId));
 			i++;
 		}
 
@@ -277,7 +277,7 @@ public class SpringEmbeddedLayouter {
 
 		View<CyNode> nodeView = partials.getNodeView();
 
-		int node_view_index = nodeIndexToMatrixIndexMap.get(nodeView.getModel().getIndex());
+		int node_view_index = nodeIndexToMatrixIndexMap.get(nodeView.getModel().getSUID());
 		double node_view_radius = nodeView.getVisualProperty(NODE_WIDTH);
 		double node_view_x = nodeView.getVisualProperty(NODE_X_LOCATION);
 		double node_view_y = nodeView.getVisualProperty(NODE_Y_LOCATION);
@@ -312,11 +312,11 @@ public class SpringEmbeddedLayouter {
 				other_node_view = other_node_partials.getNodeView();
 			}
 
-			if (nodeView.getModel().getIndex() == other_node_view.getModel().getIndex()) {
+			if (nodeView.getModel().getSUID() == other_node_view.getModel().getSUID()) {
 				continue;
 			}
 
-			other_node_view_index = nodeIndexToMatrixIndexMap.get(other_node_view.getModel().getIndex());
+			other_node_view_index = nodeIndexToMatrixIndexMap.get(other_node_view.getModel().getSUID());
 			other_node_view_radius = Math.max(other_node_view.getVisualProperty(NODE_WIDTH),
 											  other_node_view.getVisualProperty(NODE_HEIGHT));
 

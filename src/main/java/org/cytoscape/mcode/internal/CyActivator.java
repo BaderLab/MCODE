@@ -36,15 +36,15 @@ public class CyActivator extends AbstractCyActivator {
 	@SuppressWarnings("unchecked")
 	public void start(BundleContext bc) {
 
-		CyApplicationManager applicationManager = getService(bc, CyApplicationManager.class);
-		CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
-		CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
-		TaskManager<?, ?> taskManager = getService(bc, TaskManager.class);
+		CyApplicationManager appMgr = getService(bc, CyApplicationManager.class);
+		CyNetworkViewManager netViewMgr = getService(bc, CyNetworkViewManager.class);
+		CyNetworkManager netMgr = getService(bc, CyNetworkManager.class);
+		TaskManager<?, ?> taskMgr = getService(bc, TaskManager.class);
 		
-		CyNetworkViewFactory networkViewFactory = getService(bc, CyNetworkViewFactory.class);
+		CyNetworkViewFactory netViewFactory = getService(bc, CyNetworkViewFactory.class);
 		CyRootNetworkManager rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
 		
-		CySwingApplication swingApplication = getService(bc, CySwingApplication.class);
+		CySwingApplication swingApp = getService(bc, CySwingApplication.class);
 		RenderingEngineFactory<CyNetwork> dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
 		CyServiceRegistrar serviceRegistrar = getService(bc, CyServiceRegistrar.class);
 		
@@ -57,17 +57,17 @@ public class CyActivator extends AbstractCyActivator {
 		OpenBrowser openBrowser = getService(bc, OpenBrowser.class);
 		CyEventHelper eventHelper = getService(bc, CyEventHelper.class);
 		
-		MCODEUtil mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, networkViewFactory, rootNetworkMgr,
-											applicationManager, networkMgr, networkViewMgr, visualStyleFactory,
-											visualMappingMgr, swingApplication, eventHelper, discreteMappingFactory,
+		MCODEUtil mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
+											appMgr, netMgr, netViewMgr, visualStyleFactory,
+											visualMappingMgr, swingApp, eventHelper, discreteMappingFactory,
 											continuousMappingFactory, fileUtil);
 		
-		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze current network", applicationManager, swingApplication, serviceRegistrar, taskManager, mcodeUtil);
-		MCODEOpenAction openAction = new MCODEOpenAction("Open MCODE", applicationManager, swingApplication, serviceRegistrar, analyzeAction, mcodeUtil);
-		MCODECloseAction closeAction = new MCODECloseAction("Close MCODE", applicationManager, swingApplication, serviceRegistrar, mcodeUtil);
-		MCODEHelpAction helpAction = new MCODEHelpAction("Help", applicationManager, swingApplication, openBrowser);
-		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", applicationManager, swingApplication, visualMappingMgr, mcodeUtil);
-		MCODEAboutAction aboutAction = new MCODEAboutAction("About", applicationManager, swingApplication, openBrowser, mcodeUtil);
+		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze current network", appMgr, swingApp, netViewMgr, serviceRegistrar, taskMgr, mcodeUtil);
+		MCODEOpenAction openAction = new MCODEOpenAction("Open MCODE", appMgr, swingApp, netViewMgr, serviceRegistrar, analyzeAction, mcodeUtil);
+		MCODECloseAction closeAction = new MCODECloseAction("Close MCODE", appMgr, swingApp, netViewMgr, serviceRegistrar, mcodeUtil);
+		MCODEHelpAction helpAction = new MCODEHelpAction("Help", appMgr, swingApp, netViewMgr, openBrowser);
+		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", appMgr, swingApp, netViewMgr, visualMappingMgr, mcodeUtil);
+		MCODEAboutAction aboutAction = new MCODEAboutAction("About", appMgr, swingApp, netViewMgr, openBrowser, mcodeUtil);
 		
 		registerService(bc, openAction, CyAction.class, new Properties());
 		registerService(bc, closeAction, CyAction.class, new Properties());

@@ -47,11 +47,11 @@ import org.cytoscape.view.model.CyNetworkView;
  */
 public class MCODECluster {
 
-	private List<Integer> alCluster;
+	private List<Long> alCluster;
 	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unecessarily
 	private CySubNetwork network;
-	private int seedNode;
-	private Map<Integer, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
+	private Long seedNode;
+	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double clusterScore;
 	private String clusterName; // pretty much unused so far, but could store name by user's input
 	private int rank;
@@ -100,27 +100,27 @@ public class MCODECluster {
 		this.clusterScore = clusterScore;
 	}
 
-	public List<Integer> getALCluster() {
+	public List<Long> getALCluster() {
 		return alCluster;
 	}
 
-	public void setALCluster(List<Integer> alCluster) {
+	public void setALCluster(List<Long> alCluster) {
 		this.alCluster = alCluster;
 	}
 
-	public int getSeedNode() {
+	public Long getSeedNode() {
 		return seedNode;
 	}
 
-	public void setSeedNode(Integer seedNode) {
+	public void setSeedNode(Long seedNode) {
 		this.seedNode = seedNode;
 	}
 
-	public Map<Integer, Boolean> getNodeSeenHashMap() {
+	public Map<Long, Boolean> getNodeSeenHashMap() {
 		return nodeSeenHashMap;
 	}
 
-	public void setNodeSeenHashMap(Map<Integer, Boolean> nodeSeenHashMap) {
+	public void setNodeSeenHashMap(Map<Long, Boolean> nodeSeenHashMap) {
 		this.nodeSeenHashMap = nodeSeenHashMap;
 	}
 

@@ -28,6 +28,7 @@ import org.cytoscape.model.events.NetworkDestroyedEvent;
 import org.cytoscape.model.events.NetworkDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.work.TaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,7 +83,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 	public final static int INTERRUPTION = 3;
 
 	private final CyServiceRegistrar registrar;
-	private final TaskManager taskManager;
+	private final TaskManager<?, ?> taskManager;
 	private final MCODEUtil mcodeUtil;
 
 	int analyze = FIRST_TIME;
@@ -92,16 +93,14 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 	public MCODEAnalyzeAction(final String title,
 							  final CyApplicationManager applicationManager,
 							  final CySwingApplication swingApplication,
+							  final CyNetworkViewManager netViewManager,
 							  final CyServiceRegistrar registrar,
-							  final TaskManager taskManager,
+							  final TaskManager<?, ?> taskManager,
 							  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication);
+		super(title, applicationManager, swingApplication, netViewManager);
 		this.registrar = registrar;
 		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;
-		
-		// The analysis should be disabled when there is no network
-		enableFor = "network";
 	}
 
 	/**
@@ -133,15 +132,15 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 		}
 
 		List<CyNode> nodes = network.getNodeList();
-		List<Integer> selectedNodes = new ArrayList<Integer>();
+		List<Long> selectedNodes = new ArrayList<Long>();
 
 		for (CyNode n : nodes) {
 			if (network.getRow(n).get(CyNetwork.SELECTED, Boolean.class)) {
-				selectedNodes.add(n.getIndex());
+				selectedNodes.add(n.getSUID());
 			}
 		}
 
-		Integer[] selectedNodesRGI = selectedNodes.toArray(new Integer[selectedNodes.size()]);
+		Long[] selectedNodesRGI = selectedNodes.toArray(new Long[selectedNodes.size()]);
 
 		MCODEParameterSet currentParamsCopy = getMainPanel().getCurrentParamsCopy();
 		currentParamsCopy.setSelectedNodes(selectedNodesRGI);
@@ -234,6 +233,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 																										resultId,
 																										applicationManager,
 																										swingApplication,
+																										netViewManager,
 																										registrar,
 																										mcodeUtil);
 
@@ -269,7 +269,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 			// Run MCODE
 			MCODEAnalyzeTaskFactory analyzeTaskFactory = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg,
 																					 mcodeUtil, listener);
-			taskManager.execute(analyzeTaskFactory);
+			taskManager.execute(analyzeTaskFactory.createTaskIterator());
 		}
 	}
 

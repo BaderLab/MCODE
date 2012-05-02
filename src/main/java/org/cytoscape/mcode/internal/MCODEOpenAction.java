@@ -10,6 +10,7 @@ import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 /**
  * Creates a new menu item under Apps menu section.
@@ -25,10 +26,11 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 	public MCODEOpenAction(final String name,
 						   final CyApplicationManager applicationManager,
 						   final CySwingApplication swingApplication,
+						   final CyNetworkViewManager netViewManager,
 						   final CyServiceRegistrar registrar,
 						   final MCODEAnalyzeAction analyzeAction,
 						   final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication);
+		super(name, applicationManager, swingApplication, netViewManager);
 		this.registrar = registrar;
 		this.analyzeAction = analyzeAction;
 		this.mcodeUtil = mcodeUtil;

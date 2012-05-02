@@ -35,4 +35,9 @@ public class MCODEAnalyzeTaskFactory implements TaskFactory {
 		return new TaskIterator(new MCODEAnalyzeTask(network, analyze, resultId, alg, mcodeUtil, listener));
 	}
 
+	@Override
+	public boolean isReady() {
+		// TODO Auto-generated method stub
+		return true;
+	}
 }

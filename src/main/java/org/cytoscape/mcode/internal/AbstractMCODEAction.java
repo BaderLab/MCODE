@@ -10,6 +10,7 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 public abstract class AbstractMCODEAction extends AbstractCyAction {
 
@@ -17,13 +18,16 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 
 	protected final CySwingApplication swingApplication;
 	protected final CyApplicationManager applicationManager;
+	protected final CyNetworkViewManager netViewManager;
 
 	public AbstractMCODEAction(final String name,
 							   final CyApplicationManager applicationManager,
-							   final CySwingApplication swingApplication) {
-		super(name, applicationManager, "network");
+							   final CySwingApplication swingApplication,
+							   final CyNetworkViewManager netViewManager) {
+		super(name, applicationManager, "network", netViewManager);
 		this.applicationManager = applicationManager;
 		this.swingApplication = swingApplication;
+		this.netViewManager = netViewManager;
 	}
 
 	/**

@@ -1,6 +1,23 @@
 package org.cytoscape.mcode.internal.util;
 
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_SELECTED_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_STROKE_SELECTED_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_UNSELECTED_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_BORDER_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_FILL_COLOR;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_HEIGHT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_PAINT;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SHAPE;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SIZE;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -46,12 +63,12 @@ import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
 import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyEdge;
+import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
-import org.cytoscape.model.CyTableEntry;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.model.subnetwork.CySubNetwork;
@@ -365,7 +382,7 @@ public class MCODEUtil {
 			nv.setVisualProperty(NODE_Y_LOCATION, y);
 
 			// Node shape
-			if (cluster.getSeedNode() == nv.getModel().getIndex()) {
+			if (cluster.getSeedNode() == nv.getModel().getSUID()) {
 				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
 			} else {
 				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
@@ -607,11 +624,11 @@ public class MCODEUtil {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void setSelected(final Collection<? extends CyTableEntry> elements, CyNetwork network, CyNetworkView view) {
-		Collection<? extends CyTableEntry> allElements = new ArrayList<CyTableEntry>(network.getNodeList());
+	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network, CyNetworkView view) {
+		Collection<? extends CyIdentifiable> allElements = new ArrayList<CyIdentifiable>(network.getNodeList());
 		allElements.addAll((Collection) network.getEdgeList());
 
-		for (final CyTableEntry nodeOrEdge : allElements) {
+		for (final CyIdentifiable nodeOrEdge : allElements) {
 			boolean select = elements.contains(nodeOrEdge);
 			network.getRow(nodeOrEdge).set(CyNetwork.SELECTED, select);
 		}

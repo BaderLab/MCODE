@@ -39,7 +39,7 @@ public class NodeDistances implements MonitorableTask {
 	protected String statusMessage;
 	protected boolean done;
 	protected boolean canceled;
-	protected Map<Integer, Integer> nodeIndexToMatrixIndexMap; // a root node index to matrix
+	protected Map<Long, Integer> nodeIndexToMatrixIndexMap; // a root node index to matrix
 
 	/**
 	 * The main constructor
@@ -48,7 +48,7 @@ public class NodeDistances implements MonitorableTask {
 	 * @param network The <code>org.cytoscape.model.CyNetwork</code> in which the nodes reside
 	 * @param nodeIndexToMatrixIndexMap An index map that maps your root graph indices to the returned matrix indices
 	 */
-	public NodeDistances(List<CyNode> nodesList, CyNetwork network, Map<Integer, Integer> nodeIndexToMatrixIndexMap) {
+	public NodeDistances(List<CyNode> nodesList, CyNetwork network, Map<Long, Integer> nodeIndexToMatrixIndexMap) {
 		this.nodesList = nodesList;
 		this.nodeIndexToMatrixIndexMap = nodeIndexToMatrixIndexMap;
 		this.network = network;
@@ -174,7 +174,7 @@ public class NodeDistances implements MonitorableTask {
 				continue;
 			}
 
-			index = nodeIndexToMatrixIndexMap.get(from_node.getIndex());
+			index = nodeIndexToMatrixIndexMap.get(from_node.getSUID());
 
 			if ((index < 0) || (index >= nodes.length)) {
 				System.err.println("WARNING: GraphNode \"" + from_node +
@@ -285,7 +285,7 @@ public class NodeDistances implements MonitorableTask {
 						return this.distances;
 					}
 
-					neighbor_index = nodeIndexToMatrixIndexMap.get(neighbor.getIndex());
+					neighbor_index = nodeIndexToMatrixIndexMap.get(neighbor.getSUID());
 
 					// If this neighbor was not in the incoming List, we cannot include it in any paths.
 					if (nodes[neighbor_index] == null) {
@@ -331,15 +331,15 @@ public class NodeDistances implements MonitorableTask {
 
 		if (edges == null || edges.size() == 0) return result;
 
-		int targetIndex = node.getIndex();
+		Long targetID = node.getSUID();
 
 		for (CyEdge curEdge : edges) {
-			if (curEdge.getSource().getIndex() != targetIndex) {
+			if (curEdge.getSource().getSUID() != targetID) {
 				result.add(curEdge.getSource());
 				continue;
 			}
 
-			if (curEdge.getTarget().getIndex() != targetIndex) result.add(curEdge.getTarget());
+			if (curEdge.getTarget().getSUID() != targetID) result.add(curEdge.getTarget());
 		}
 
 		return result;

@@ -10,6 +10,7 @@ import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 
@@ -63,9 +64,10 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 	public MCODEVisualStyleAction(final String title,
 								  final CyApplicationManager applicationManager,
 								  final CySwingApplication swingApplication,
+								  final CyNetworkViewManager netViewManager,
 								  final VisualMappingManager visualMappingMgr,
 								  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication);
+		super(title, applicationManager, swingApplication, netViewManager);
 		this.visualMappingMgr = visualMappingMgr;
 		this.mcodeUtil = mcodeUtil;
 	}

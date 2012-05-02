@@ -65,6 +65,7 @@ import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.model.CyColumn;
+import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
@@ -421,7 +422,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	public double setNodeAttributesAndGetMaxScore() {
 		for (CyNode n : network.getNodeList()) {
-			int rgi = n.getIndex();
+			Long rgi = n.getSUID();
 			CyTable netNodeTbl = network.getDefaultNodeTable();
 			
 			if (netNodeTbl.getColumn("MCODE_Cluster") == null)
@@ -433,7 +434,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			CyRow nodeRow = network.getRow(n);
 			nodeRow.set("MCODE_Node_Status", "Unclustered");
-			nodeRow.set("MCODE_Score", alg.getNodeScore(n.getIndex(), resultId));
+			nodeRow.set("MCODE_Score", alg.getNodeScore(n.getSUID(), resultId));
 
 			for (int c = 0; c < clusters.length; c++) {
 				MCODECluster cluster = clusters[c];
@@ -932,7 +933,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 											  JOptionPane.INFORMATION_MESSAGE);
 			}
 		} else {
-			mcodeUtil.setSelected(new ArrayList<CyNode>(), network, networkView); // deselect all
+			mcodeUtil.setSelected(new ArrayList<CyIdentifiable>(), network, networkView); // deselect all
 		}
 	}
 
@@ -1048,7 +1049,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			double nodeScoreCutoff = (((double) source.getValue()) / 1000);
 
 			// Store current cluster content for comparison
-			List<Integer> oldCluster = clusters[selectedRow].getALCluster();
+			List<Long> oldCluster = clusters[selectedRow].getALCluster();
 
 			// Find the new cluster given the node score cutoff
 			MCODECluster cluster = alg.exploreCluster(clusters[selectedRow], nodeScoreCutoff, network, resultId);
@@ -1056,7 +1057,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			// We only want to do the following work if the newly found cluster
 			// is actually different
 			// So we get the new cluster content
-			List<Integer> newCluster = cluster.getALCluster();
+			List<Long> newCluster = cluster.getALCluster();
 
 			// If the new cluster is too large to draw within a reasonable time
 			// and won't look understandable in the table cell then we draw a place holder

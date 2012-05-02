@@ -13,6 +13,7 @@ import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.view.model.CyNetworkViewManager;
 
 public class MCODEDiscardResultAction extends AbstractMCODEAction {
 
@@ -28,9 +29,10 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 									final int resultId,
 									final CyApplicationManager applicationManager,
 									final CySwingApplication swingApplication,
+									final CyNetworkViewManager netViewManager,
 									final CyServiceRegistrar registrar,
 									final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication);
+		super(name, applicationManager, swingApplication, netViewManager);
 		this.resultId = resultId;
 		this.registrar = registrar;
 		this.mcodeUtil = mcodeUtil;
