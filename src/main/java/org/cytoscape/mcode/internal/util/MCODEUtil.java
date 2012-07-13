@@ -214,20 +214,19 @@ public class MCODEUtil {
 	}	
 	
 	public void removeUnusedSubNetworks(CyNetwork network, MCODECluster[] clusters) {
-		Set<CySubNetwork> clusterNetworks = new HashSet<CySubNetwork>();
+		Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
 		if (clusters != null && clusters.length > 0) {
-			for (MCODECluster c : clusters) {
-				clusterNetworks.add(c.getNetwork());
-			}
+			for (MCODECluster c : clusters)
+				clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		}
 		
 		CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(network);
 		
-		for (CySubNetwork subNet : subNetworks) {
-			if (!clusterNetworks.contains(subNet)) {
-				rootNet.removeSubNetwork(subNet);
-			}
+		for (CySubNetwork sn : subNetworks) {
+			// Only remove the subnetwork if it is not registered
+			if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID()))
+				rootNet.removeSubNetwork(sn);
 		}
 		
 		subNetworks.clear();
