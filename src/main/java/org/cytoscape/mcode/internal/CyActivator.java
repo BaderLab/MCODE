@@ -33,6 +33,7 @@ public class CyActivator extends AbstractCyActivator {
 		super();
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public void start(BundleContext bc) {
 

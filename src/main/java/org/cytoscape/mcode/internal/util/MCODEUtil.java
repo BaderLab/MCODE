@@ -499,7 +499,7 @@ public class MCODEUtil {
 	}
 
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
-		final CyNetworkView view = networkViewFactory.createNetworkView(net, false);
+		final CyNetworkView view = networkViewFactory.createNetworkView(net);
 
 		if (vs == null) vs = visualMappingMgr.getDefaultVisualStyle();
 		visualMappingMgr.setVisualStyle(vs, view);
@@ -577,7 +577,7 @@ public class MCODEUtil {
 
 			// Node Shape:
 			DiscreteMapping<String, NodeShape> nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
-					.createVisualMappingFunction("MCODE_Node_Status", String.class, null, NODE_SHAPE);
+					.createVisualMappingFunction("MCODE_Node_Status", String.class, NODE_SHAPE);
 
 			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
 			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
@@ -594,7 +594,7 @@ public class MCODEUtil {
 
 		// The lower the score the darker the color
 		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-				.createVisualMappingFunction("MCODE_Score", Double.class, null, NODE_FILL_COLOR);
+				.createVisualMappingFunction("MCODE_Score", Double.class, NODE_FILL_COLOR);
 
 		final Color MIN_COLOR = Color.BLACK;
 		final Color MAX_COLOR = Color.RED;
