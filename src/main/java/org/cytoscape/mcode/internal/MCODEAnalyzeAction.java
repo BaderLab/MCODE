@@ -8,6 +8,8 @@ import java.util.Properties;
 import javax.swing.JOptionPane;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.events.SetCurrentNetworkEvent;
+import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -22,10 +24,6 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
-import org.cytoscape.model.events.NetworkAddedEvent;
-import org.cytoscape.model.events.NetworkAddedListener;
-import org.cytoscape.model.events.NetworkDestroyedEvent;
-import org.cytoscape.model.events.NetworkDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -72,8 +70,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Simple score and find action for MCODE. This should be the default for general users.
  */
-public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAddedListener,
-		NetworkDestroyedListener {
+public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurrentNetworkListener {
 
 	private static final long serialVersionUID = 87924889404093104L;
 
@@ -238,8 +235,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 																										mcodeUtil);
 
 							resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network, networkView,
-																 e.getImageList(), resultId, swingApplication,
-																 discardResultAction);
+																 e.getImageList(), resultId, discardResultAction);
 
 							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 						} else {
@@ -274,12 +270,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements NetworkAd
 	}
 
 	@Override
-	public void handleEvent(NetworkAddedEvent e) {
-		updateEnableState();
-	}
-
-	@Override
-	public void handleEvent(NetworkDestroyedEvent e) {
+	public void handleEvent(SetCurrentNetworkEvent e) {
 		updateEnableState();
 	}
 }

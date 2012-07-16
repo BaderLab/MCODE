@@ -36,7 +36,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
@@ -53,7 +52,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
-import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.mcode.internal.MCODEDiscardResultAction;
@@ -140,7 +138,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private MCODELoader loader;
 
 	private final MCODEUtil mcodeUtil;
-	private final CySwingApplication swingApplication;
 	private final MCODEDiscardResultAction discardResultAction;
 
 	/**
@@ -160,7 +157,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							 CyNetworkView networkView,
 							 Image[] imageList,
 							 int resultId,
-							 final CySwingApplication swingApplication,
 							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
 
@@ -171,7 +167,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.network = network;
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
-		this.swingApplication = swingApplication;
 		this.discardResultAction = discardResultAction;
 
 		currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
@@ -912,28 +907,19 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	public void selectCluster(final CyNetwork custerNetwork) {
 		if (custerNetwork != null) {
 			// Only do this if a view has been created on this network
-			if (networkView != null) {
-				// start with no selected nodes
-				//				mcodeUtil.setSelected(network.getNodeList(), false, networkView);
-				mcodeUtil.setSelected(custerNetwork.getNodeList(), network, networkView);
+			// start with no selected nodes
+			//				mcodeUtil.setSelected(network.getNodeList(), false, networkView);
+			mcodeUtil.setSelected(custerNetwork.getNodeList(), network);
 
-				// TODO: is it still necessary?
-				// We want the focus to switch to the appropriate network view but only if the cytopanel is docked
-				// If it is not docked then it is best if the focus stays on the panel
-				//				if (swingApplication.getCytoPanel(CytoPanelName.EAST).getState() == CytoPanelState.DOCK) {
-				//					
-				//					 Cytoscape.getDesktop().setFocus(networkView.getSUID());
-				//				}
-			} else {
-				// Warn user that nothing will happen in this case because there
-				// is no view to select nodes with
-				JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-											  "You must have a network view\ncreated to select nodes.",
-											  "No Network View",
-											  JOptionPane.INFORMATION_MESSAGE);
-			}
+			// TODO: is it still necessary?
+			// We want the focus to switch to the appropriate network view but only if the cytopanel is docked
+			// If it is not docked then it is best if the focus stays on the panel
+			//				if (swingApplication.getCytoPanel(CytoPanelName.EAST).getState() == CytoPanelState.DOCK) {
+			//					
+			//					 Cytoscape.getDesktop().setFocus(networkView.getSUID());
+			//				}
 		} else {
-			mcodeUtil.setSelected(new ArrayList<CyIdentifiable>(), network, networkView); // deselect all
+			mcodeUtil.setSelected(new ArrayList<CyIdentifiable>(), network); // deselect all
 		}
 	}
 

@@ -538,7 +538,7 @@ public class MCODEUtil {
 			tbl.addVirtualColumn("MCODE_Score", "MCODE_Score", parentTbl, CyNetwork.SUID, false);
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public VisualStyle getClusterStyle() {
 		if (clusterStyle == null) {
 			clusterStyle = visualStyleFactory.createVisualStyle("MCODE Cluster");
@@ -622,10 +622,9 @@ public class MCODEUtil {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network, CyNetworkView view) {
-		Collection<? extends CyIdentifiable> allElements = new ArrayList<CyIdentifiable>(network.getNodeList());
-		allElements.addAll((Collection) network.getEdgeList());
+	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network) {
+		final Collection<CyIdentifiable> allElements = new ArrayList<CyIdentifiable>(network.getNodeList());
+		allElements.addAll(network.getEdgeList());
 
 		for (final CyIdentifiable nodeOrEdge : allElements) {
 			boolean select = elements.contains(nodeOrEdge);
@@ -634,10 +633,13 @@ public class MCODEUtil {
 
 		eventHelper.flushPayloadEvents();
 
-		if (view != null) {
+		final Collection<CyNetworkView> netViews = networkViewMgr.getNetworkViews(network);
+		
+		for (final CyNetworkView view : netViews) {
 			view.updateView();
-			swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 		}
+		
+		swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 	}
 
 	public void interruptLoading() {

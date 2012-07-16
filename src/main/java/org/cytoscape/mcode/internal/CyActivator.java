@@ -3,6 +3,7 @@ package org.cytoscape.mcode.internal;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
@@ -11,8 +12,6 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
-import org.cytoscape.model.events.NetworkAddedListener;
-import org.cytoscape.model.events.NetworkDestroyedListener;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.service.util.CyServiceRegistrar;
@@ -75,8 +74,7 @@ public class CyActivator extends AbstractCyActivator {
 		registerService(bc, closeAction, NetworkAboutToBeDestroyedListener.class, new Properties());
 		registerService(bc, helpAction, CyAction.class, new Properties());
 		registerService(bc, aboutAction, CyAction.class, new Properties());
-		registerService(bc, analyzeAction, NetworkAddedListener.class, new Properties());
-		registerService(bc, analyzeAction, NetworkDestroyedListener.class, new Properties());
+		registerService(bc, analyzeAction, SetCurrentNetworkListener.class, new Properties());
 		registerService(bc, visualStyleAction, CyAction.class, new Properties());
 		registerService(bc, visualStyleAction, CytoPanelComponentSelectedListener.class, new Properties());
 	}
