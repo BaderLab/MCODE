@@ -6,6 +6,7 @@
 		<bundle.symbolicName>org.cytoscape.mcode.mcode-plugin</bundle.symbolicName>
 		<bundle.namespace>org.cytoscape.mcode</bundle.namespace>
 		<cytoscape.api.version>3.0.0-beta3-SNAPSHOT</cytoscape.api.version>
+		<cytoscape.impl.version>3.0.0-alpha10-SNAPSHOT</cytoscape.impl.version>
 		<maven.build.timestamp.format>MMMM yyyy</maven.build.timestamp.format>
 		<buildDate>${maven.build.timestamp}</buildDate>
 	</properties>
@@ -221,6 +222,37 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>model-impl</artifactId>
+			<version>${cytoscape.impl.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>model-impl</artifactId>
+			<version>${cytoscape.impl.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>ding-presentation-impl</artifactId>
+			<version>${cytoscape.impl.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>ding-presentation-impl</artifactId>
+			<version>${cytoscape.impl.version}</version>
+			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

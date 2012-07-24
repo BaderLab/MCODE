@@ -834,22 +834,21 @@ public class MCODEAlgorithm {
 		int nodeCount = network.getNodeCount();
 		int edgeCount = network.getEdgeCount();
 
-		if (includeLoops) {
+		if (!includeLoops) {
 			//count loops
 			List<CyNode> nodes = network.getNodeList();
 
 			for (CyNode n : nodes) {
 				List<CyEdge> loopEdges = network.getConnectingEdgeList(n, n, CyEdge.Type.ANY);
 
-				if (loopEdges != null && loopEdges.size() > 0) {
+				if (loopEdges != null && loopEdges.size() > 0)
 					loopCount++;
-				}
 			}
 
-			possibleEdgeNum = nodeCount * nodeCount;
+			possibleEdgeNum = (nodeCount * (nodeCount - 1)) / 2;
 			actualEdgeNum = edgeCount - loopCount;
 		} else {
-			possibleEdgeNum = nodeCount * nodeCount;
+			possibleEdgeNum = (nodeCount * (nodeCount + 1)) / 2;
 			actualEdgeNum = edgeCount;
 		}
 

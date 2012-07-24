@@ -2,10 +2,29 @@ package org.cytoscape.mcode.internal.model;
 
 import static org.junit.Assert.*;
 
+import java.util.List;
+
+import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.ding.NetworkViewTestSupport;
+import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.CyNetworkManager;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.model.subnetwork.CyRootNetworkManager;
+import org.cytoscape.model.subnetwork.CySubNetwork;
+import org.cytoscape.util.swing.FileUtil;
+import org.cytoscape.view.model.CyNetworkViewFactory;
+import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.presentation.RenderingEngineFactory;
+import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 /**
  * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -50,16 +69,32 @@ public class MCODEAlgorithmTest {
 
 	MCODEAlgorithm alg;
 	CyNetwork networkSmall;
-	MCODEParameterSet params;
-	MCODEUtil mcodeutil;
+	MCODEUtil mcodeUtil;
+	
+	@Mock RenderingEngineFactory<CyNetwork> rendererFactory;
+	@Mock CyRootNetworkManager rootNetMgr;
+	@Mock CyApplicationManager appMgr;
+	@Mock CyNetworkViewManager netViewMgr;
+	@Mock VisualMappingManager vmMgr;
+	@Mock VisualStyleFactory styleFactory;
+	@Mock VisualMappingFunctionFactory vmfFactory;
+	@Mock CySwingApplication swingApp;
+	@Mock CyEventHelper evtHelper;
+	@Mock FileUtil fileUtil;
+	
+	NetworkViewTestSupport netViewTestSupport;
+	CyNetworkManager netMgr;
+	CyNetworkViewFactory netViewFactory;
 
 	@Before
 	public void setUp() throws Exception {
-		// TODO
-//		mcodeutil = new MCODEUtil(renderingEngineFactory, networkViewFactory, rootNetworkFactory, applicationManager,
-//								  networkManager, networkViewManager, vmMgr, eventHelper);
-//		alg = new MCODEAlgorithm(null);
-//		params = new MCODEParameterSet();
+		MockitoAnnotations.initMocks(this);
+		netViewTestSupport = new NetworkViewTestSupport();
+		rootNetMgr = netViewTestSupport.getRootNetworkFactory();
+		netViewFactory = netViewTestSupport.getNetworkViewFactory();
+		
+		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
+				styleFactory, vmMgr, swingApp, evtHelper, vmfFactory, vmfFactory, fileUtil);
 //		networkSmall = Cytoscape.createNetworkFromFile("testData" + File.separator + "smallTest.sif");
 	}
 
@@ -76,5 +111,62 @@ public class MCODEAlgorithmTest {
 //		assertEquals(clusters.length, 1);
 //		double score = alg.scoreCluster(clusters[0]);
 //		assertEquals(score, (double) 1.5, 0);
+	}
+	
+	@Test
+	public void testCompleteGraph() {
+		CyNetwork net = createCompleteGraph(16);
+		int resultId = 1;
+		MCODECluster[] clusters = findClusters(net, resultId);
+		
+		assertEquals(1, clusters.length);
+		
+		MCODECluster c = clusters[0];
+		CySubNetwork cn = c.getNetwork();
+		
+		assertNotNull(cn);
+		assertEquals(resultId, c.getResultId());
+		assertEquals(14.118, c.getClusterScore(), 0.001);
+		assertEquals(16, cn.getNodeCount());
+		assertEquals(120, cn.getEdgeCount());
+		assertNotNull(c.getSeedNode());
+		
+		// check scores of the nodes
+		for (CyNode n : cn.getNodeList()) {
+			assertEquals(15.0, alg.getNodeScore(n.getSUID(), resultId), 0.0);
+		}
+	}
+	
+	private MCODECluster[] findClusters(CyNetwork net, int resultId) {
+		mcodeUtil.getCurrentParameters().setParams(new MCODEParameterSet(), resultId, net.getSUID());
+		alg = new MCODEAlgorithm(net.getSUID(), mcodeUtil);
+		alg.scoreGraph(net, resultId);
+		
+		return alg.findClusters(net, resultId);
+	}
+
+	private CyNetwork createCompleteGraph(int totalNodes) {
+		CyNetwork net = netViewTestSupport.getNetwork();
+		
+		for (int i = 0; i < totalNodes; i++) {
+			net.addNode();
+		}
+		
+		List<CyNode> nodes = net.getNodeList();
+		
+		for (int i = 0; i < totalNodes; i++) {
+			CyNode src = nodes.get(i);
+			
+			for (int j = 0; j < totalNodes; j++) {
+				CyNode tgt = nodes.get(j);
+				
+				if (src != tgt && !net.containsEdge(src, tgt))
+					net.addEdge(src, tgt, false);
+			}
+		}
+		
+		assertEquals((totalNodes*(totalNodes-1))/2, net.getEdgeCount());
+		
+		return net;
 	}
 }
