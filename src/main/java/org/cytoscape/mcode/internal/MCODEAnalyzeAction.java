@@ -2,7 +2,9 @@ package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
@@ -24,6 +26,14 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.events.AddedEdgesEvent;
+import org.cytoscape.model.events.AddedEdgesListener;
+import org.cytoscape.model.events.AddedNodesEvent;
+import org.cytoscape.model.events.AddedNodesListener;
+import org.cytoscape.model.events.RemovedEdgesEvent;
+import org.cytoscape.model.events.RemovedEdgesListener;
+import org.cytoscape.model.events.RemovedNodesEvent;
+import org.cytoscape.model.events.RemovedNodesListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -70,7 +80,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Simple score and find action for MCODE. This should be the default for general users.
  */
-public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurrentNetworkListener {
+public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurrentNetworkListener, AddedNodesListener,
+		AddedEdgesListener, RemovedNodesListener, RemovedEdgesListener {
 
 	private static final long serialVersionUID = 87924889404093104L;
 
@@ -85,6 +96,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 	int analyze = FIRST_TIME;
 	
+	private Map<Long/*network_suid*/, Boolean> dirtyNetworks;
+	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeAction.class);
 
 	public MCODEAnalyzeAction(final String title,
@@ -98,6 +111,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		this.registrar = registrar;
 		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;
+		dirtyNetworks = new HashMap<Long, Boolean>();
 	}
 
 	/**
@@ -106,7 +120,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	 * @param event Click of the analyzeButton on the MCODEMainPanel.
 	 */
 	@Override
-	public void actionPerformed(ActionEvent event) {
+	public void actionPerformed(final ActionEvent event) {
 		String interruptedMessage = "";
 		// Get the selected network
 		final CyNetwork network = applicationManager.getCurrentNetwork();
@@ -162,30 +176,19 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		}
 
 		final int resultId = mcodeUtil.getCurrentResultId();
-
+		
 		// These statements determine which portion of the algorithm needs to be conducted by
 		// testing which parameters have been modified compared to the last saved parameters.
 		// Here we ensure that only relevant parameters are looked at.  For example, fluff density
 		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
 		// the clustering parameters are relevant if the optimization is used
-		if (currentParamsCopy.isIncludeLoops() != savedParamsCopy.isIncludeLoops() ||
-			currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff() || analyze == FIRST_TIME) {
+		if (analyze == FIRST_TIME || isDirty(network)
+				|| currentParamsCopy.isIncludeLoops() != savedParamsCopy.isIncludeLoops()
+				|| currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff()) {
 			analyze = RESCORE;
 			logger.debug("Analysis: score network, find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
-		} else if (!currentParamsCopy.getScope().equals(savedParamsCopy.getScope()) ||
-				   (!currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK) && currentParamsCopy
-						   .getSelectedNodes() != savedParamsCopy.getSelectedNodes()) ||
-				   currentParamsCopy.isOptimize() != savedParamsCopy.isOptimize() ||
-				   (!currentParamsCopy.isOptimize() && (currentParamsCopy.getKCore() != savedParamsCopy.getKCore() ||
-														currentParamsCopy.getMaxDepthFromStart() != savedParamsCopy
-																.getMaxDepthFromStart() ||
-														currentParamsCopy.isHaircut() != savedParamsCopy.isHaircut() ||
-														currentParamsCopy.getNodeScoreCutoff() != savedParamsCopy
-																.getNodeScoreCutoff() ||
-														currentParamsCopy.isFluff() != savedParamsCopy.isFluff() || (currentParamsCopy
-						   .isFluff() && currentParamsCopy.getFluffNodeDensityCutoff() != savedParamsCopy
-						   .getFluffNodeDensityCutoff())))) {
+		} else if (parametersChanged(savedParamsCopy, currentParamsCopy)) {
 			analyze = REFIND;
 			logger.debug("Analysis: find clusters");
 			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
@@ -218,6 +221,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 				public void handleEvent(final AnalysisCompletedEvent e) {
 					MCODEResultsPanel resultsPanel = null;
 					boolean resultFound = false;
+					setDirty(network, false);
 
 					// Display clusters in a new modal dialog box
 					if (e.isSuccessful()) {
@@ -272,5 +276,60 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	@Override
 	public void handleEvent(SetCurrentNetworkEvent e) {
 		updateEnableState();
+	}
+
+	@Override
+	public void handleEvent(RemovedEdgesEvent e) {
+		setDirty(e.getSource(), true);
+	}
+
+	@Override
+	public void handleEvent(RemovedNodesEvent e) {
+		setDirty(e.getSource(), true);
+	}
+
+	@Override
+	public void handleEvent(AddedEdgesEvent e) {
+		setDirty(e.getSource(), true);
+	}
+
+	@Override
+	public void handleEvent(AddedNodesEvent e) {
+		setDirty(e.getSource(), true);
+	}
+
+	/**
+	 * @param p1 previous parameters set
+	 * @param p2 current parameters set
+	 * @return
+	 */
+	private boolean parametersChanged(final MCODEParameterSet p1, final MCODEParameterSet p2) {
+		boolean b = !p2.getScope().equals(p1.getScope());
+		b = b || (!p2.getScope().equals(MCODEParameterSet.NETWORK) && p2.getSelectedNodes() != p1.getSelectedNodes());
+		b = b || (p2.isOptimize() != p1.isOptimize());
+		b = b || (!p2.isOptimize() && (p2.getKCore() != p1.getKCore() ||
+										p2.getMaxDepthFromStart() != p1.getMaxDepthFromStart() ||
+										p2.isHaircut() != p1.isHaircut() ||
+										p2.getNodeScoreCutoff() != p1.getNodeScoreCutoff() ||
+										p2.isFluff() != p1.isFluff() || 
+										(p2.isFluff() && p2.getFluffNodeDensityCutoff() != p1.getFluffNodeDensityCutoff())));
+		return b;
+	}
+	
+	private void setDirty(final CyNetwork net, final boolean dirty) {
+		if (mcodeUtil.containsNetworkAlgorithm(net.getSUID())) {
+			if (dirty)
+				dirtyNetworks.put(net.getSUID(), dirty);
+			else
+				dirtyNetworks.remove(net.getSUID());
+		}
+	}
+	
+	/**
+	 * @param net
+	 * @return true if the network has been modified after the last analysis.
+	 */
+	private boolean isDirty(final CyNetwork net) {
+		return Boolean.TRUE.equals(dirtyNetworks.get(net.getSUID()));
 	}
 }

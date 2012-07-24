@@ -3,7 +3,6 @@ package org.cytoscape.mcode.internal;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
-import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
@@ -74,7 +73,7 @@ public class CyActivator extends AbstractCyActivator {
 		registerService(bc, closeAction, NetworkAboutToBeDestroyedListener.class, new Properties());
 		registerService(bc, helpAction, CyAction.class, new Properties());
 		registerService(bc, aboutAction, CyAction.class, new Properties());
-		registerService(bc, analyzeAction, SetCurrentNetworkListener.class, new Properties());
+		registerAllServices(bc, analyzeAction, new Properties());
 		registerService(bc, visualStyleAction, CyAction.class, new Properties());
 		registerService(bc, visualStyleAction, CytoPanelComponentSelectedListener.class, new Properties());
 	}
