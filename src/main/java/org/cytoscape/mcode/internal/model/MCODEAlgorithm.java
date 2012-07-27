@@ -209,7 +209,6 @@ public class MCODEAlgorithm {
 	 * @param resultId Title of the result, used as an identifier in various hash maps
 	 */
 	public void scoreGraph(CyNetwork inputNetwork, int resultId) {
-		params = getParams();
 		String callerID = "MCODEAlgorithm.MCODEAlgorithm";
 
 		if (inputNetwork == null) {
@@ -302,7 +301,6 @@ public class MCODEAlgorithm {
 			nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
 		}
 
-		params = getParams();
 		MCODECluster currentCluster;
 		String callerID = "MCODEAlgorithm.findClusters";
 
@@ -535,7 +533,7 @@ public class MCODEAlgorithm {
 		double density = 0.0, score = 0.0;
 
 		numNodes = cluster.getNetwork().getNodeCount();
-		density = calcDensity(cluster.getNetwork(), true);
+		density = calcDensity(cluster.getNetwork(), params.isIncludeLoops());
 		score = density * numNodes;
 
 		return score;

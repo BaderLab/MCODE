@@ -114,7 +114,7 @@ public class MCODEAlgorithmTest {
 	}
 	
 	@Test
-	public void testCompleteGraph() {
+	public void testCompleteGraphWithDefaultParameters() {
 		CyNetwork net = createCompleteGraph(16);
 		int resultId = 1;
 		MCODECluster[] clusters = findClusters(net, resultId);
@@ -126,7 +126,7 @@ public class MCODEAlgorithmTest {
 		
 		assertNotNull(cn);
 		assertEquals(resultId, c.getResultId());
-		assertEquals(14.118, c.getClusterScore(), 0.001);
+		assertEquals(16, c.getClusterScore(), 0.0);
 		assertEquals(16, cn.getNodeCount());
 		assertEquals(120, cn.getEdgeCount());
 		assertNotNull(c.getSeedNode());
@@ -137,8 +137,40 @@ public class MCODEAlgorithmTest {
 		}
 	}
 	
+	@Test
+	public void testCompleteGraphIncludingLoops() {
+		CyNetwork net = createCompleteGraph(16);
+		int resultId = 1;
+		MCODEParameterSet params = new MCODEParameterSet();
+		params.setIncludeLoops(true);
+		
+		MCODECluster[] clusters = findClusters(net, resultId, params);
+		
+		assertEquals(1, clusters.length);
+		
+		MCODECluster c = clusters[0];
+		CySubNetwork cn = c.getNetwork();
+		
+		assertNotNull(cn);
+		assertEquals(resultId, c.getResultId());
+		assertEquals(14.118, c.getClusterScore(), 0.0009);
+		assertEquals(16, cn.getNodeCount());
+		assertEquals(120, cn.getEdgeCount());
+		assertNotNull(c.getSeedNode());
+		
+		// TODO: fix
+		// check scores of the nodes
+//		for (CyNode n : cn.getNodeList()) {
+//			assertEquals(13.345, alg.getNodeScore(n.getSUID(), resultId), 0.001);
+//		}
+	}
+	
 	private MCODECluster[] findClusters(CyNetwork net, int resultId) {
-		mcodeUtil.getCurrentParameters().setParams(new MCODEParameterSet(), resultId, net.getSUID());
+		return findClusters(net, resultId, new MCODEParameterSet());
+	}
+	
+	private MCODECluster[] findClusters(CyNetwork net, int resultId, MCODEParameterSet params) {
+		mcodeUtil.getCurrentParameters().setParams(params, resultId, net.getSUID());
 		alg = new MCODEAlgorithm(net.getSUID(), mcodeUtil);
 		alg.scoreGraph(net, resultId);
 		
