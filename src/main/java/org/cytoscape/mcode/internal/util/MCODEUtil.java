@@ -69,6 +69,7 @@ import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
+import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.model.subnetwork.CySubNetwork;
@@ -476,7 +477,7 @@ public class MCODEUtil {
 		return image;
 	}
 
-	public CySubNetwork createSubNetwork(final CyNetwork net, Collection<CyNode> nodes) {
+	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes, final SavePolicy policy) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
 
@@ -491,7 +492,7 @@ public class MCODEUtil {
 			}
 		}
 		
-		final CySubNetwork subNet = root.addSubNetwork(nodes, edges);
+		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
 		subNetworks.add(subNet);
 		
 		return subNet;

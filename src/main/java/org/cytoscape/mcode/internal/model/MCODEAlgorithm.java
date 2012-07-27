@@ -16,6 +16,7 @@ import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.work.TaskMonitor;
 import org.slf4j.Logger;
@@ -499,7 +500,7 @@ public class MCODEAlgorithm {
 			nodes.add(n);
 		}
 
-		CySubNetwork outputNetwork = mcodeUtil.createSubNetwork(inputNetwork, nodes);
+		CySubNetwork outputNetwork = mcodeUtil.createSubNetwork(inputNetwork, nodes, SavePolicy.DO_NOT_SAVE);
 
 		return outputNetwork;
 	}
@@ -596,7 +597,7 @@ public class MCODEAlgorithm {
 		}
 		
 		// extract neighborhood subgraph
-		CySubNetwork neighborhoodNet = mcodeUtil.createSubNetwork(inputNetwork, neighbors);
+		CySubNetwork neighborhoodNet = mcodeUtil.createSubNetwork(inputNetwork, neighbors, SavePolicy.DO_NOT_SAVE);
 		
 		if (neighborhoodNet == null) {
 			// this shouldn't happen
@@ -821,9 +822,6 @@ public class MCODEAlgorithm {
 	 * @return The density of the network
 	 */
 	public double calcDensity(CySubNetwork network, boolean includeLoops) {
-		int possibleEdgeNum = 0, actualEdgeNum = 0, loopCount = 0;
-		double density = 0;
-
 		String callerID = "MCODEAlgorithm.calcDensity";
 
 		if (network == null) {
@@ -832,29 +830,34 @@ public class MCODEAlgorithm {
 		}
 
 		int nodeCount = network.getNodeCount();
-		int edgeCount = network.getEdgeCount();
-
-		if (!includeLoops) {
-			//count loops
-			List<CyNode> nodes = network.getNodeList();
-
-			for (CyNode n : nodes) {
-				List<CyEdge> loopEdges = network.getConnectingEdgeList(n, n, CyEdge.Type.ANY);
-
-				if (loopEdges != null && loopEdges.size() > 0)
-					loopCount++;
-			}
-
-			possibleEdgeNum = (nodeCount * (nodeCount - 1)) / 2;
-			actualEdgeNum = edgeCount - loopCount;
-		} else {
+		int actualEdgeNum = getMergedEdgeCount(network, includeLoops);
+		int possibleEdgeNum = 0;
+		
+		if (includeLoops)
 			possibleEdgeNum = (nodeCount * (nodeCount + 1)) / 2;
-			actualEdgeNum = edgeCount;
-		}
+		else
+			possibleEdgeNum = (nodeCount * (nodeCount - 1)) / 2;
 
-		density = (double) actualEdgeNum / (double) possibleEdgeNum;
+		double density = (double) actualEdgeNum / (double) possibleEdgeNum;
 
 		return density;
+	}
+
+	private int getMergedEdgeCount(CySubNetwork network, boolean includeLoops) {
+		Set<String> suidPairs = new HashSet<String>();
+		
+		for (CyEdge e : network.getEdgeList()) {
+			Long id1 = e.getSource().getSUID();
+			Long id2 = e.getTarget().getSUID();
+			
+			if (!includeLoops && id1 == id2)
+				continue;
+			
+			String pair = id1 < id2 ? id1+"_"+id2 : id2+"_"+id1;
+			suidPairs.add(pair);
+		}
+		
+		return suidPairs.size();
 	}
 
 	/**
@@ -899,7 +902,8 @@ public class MCODEAlgorithm {
 					outputNodes.add(n);
 				}
 				
-				outputNetwork = mcodeUtil.createSubNetwork(inputNetwork.getRootNetwork(), outputNodes);
+				outputNetwork = mcodeUtil.createSubNetwork(inputNetwork.getRootNetwork(), outputNodes,
+						SavePolicy.DO_NOT_SAVE);
 				
 				if (outputNetwork.getNodeCount() == 0) {
 					return null;

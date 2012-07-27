@@ -14,7 +14,7 @@
     <property environment="env"/>
     
     <property name="build.dir" value="target"/>
-    <property name="cytoscape.app.dir" value="${cytoscape.home}/deploy"/>
+    <property name="cytoscape.app.dir" value="${cytoscape.home}/apps/installed"/>
 
     <target name="install">
         <copy todir="${cytoscape.app.dir}" overwrite="true">

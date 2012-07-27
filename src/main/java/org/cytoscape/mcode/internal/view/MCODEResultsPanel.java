@@ -68,6 +68,7 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
+import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
@@ -488,7 +489,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 				@Override
 				protected CyNetworkView doInBackground() throws Exception {
-					CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList());
+					CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
+							SavePolicy.SESSION_FILE);
 					newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
 
 					mcodeUtil.addVirtualColumns(newNetwork, network);
