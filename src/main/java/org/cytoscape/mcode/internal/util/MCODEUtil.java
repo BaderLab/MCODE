@@ -129,6 +129,7 @@ import org.slf4j.LoggerFactory;
  * * Description: Utilities for MCODE
  */
 
+// TODO refactor: remove circular dependencies
 /**
  * Utilities for MCODE
  */
@@ -161,7 +162,7 @@ public class MCODEUtil {
 
 	private int currentResultId;
 	
-	private Set<CySubNetwork> subNetworks;
+	private Map<CyRootNetwork, Set<CySubNetwork>> createdSubNetworks;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 
@@ -209,26 +210,39 @@ public class MCODEUtil {
 		currentParameters = new MCODECurrentParameters();
 		networkAlgorithms = new HashMap<Long, MCODEAlgorithm>();
 		networkResults = new HashMap<Long, Set<Integer>>();
-		subNetworks = new HashSet<CySubNetwork>();
+		createdSubNetworks = new HashMap<CyRootNetwork, Set<CySubNetwork>>();
 	}	
 	
-	public void removeUnusedSubNetworks(CyNetwork network, MCODECluster[] clusters) {
-		Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
+	public void disposeUnusedSubNetworks(final CyNetwork network, final MCODECluster[] clusters) {
+		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
 		if (clusters != null && clusters.length > 0) {
 			for (MCODECluster c : clusters)
 				clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		}
 		
-		CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(network);
+		final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(network);
+		final Set<CySubNetwork> snSet = createdSubNetworks.get(rootNet);
 		
-		for (CySubNetwork sn : subNetworks) {
-			// Only remove the subnetwork if it is not registered
-			if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID()))
-				rootNet.removeSubNetwork(sn);
+		if (snSet != null) {
+			final Set<CySubNetwork> disposedSet = new HashSet<CySubNetwork>();
+			
+			for (final CySubNetwork sn : snSet) {
+				// Only remove the subnetwork if it is not registered
+				if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
+					try {
+						if (rootNet.containsNetwork(sn)) {
+							dispose(sn);
+							disposedSet.add(sn);
+						}
+					} catch (Exception e) {
+						logger.error("Error disposing: " + sn);
+					}
+				}
+			}
+			
+			snSet.removeAll(disposedSet);
 		}
-		
-		subNetworks.clear();
 	}
 
 	public MCODECurrentParameters getCurrentParameters() {
@@ -274,32 +288,26 @@ public class MCODEUtil {
 
 	public boolean removeNetworkResult(final int resultId) {
 		boolean removed = false;
-		Long networkToRemove = null;
+		Long networkId = null;
 
 		for (Entry<Long, Set<Integer>> entries : networkResults.entrySet()) {
 			Set<Integer> ids = entries.getValue();
 
 			if (ids.remove(resultId)) {
-				if (ids.isEmpty()) {
-					networkToRemove = entries.getKey();
-				}
+				if (ids.isEmpty())
+					networkId = entries.getKey();
 
 				removed = true;
 				break;
 			}
 		}
 
-		if (networkToRemove != null) {
-			removeNetworkResults(networkToRemove);
-		}
+		if (networkId != null)
+			networkResults.remove(networkId);
 
 		this.getCurrentParameters().removeResultParams(resultId);
 
 		return removed;
-	}
-
-	public Set<Integer> removeNetworkResults(final long suid) {
-		return networkResults.remove(suid);
 	}
 
 	/**
@@ -491,7 +499,16 @@ public class MCODEUtil {
 		}
 		
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
-		subNetworks.add(subNet);
+		
+		// Save it for later disposal
+		Set<CySubNetwork> snSet = createdSubNetworks.get(root);
+		
+		if (snSet == null) {
+			snSet = new HashSet<CySubNetwork>();
+			createdSubNetworks.put(root, snSet);
+		}
+		
+		snSet.add(subNet);
 		
 		return subNet;
 	}
@@ -806,5 +823,14 @@ public class MCODEUtil {
 		}
 
 		return props;
+	}
+	
+	public static void dispose(final CyNetwork net) {
+		if (net != null) {
+			if (net instanceof CySubNetwork)
+				((CySubNetwork) net).getRootNetwork().removeSubNetwork((CySubNetwork) net);
+			
+			net.dispose();
+		}
 	}
 }

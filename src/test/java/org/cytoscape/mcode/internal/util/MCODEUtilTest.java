@@ -1,19 +1,16 @@
-package org.cytoscape.mcode.internal.model;
+package org.cytoscape.mcode.internal.util;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.ding.NetworkViewTestSupport;
 import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.AbstractMCODETest;
-import org.cytoscape.mcode.internal.util.MCODEUtil;
+import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
-import org.cytoscape.model.CyNode;
+import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
-import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -65,10 +62,9 @@ import org.mockito.MockitoAnnotations;
 /**
  * Test for the MCODE algorithm
  */
-public class MCODEAlgorithmTest extends AbstractMCODETest {
+public class MCODEUtilTest extends AbstractMCODETest {
 
 	CyNetwork networkSmall;
-	
 	@Mock RenderingEngineFactory<CyNetwork> rendererFactory;
 	@Mock CyRootNetworkManager rootNetMgr;
 	@Mock CyApplicationManager appMgr;
@@ -81,86 +77,29 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Mock CyEventHelper evtHelper;
 	@Mock FileUtil fileUtil;
 	
-	NetworkViewTestSupport netViewTestSupport;
-	
 	CyNetworkViewFactory netViewFactory;
 
 	@Before
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
-		netViewTestSupport = new NetworkViewTestSupport();
 		rootNetMgr = netViewTestSupport.getRootNetworkFactory();
 		netViewFactory = netViewTestSupport.getNetworkViewFactory();
 		
 		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
 				styleFactory, vmMgr, swingApp, evtHelper, vmfFactory, vmfFactory, fileUtil);
-//		networkSmall = Cytoscape.createNetworkFromFile("testData" + File.separator + "smallTest.sif");
-	}
-
-	/**
-	 * Run MCODE on a small test network with some default parameters
-	 */
-	@Test
-	public void testMCODEAlgorithmSmall() {
-		// TODO
-//		params.setAllAlgorithmParams(MCODEParameterSet.NETWORK, null, false, 2, 2, false, 100, 0.2, false, true, 0.1);
-//		alg.scoreGraph(networkSmall, 1);
-//		MCODECluster[] clusters = alg.findClusters(networkSmall, 1);
-//
-//		assertEquals(clusters.length, 1);
-//		double score = alg.scoreCluster(clusters[0]);
-//		assertEquals(score, (double) 1.5, 0);
 	}
 	
 	@Test
-	public void testCompleteGraphWithDefaultParameters() {
-		CyNetwork net = createCompleteGraph(16);
+	public void testDisposeUnnusedNetworks() {
+		final CyNetwork net = createCompleteGraph(16);
+		final CyRootNetwork rn = netViewTestSupport.getRootNetworkFactory().getRootNetwork(net);
+		int originalNetCount = rn.getSubNetworkList().size(); 
 		int resultId = 1;
 		MCODECluster[] clusters = findClusters(net, resultId);
-		
 		assertEquals(1, clusters.length);
 		
-		MCODECluster c = clusters[0];
-		CySubNetwork cn = c.getNetwork();
+		mcodeUtil.disposeUnusedSubNetworks(net, clusters);
 		
-		assertNotNull(cn);
-		assertEquals(resultId, c.getResultId());
-		assertEquals(16, c.getClusterScore(), 0.0);
-		assertEquals(16, cn.getNodeCount());
-		assertEquals(120, cn.getEdgeCount());
-		assertNotNull(c.getSeedNode());
-		
-		// check scores of the nodes
-		for (CyNode n : cn.getNodeList()) {
-			assertEquals(15.0, alg.getNodeScore(n.getSUID(), resultId), 0.0);
-		}
-	}
-	
-	@Test
-	public void testCompleteGraphIncludingLoops() {
-		CyNetwork net = createCompleteGraph(16);
-		int resultId = 1;
-		MCODEParameterSet params = new MCODEParameterSet();
-		params.setIncludeLoops(true);
-		
-		MCODECluster[] clusters = findClusters(net, resultId, params);
-		
-		assertEquals(1, clusters.length);
-		
-		MCODECluster c = clusters[0];
-		CySubNetwork cn = c.getNetwork();
-		
-		assertNotNull(cn);
-		assertEquals(resultId, c.getResultId());
-		assertEquals(14.118, c.getClusterScore(), 0.0009);
-		assertEquals(16, cn.getNodeCount());
-		assertEquals(120, cn.getEdgeCount());
-		assertNotNull(c.getSeedNode());
-		
-		// TODO: fix
-		// check scores of all nodes
-//		for (CyNode n : cn.getNodeList()) {
-//			assertEquals(13.345, alg.getNodeScore(n.getSUID(), resultId), 0.001);
-//		}
+		assertEquals(originalNetCount + clusters.length, rn.getSubNetworkList().size());
 	}
 }

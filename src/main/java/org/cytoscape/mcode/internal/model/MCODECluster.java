@@ -48,7 +48,7 @@ import org.cytoscape.view.model.CyNetworkView;
 public class MCODECluster {
 
 	private List<Long> alCluster;
-	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unecessarily
+	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unnecessarily
 	private CySubNetwork network;
 	private Long seedNode;
 	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
@@ -72,7 +72,7 @@ public class MCODECluster {
 		return clusterName;
 	}
 
-	public void setClusterName(String clusterName) {
+	public void setClusterName(final String clusterName) {
 		this.clusterName = clusterName;
 	}
 
@@ -80,7 +80,10 @@ public class MCODECluster {
 		return view;
 	}
 
-	public void setView(CyNetworkView view) {
+	public void setView(final CyNetworkView view) {
+		if (this.view != null)
+			this.view.dispose();
+		
 		this.view = view;
 	}
 
@@ -88,7 +91,11 @@ public class MCODECluster {
 		return network;
 	}
 
-	public void setNetwork(CySubNetwork network) {
+	public void setNetwork(final CySubNetwork network) {
+		if (view != null && view.getModel().equals(this.network))
+			view.dispose();
+		
+		dispose(this.network);
 		this.network = network;
 	}
 
@@ -96,7 +103,7 @@ public class MCODECluster {
 		return clusterScore;
 	}
 
-	public void setClusterScore(double clusterScore) {
+	public void setClusterScore(final double clusterScore) {
 		this.clusterScore = clusterScore;
 	}
 
@@ -104,7 +111,7 @@ public class MCODECluster {
 		return alCluster;
 	}
 
-	public void setALCluster(List<Long> alCluster) {
+	public void setALCluster(final List<Long> alCluster) {
 		this.alCluster = alCluster;
 	}
 
@@ -131,5 +138,18 @@ public class MCODECluster {
 	public void setRank(int rank) {
 		this.rank = rank;
 		this.clusterName = "Cluster " + (rank + 1);
+	}
+	
+	public void dispose() {
+		if (view != null)
+			view.dispose();
+		dispose(network);
+	}
+	
+	private static void dispose(final CySubNetwork net) {
+		if (net != null) {
+			net.getRootNetwork().removeSubNetwork(net);
+			net.dispose();
+		}
 	}
 }
