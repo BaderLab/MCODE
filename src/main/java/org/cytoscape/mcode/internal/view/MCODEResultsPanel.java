@@ -24,6 +24,7 @@ import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,6 +115,10 @@ import org.cytoscape.view.vizmap.VisualStyle;
 @SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
+	private static final String SCORE_ATTR = "MCODE_Score";
+	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
+	private static final String CLUSTER_ATTR = "MCODE_Cluster";
+	
 	// table size parameters
 	private static final int graphPicSize = 80;
 	private static final int defaultRowHeight = graphPicSize + 8;
@@ -307,6 +312,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @return panel A JPanel with the contents of the explore panel, get's
 	 *         added to the explore collapsable panel's content pane
 	 */
+	@SuppressWarnings("rawtypes")
 	private JPanel createExploreContent(int selectedRow) {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -421,41 +427,33 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			Long rgi = n.getSUID();
 			CyTable netNodeTbl = network.getDefaultNodeTable();
 			
-			if (netNodeTbl.getColumn("MCODE_Cluster") == null)
-				netNodeTbl.createListColumn("MCODE_Cluster", String.class, false);
-			if (netNodeTbl.getColumn("MCODE_Node_Status") == null)
-				netNodeTbl.createColumn("MCODE_Node_Status", String.class, false);
-			if (netNodeTbl.getColumn("MCODE_Score") == null)
-				netNodeTbl.createColumn("MCODE_Score", Double.class, false);
+			if (netNodeTbl.getColumn(CLUSTER_ATTR) == null)
+				netNodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
+			if (netNodeTbl.getColumn(NODE_STATUS_ATTR) == null)
+				netNodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
+			if (netNodeTbl.getColumn(SCORE_ATTR) == null)
+				netNodeTbl.createColumn(SCORE_ATTR, Double.class, false);
 
 			CyRow nodeRow = network.getRow(n);
-			nodeRow.set("MCODE_Node_Status", "Unclustered");
-			nodeRow.set("MCODE_Score", alg.getNodeScore(n.getSUID(), resultId));
+			nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
+			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
 
 			for (int c = 0; c < clusters.length; c++) {
 				MCODECluster cluster = clusters[c];
-				CySubNetwork clusterNet = cluster.getNetwork();
-				
-				// TODO: encapsulate it with sub-net creation
-				mcodeUtil.addVirtualColumns(clusterNet, network);
 				
 				if (cluster.getALCluster().contains(rgi)) {
-					List<String> clusterArrayList = new ArrayList<String>();
+					Set<String> clusterNameSet = new LinkedHashSet<String>();
 
-					if (nodeRow.isSet("MCODE_Cluster")) {
-						clusterArrayList = nodeRow.getList("MCODE_Cluster", String.class);
-						clusterArrayList.add(cluster.getClusterName());
-					} else {
-						clusterArrayList.add(cluster.getClusterName());
-					}
+					if (nodeRow.isSet(CLUSTER_ATTR))
+						clusterNameSet.addAll(nodeRow.getList(CLUSTER_ATTR, String.class));
 
-					nodeRow.set("MCODE_Cluster", clusterArrayList);
+					clusterNameSet.add(cluster.getClusterName());
+					nodeRow.set(CLUSTER_ATTR, new ArrayList<String>(clusterNameSet));
 
-					if (cluster.getSeedNode() == rgi) {
-						nodeRow.set("MCODE_Node_Status", "Seed");
-					} else {
-						nodeRow.set("MCODE_Node_Status", "Clustered");
-					}
+					if (cluster.getSeedNode() == rgi)
+						nodeRow.set(NODE_STATUS_ATTR, "Seed");
+					else
+						nodeRow.set(NODE_STATUS_ATTR, "Clustered");
 				}
 			}
 		}
@@ -477,7 +475,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 
 		@Override
-		public void actionPerformed(ActionEvent actionEvent) {
+		public void actionPerformed(final ActionEvent evt) {
 			final NumberFormat nf = NumberFormat.getInstance();
 			nf.setMaximumFractionDigits(3);
 			final MCODECluster cluster = clusters[selectedRow];
@@ -492,8 +490,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
 							SavePolicy.SESSION_FILE);
 					newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
-
-					mcodeUtil.addVirtualColumns(newNetwork, network);
 					
 					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
 					CyNetworkView newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
@@ -647,6 +643,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			listIt(enumerations);
 		}
 
+		@SuppressWarnings("rawtypes")
 		public void listIt(HashMap<?, ?> enumerations) {
 			// First we sort the hash map of attributes values and their occurrences
 			ArrayList<?> enumerationsSorted = sortMap(enumerations);
@@ -714,7 +711,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 *            Has values mapped to keys
 	 * @return outputList of Map.Entries
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private ArrayList sortMap(Map map) {
 		ArrayList outputList = null;
 		int count = 0;
@@ -760,7 +757,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			this.modelEnumerator = modelEnumerator;
 		}
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public void actionPerformed(ActionEvent e) {
 			// The key is the attribute value and the value is the number of times that value appears in the cluster
 			HashMap<String, Integer> attributeEnumerations = new HashMap<String, Integer>();

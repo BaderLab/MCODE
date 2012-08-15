@@ -61,14 +61,12 @@ import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
-import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
-import org.cytoscape.model.CyTable;
 import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
@@ -514,29 +512,6 @@ public class MCODEUtil {
 
 		view.fitContent();
 		view.updateView();
-	}
-
-	public void addVirtualColumns(CySubNetwork subNetwork, CyNetwork parent) {
-		CyTable tbl = subNetwork.getDefaultNodeTable();
-		CyTable parentTbl = parent.getDefaultNodeTable();
-		
-		// Add virtual columns for all of the parent network columns (only nodes):
-		final Collection<CyColumn> columns = parentTbl.getColumns();
-		
-		for (CyColumn col : columns) {
-			final String colName = col.getName();
-			
-			if (tbl.getColumn(colName) == null)
-				tbl.addVirtualColumn(colName, colName, parentTbl, CyNode.SUID, false);
-		}
-		
-		// Add MCODE columns
-		if (tbl.getColumn("MCODE_Cluster") == null)
-			tbl.addVirtualColumn("MCODE_Cluster", "MCODE_Cluster", parentTbl, CyNetwork.SUID, false);
-		if (tbl.getColumn("MCODE_Node_Status") == null)
-			tbl.addVirtualColumn("MCODE_Node_Status", "MCODE_Node_Status", parentTbl, CyNetwork.SUID, false);
-		if (tbl.getColumn("MCODE_Score") == null)
-			tbl.addVirtualColumn("MCODE_Score", "MCODE_Score", parentTbl, CyNetwork.SUID, false);
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
