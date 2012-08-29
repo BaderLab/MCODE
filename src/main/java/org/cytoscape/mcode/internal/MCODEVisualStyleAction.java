@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
@@ -67,7 +68,7 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 								  final CyNetworkViewManager netViewManager,
 								  final VisualMappingManager visualMappingMgr,
 								  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication, netViewManager);
+		super(title, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_NETWORK);
 		this.visualMappingMgr = visualMappingMgr;
 		this.mcodeUtil = mcodeUtil;
 	}

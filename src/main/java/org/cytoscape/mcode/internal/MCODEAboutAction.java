@@ -3,6 +3,7 @@ package org.cytoscape.mcode.internal;
 import java.awt.event.ActionEvent;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.view.MCODEAboutDialog;
@@ -61,7 +62,7 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 							final CyNetworkViewManager netViewManager,
 							final OpenBrowser openBrowser,
 							final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication, netViewManager);
+		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
 		this.openBrowser = openBrowser;
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");
@@ -71,7 +72,6 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	public void actionPerformed(ActionEvent e) {
 		//display about box
 		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, mcodeUtil);
-		aboutDialog.pack();
 		aboutDialog.setVisible(true);
 	}
 }

@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -30,7 +31,7 @@ public class MCODEOpenAction extends AbstractMCODEAction {
 						   final CyServiceRegistrar registrar,
 						   final MCODEAnalyzeAction analyzeAction,
 						   final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication, netViewManager);
+		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
 		this.registrar = registrar;
 		this.analyzeAction = analyzeAction;
 		this.mcodeUtil = mcodeUtil;

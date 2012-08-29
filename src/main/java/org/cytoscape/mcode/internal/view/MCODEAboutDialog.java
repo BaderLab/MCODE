@@ -1,18 +1,26 @@
 package org.cytoscape.mcode.internal.view;
 
+import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.net.URL;
 
+import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
+import javax.swing.JPanel;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.html.HTMLEditorKit;
 
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.mcode.internal.util.MCODEResources;
-import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.mcode.internal.util.MCODEResources.ImageName;
+import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.util.swing.OpenBrowser;
 
 /**
@@ -58,24 +66,30 @@ public class MCODEAboutDialog extends JDialog {
 
 	private static final long serialVersionUID = 635333288924094273L;
 
+	private final CySwingApplication swingApplication;
 	private final OpenBrowser openBrowser;
 	private final String version;
 	private final String buildDate;
 
 	/** Main panel for dialog box */
 	private JEditorPane mainContainer;
+	private JPanel buttonPanel;
+
 
 	public MCODEAboutDialog(final CySwingApplication swingApplication,
 							final OpenBrowser openBrowser,
 							final MCODEUtil mcodeUtil) {
 		super(swingApplication.getJFrame(), "About MCODE", false);
+		this.swingApplication = swingApplication;
 		this.openBrowser = openBrowser;
-		
 		version = mcodeUtil.getProperty("project.version");
 		buildDate = mcodeUtil.getProperty("buildDate");
 
 		setResizable(false);
-		setContentPane(getMainContainer());
+		getContentPane().add(getMainContainer(), BorderLayout.CENTER);
+		getContentPane().add(getButtonPanel(), BorderLayout.SOUTH);
+		pack();
+		setLocationRelativeTo(getApplicationParent());
 	}
 
 	private JEditorPane getMainContainer() {
@@ -110,11 +124,51 @@ public class MCODEAboutDialog extends JDialog {
 						  "<i>BMC Bioinformatics</i>. 2003 Jan 13;4(1):2</P></body></html>";
 
 			mainContainer.setText(text);
+			
+			mainContainer.addKeyListener(new KeyListener() {
+				
+				@Override
+				public void keyTyped(KeyEvent e) {
+				}
+				
+				@Override
+				public void keyReleased(KeyEvent e) {
+					switch (e.getKeyCode()) {
+						case KeyEvent.VK_ENTER:
+						case KeyEvent.VK_ESCAPE:
+							dispose();
+							break;
+					}
+				}
+				
+				@Override
+				public void keyPressed(KeyEvent e) {
+				}
+			});
 		}
 
 		return mainContainer;
 	}
 
+	private JPanel getButtonPanel() {
+		if (buttonPanel == null) {
+			buttonPanel = new JPanel();
+			
+			JButton button = new JButton("Close");
+			button.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					dispose();
+				}
+			});
+			button.setAlignmentX(CENTER_ALIGNMENT);
+			
+			buttonPanel.add(button);
+		}
+		
+		return buttonPanel;
+	}
+	
 	private class HyperlinkAction implements HyperlinkListener {
 
 		public void hyperlinkUpdate(HyperlinkEvent event) {
@@ -122,5 +176,14 @@ public class MCODEAboutDialog extends JDialog {
 				openBrowser.openURL(event.getURL().toString());
 			}
 		}
+	}
+
+	private Component getApplicationParent() {
+		Component c = swingApplication.getJFrame();
+		
+		while (c.getParent() != null)
+			c = c.getParent();
+		
+		return c;
 	}
 }

@@ -2,5 +2,5 @@
 # Use this file to add customized Bnd instructions for the bundle
 #-----------------------------------------------------------------
 
-Bundle-Activator: ${bundle.namespace}.internal.CyActivator
-Private-Package: ${bundle.namespace}.internal.*
+Bundle-Activator: ${bundle.namespace}.CyActivator
+Private-Package: ${bundle.namespace}.*

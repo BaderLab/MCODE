@@ -3,6 +3,7 @@ package org.cytoscape.mcode.internal;
 import java.awt.event.ActionEvent;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.util.swing.OpenBrowser;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -58,7 +59,7 @@ public class MCODEHelpAction extends AbstractMCODEAction {
 						   final CySwingApplication swingApplication,
 						   final CyNetworkViewManager netViewManager,
 						   final OpenBrowser openBrowser) {
-		super(name, applicationManager, swingApplication, netViewManager);
+		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
 		this.openBrowser = openBrowser;
 		setPreferredMenu("Apps.MCODE");
 	}

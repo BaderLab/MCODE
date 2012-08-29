@@ -7,6 +7,7 @@ import java.util.Set;
 import javax.swing.JOptionPane;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -37,7 +38,7 @@ public class MCODECloseAction extends AbstractMCODEAction implements NetworkAbou
 							final CyNetworkViewManager netViewManager,
 							final CyServiceRegistrar registrar,
 							final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication, netViewManager);
+		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
 		this.registrar = registrar;
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");

@@ -12,6 +12,7 @@ import javax.swing.JOptionPane;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkEvent;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
+import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -107,7 +108,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 							  final CyServiceRegistrar registrar,
 							  final TaskManager<?, ?> taskManager,
 							  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication, netViewManager);
+		super(title, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_NETWORK);
 		this.registrar = registrar;
 		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;

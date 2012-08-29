@@ -81,10 +81,12 @@ import org.cytoscape.view.model.VisualLexicon;
 import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
+import org.cytoscape.view.presentation.property.BasicVisualLexicon;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.presentation.property.values.NodeShape;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualPropertyDependency;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.view.vizmap.mappings.BoundaryRangeValues;
@@ -575,6 +577,14 @@ public class MCODEUtil {
 			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
 			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
 
+			// Set node width/height lock
+			for (VisualPropertyDependency<?> dep : appStyle.getAllVisualPropertyDependencies()) {
+				if (dep.getParentVisualProperty() == BasicVisualLexicon.NODE_SIZE &&
+						dep.getVisualProperties().contains(BasicVisualLexicon.NODE_WIDTH) &&
+						dep.getVisualProperties().contains(BasicVisualLexicon.NODE_HEIGHT))
+					dep.setDependency(true);
+			}
+			
 			appStyle.addVisualMappingFunction(nodeShapeDm);
 		}
 

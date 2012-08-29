@@ -5,7 +5,6 @@ import java.util.Collection;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.AbstractCyAction;
-import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -24,8 +23,9 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	public AbstractMCODEAction(final String name,
 							   final CyApplicationManager applicationManager,
 							   final CySwingApplication swingApplication,
-							   final CyNetworkViewManager netViewManager) {
-		super(name, applicationManager, ActionEnableSupport.ENABLE_FOR_NETWORK, netViewManager);
+							   final CyNetworkViewManager netViewManager,
+							   final String enableFor) {
+		super(name, applicationManager, enableFor, netViewManager);
 		this.applicationManager = applicationManager;
 		this.swingApplication = swingApplication;
 		this.netViewManager = netViewManager;
