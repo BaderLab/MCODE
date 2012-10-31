@@ -79,7 +79,7 @@ public class MCODEAboutDialog extends JDialog {
 	public MCODEAboutDialog(final CySwingApplication swingApplication,
 							final OpenBrowser openBrowser,
 							final MCODEUtil mcodeUtil) {
-		super(swingApplication.getJFrame(), "About MCODE", false);
+		super(swingApplication.getJFrame(), "About MCODE", true);
 		this.swingApplication = swingApplication;
 		this.openBrowser = openBrowser;
 		version = mcodeUtil.getProperty("project.version");
@@ -170,7 +170,7 @@ public class MCODEAboutDialog extends JDialog {
 	}
 	
 	private class HyperlinkAction implements HyperlinkListener {
-
+		@Override
 		public void hyperlinkUpdate(HyperlinkEvent event) {
 			if (event.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
 				openBrowser.openURL(event.getURL().toString());

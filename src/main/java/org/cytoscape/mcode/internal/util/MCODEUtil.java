@@ -54,6 +54,8 @@ import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.CytoPanel;
+import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.CyActivator;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
@@ -61,6 +63,8 @@ import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
+import org.cytoscape.mcode.internal.view.MCODEMainPanel;
+import org.cytoscape.mcode.internal.view.MCODEResultsPanel;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
@@ -816,6 +820,66 @@ public class MCODEUtil {
 		}
 
 		return false;
+	}
+	
+	/**
+	 * @return Cytoscape's control panel
+	 */
+	public CytoPanel getControlCytoPanel() {
+		return swingApplication.getCytoPanel(CytoPanelName.WEST);
+	}
+
+	/**
+	 * @return Cytoscape's results panel
+	 */
+	public CytoPanel getResultsCytoPanel() {
+		return swingApplication.getCytoPanel(CytoPanelName.EAST);
+	}
+
+	/**
+	 * @return The main panel of the app if it is opened, and null otherwise
+	 */
+	public MCODEMainPanel getMainPanel() {
+		CytoPanel cytoPanel = getControlCytoPanel();
+		int count = cytoPanel.getCytoPanelComponentCount();
+
+		for (int i = 0; i < count; i++) {
+			if (cytoPanel.getComponentAt(i) instanceof MCODEMainPanel)
+				return (MCODEMainPanel) cytoPanel.getComponentAt(i);
+		}
+
+		return null;
+	}
+
+	/**
+	 * @return The result panels of the app if it is opened, or an empty collection otherwise
+	 */
+	public Collection<MCODEResultsPanel> getResultPanels() {
+		Collection<MCODEResultsPanel> panels = new ArrayList<MCODEResultsPanel>();
+		CytoPanel cytoPanel = getResultsCytoPanel();
+		int count = cytoPanel.getCytoPanelComponentCount();
+
+		for (int i = 0; i < count; i++) {
+			if (cytoPanel.getComponentAt(i) instanceof MCODEResultsPanel)
+				panels.add((MCODEResultsPanel) cytoPanel.getComponentAt(i));
+		}
+
+		return panels;
+	}
+
+	public MCODEResultsPanel getResultPanel(final int resultId) {
+		for (MCODEResultsPanel panel : getResultPanels()) {
+			if (panel.getResultId() == resultId) return panel;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @return true if the app is opened and false otherwise
+	 */
+	public boolean isOpened() {
+		return getMainPanel() != null;
 	}
 	
 	private static Properties loadProperties(String name) {
