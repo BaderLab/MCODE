@@ -34,20 +34,21 @@ public class MCODECloseTask implements Task {
 	}
 
 	@Override
-	public void run(TaskMonitor taskMonitor) throws Exception {
+	public void run(final TaskMonitor taskMonitor) throws Exception {
 		if (mcodeUtil.isOpened()) {
+			int result = JOptionPane.YES_OPTION;
 			Collection<MCODEResultsPanel> resultPanels = mcodeUtil.getResultPanels();
 
 			if (resultPanels.size() > 0) {
 				String message = "You are about to close the MCODE app.\nDo you wish to continue?";
-				int result = JOptionPane.showOptionDialog(swingApplication.getJFrame(),
-														  new Object[] { message },
-														  "Confirm",
-														  JOptionPane.YES_NO_OPTION,
-														  JOptionPane.QUESTION_MESSAGE,
-														  null,
-														  null,
-														  null);
+				result = JOptionPane.showOptionDialog(swingApplication.getJFrame(),
+													  new Object[] { message },
+													  "Close MCODE",
+													  JOptionPane.YES_NO_OPTION,
+													  JOptionPane.QUESTION_MESSAGE,
+													  null,
+													  null,
+													  null);
 				if (result == JOptionPane.YES_OPTION) {
 					for (MCODEResultsPanel panel : resultPanels) {
 						panel.discard(false);
@@ -61,13 +62,15 @@ public class MCODECloseTask implements Task {
 				}
 			}
 
-			MCODEMainPanel mainPanel = mcodeUtil.getMainPanel();
-
-			if (mainPanel != null) {
-				registrar.unregisterService(mainPanel, CytoPanelComponent.class);
+			if (result == JOptionPane.YES_OPTION) {
+				MCODEMainPanel mainPanel = mcodeUtil.getMainPanel();
+	
+				if (mainPanel != null) {
+					registrar.unregisterService(mainPanel, CytoPanelComponent.class);
+				}
+	
+				mcodeUtil.reset();
 			}
-
-			mcodeUtil.reset();
 		}
 	}
 
