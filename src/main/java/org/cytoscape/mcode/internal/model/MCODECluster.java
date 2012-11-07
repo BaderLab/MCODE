@@ -52,83 +52,75 @@ public class MCODECluster {
 	private CySubNetwork network;
 	private Long seedNode;
 	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
-	private double clusterScore;
-	private String clusterName; // pretty much unused so far, but could store name by user's input
+	private double score;
+	private String name; // pretty much unused so far, but could store name by user's input
 	private int rank;
 	private int resultId;
+	private boolean disposed;
 
-	public MCODECluster() {
+	public MCODECluster(final int resultId,
+						final Long seedNode,
+						final CySubNetwork network,
+						final double score,
+						final List<Long> alCluster,
+						final Map<Long, Boolean> nodeSeenHashMap) {
+		assert seedNode != null;
+		assert network != null;
+		assert alCluster != null;
+		assert nodeSeenHashMap != null;
+		
+		this.resultId = resultId;
+		this.seedNode = seedNode;
+		this.network = network;
+		this.score = score;
+		this.alCluster = alCluster;
+		this.nodeSeenHashMap = nodeSeenHashMap;
 	}
 
 	public int getResultId() {
 		return resultId;
 	}
 
-	public void setResultId(int resultId) {
-		this.resultId = resultId;
+	public String getName() {
+		return name;
 	}
 
-	public String getClusterName() {
-		return clusterName;
+	public void setName(final String name) {
+		throwExceptionIfDisposed();
+		this.name = name;
 	}
 
-	public void setClusterName(final String clusterName) {
-		this.clusterName = clusterName;
-	}
-
-	public CyNetworkView getView() {
+	public synchronized CyNetworkView getView() {
 		return view;
 	}
 
-	public void setView(final CyNetworkView view) {
+	public synchronized void setView(final CyNetworkView view) {
+		throwExceptionIfDisposed();
+		
 		if (this.view != null)
 			this.view.dispose();
 		
 		this.view = view;
 	}
 
-	public CySubNetwork getNetwork() {
+	public synchronized CySubNetwork getNetwork() {
 		return network;
 	}
 
-	public void setNetwork(final CySubNetwork network) {
-		if (view != null && view.getModel().equals(this.network))
-			view.dispose();
-		
-		dispose(this.network);
-		this.network = network;
-	}
-
-	public double getClusterScore() {
-		return clusterScore;
-	}
-
-	public void setClusterScore(final double clusterScore) {
-		this.clusterScore = clusterScore;
+	public double getScore() {
+		return score;
 	}
 
 	public List<Long> getALCluster() {
 		return alCluster;
 	}
 
-	public void setALCluster(final List<Long> alCluster) {
-		this.alCluster = alCluster;
-	}
-
 	public Long getSeedNode() {
 		return seedNode;
 	}
 
-	public void setSeedNode(Long seedNode) {
-		this.seedNode = seedNode;
-	}
-
 	public Map<Long, Boolean> getNodeSeenHashMap() {
 		return nodeSeenHashMap;
-	}
-
-	public void setNodeSeenHashMap(Map<Long, Boolean> nodeSeenHashMap) {
-		this.nodeSeenHashMap = nodeSeenHashMap;
 	}
 
 	public int getRank() {
@@ -137,19 +129,33 @@ public class MCODECluster {
 
 	public void setRank(int rank) {
 		this.rank = rank;
-		this.clusterName = "Cluster " + (rank + 1);
+		this.name = "Cluster " + (rank + 1);
 	}
 	
-	public void dispose() {
+	public synchronized boolean isDisposed() {
+		return disposed;
+	}
+
+	public synchronized void dispose() {
+		if (isDisposed()) return;
+		
 		if (view != null)
 			view.dispose();
-		dispose(network);
+		
+		network.getRootNetwork().removeSubNetwork(network);
+		network.dispose();
+		
+		disposed = true;
 	}
-	
-	private static void dispose(final CySubNetwork net) {
-		if (net != null) {
-			net.getRootNetwork().removeSubNetwork(net);
-			net.dispose();
-		}
+
+	@Override
+	public String toString() {
+		return "MCODECluster [clusterName=" + name + ", clusterScore=" + score + 
+				", rank=" + rank + ", resultId=" + resultId + ", disposed=" + disposed + "]";
+	}
+
+	private void throwExceptionIfDisposed() {
+		if (isDisposed())
+			throw new RuntimeException("MCODECluster has been disposed and cannot be used anymore: ");
 	}
 }

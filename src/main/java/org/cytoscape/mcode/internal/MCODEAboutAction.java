@@ -55,6 +55,7 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 
 	private final OpenBrowser openBrowser;
 	private final MCODEUtil mcodeUtil;
+	private MCODEAboutDialog aboutDialog;
 
 	public MCODEAboutAction(final String name,
 							final CyApplicationManager applicationManager,
@@ -71,7 +72,17 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//display about box
-		MCODEAboutDialog aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, mcodeUtil);
-		aboutDialog.setVisible(true);
+		synchronized (this) {
+			if (aboutDialog == null) {
+				aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, mcodeUtil);
+			}
+			
+			if (!aboutDialog.isVisible()) {
+				aboutDialog.setLocationRelativeTo(null);
+				aboutDialog.setVisible(true);
+			}
+		}
+		
+		aboutDialog.toFront();
 	}
 }

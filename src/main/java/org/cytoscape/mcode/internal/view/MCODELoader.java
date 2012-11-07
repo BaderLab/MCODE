@@ -52,35 +52,36 @@ public class MCODELoader extends ImageIcon implements Runnable {
     
 	private static final long serialVersionUID = 3709336791661338561L;
 	
-	JTable table; //cluster browser table reference
-    int selectedRow; //row of cluster
-    ImageIcon graphImage; //picture of the graph as is before loading
-    BufferedImage onScreenLoader; //picture of loader
-    BufferedImage offScreenLoader;
-    Graphics2D onScreenG2; //graphics context of loader
-    Graphics2D offScreenG2;
-    Color bgColor; //background of selected cluster browser table cell
-    Color fgColor; //color of foreground in the selected cluster browser table cell
-    double fadeInAlpha; //global variable that allows the loader to fade in when it's first displayed
-    int degreesForDisk; //global variable keeping track of the loading disk rotation
-    int fontSize;
+	private JTable table; //cluster browser table reference
+	private int selectedRow; //row of cluster
+	private ImageIcon graphImage; //picture of the graph as is before loading
+	private BufferedImage onScreenLoader; //picture of loader
+	private BufferedImage offScreenLoader;
+	private Graphics2D onScreenG2; //graphics context of loader
+	private Graphics2D offScreenG2;
+	private Color bgColor; //background of selected cluster browser table cell
+	private Color fgColor; //color of foreground in the selected cluster browser table cell
+	private double fadeInAlpha; //global variable that allows the loader to fade in when it's first displayed
+	private int degreesForDisk; //global variable keeping track of the loading disk rotation
+	private int fontSize;
 
-    int progress; //progress bar progress value
-    String process; //current process being computed
+	private int progress; //progress bar progress value
+	private String process; //current process being computed
 
-    Thread t;
-    boolean loading; // run switch
-    boolean loaderDisplayed; //allows mcode to display a continous loading animation during continous exploration
+	private Thread t;
+	private boolean loading; // run switch
+	private boolean loaderDisplayed; //allows mcode to display a continuous loading animation during continuous exploration
 
     /**
-     * Constructer for the loader.
+     * Constructor for the loader.
      *
      * @param table Reference to the cluster browser table
      * @param width cell width
      * @param height cell height
      */
-    MCODELoader (JTable table, int width, int height) {
-        this.table = table;
+    MCODELoader (final int selectedRow, final JTable table, int width, int height) {
+    	this.selectedRow = selectedRow;
+    	this.table = table;
         //First we get the tables colors and set the font
         bgColor = table.getSelectionBackground();
         fgColor = table.getSelectionForeground();
@@ -99,75 +100,66 @@ public class MCODELoader extends ImageIcon implements Runnable {
 
         //the on screen image is the one that this ImageIcon will display        
         this.setImage(onScreenLoader);
-
-        loading = false;
-
-        t = new Thread(this);
-        
     }
 
-    /**
-     * Sets the row and network image on top of which the loader will be drawn as well as
-     * progress to 0 and process to "Starting".
-     *
-     * @param selectedRow the row in a table where the loader is to be drawn
-     * @param table an image of the cluster before the loader is drawn on top
-     */
-    public void setLoader(int selectedRow, JTable table) {
-        this.selectedRow = selectedRow;
+    public void start() {
         graphImage = (ImageIcon) table.getValueAt(selectedRow, 0);
         fadeInAlpha = 0.0;
         degreesForDisk = 0;
         progress = 0;
         process = "Starting";
-
         loaderDisplayed = false;
         loading = true;
-    }
-
-    @Override
-    public void run() {
-        try {
-            while (true) {
-                if (loading) {
-                    //First we make sure that if the loader is being displayed for the first time in this exploration
-                    //session, then we wait half a second to make sure it isn't displayed for process that are really
-                    //quick
-                    if (loading && !loaderDisplayed) {
-                        Thread.sleep(500);
-                    }
-                    //Then we compute the loading picture if loading is still taking place
-                    if (loading) {
-                        drawLoader();
-                        //If the loader has not been displayed yet and loading is still taking place,
-                        //we put it in the table
-                        if (loading && !loaderDisplayed) {
-                            table.setValueAt(this, selectedRow, 0);
-                            loaderDisplayed = true;
-                        }
-
-                        //Since the table consolidates paint updates, the animation would not show up unless
-                        //we implicitly force it to repaint
-                        //This paintImmediately function causes problems in windows (paints on every component sometimes)
-                        //Rectangle bounds = table.getCellRect(selectedRow, 0, false);
-                        //if (loading) table.paintImmediately(bounds);
-                        //This fireTableCellUpdated function seems to consolidate some painting too so it is not very responsive in windows
-                        if (loading) ((AbstractTableModel) table.getModel()).fireTableCellUpdated(selectedRow, 0);
-                        //Both work on the mac just fine
-                    }
-                }
-                //This sleep time generates a ~30 fps animation
-                Thread.sleep(30);
-            }
-        } catch (Exception e) {}
+        
+        t = new Thread(this);
+        t.start();
     }
 
     /**
      * Sets the run switch to false to stop the drawing process
      */
-    public void loaded() {
+    public void stop() {
         loading = false;
         loaderDisplayed = false;
+        t = null;
+    }
+    
+    @Override
+    public void run() {
+        try {
+        	final Thread curentThread = Thread.currentThread();
+        	
+            while (t == curentThread) {
+                //First we make sure that if the loader is being displayed for the first time in this exploration
+                //session, then we wait half a second to make sure it isn't displayed for process that are really quick
+                if (loading && !loaderDisplayed)
+                    Thread.sleep(500);
+                
+                //Then we compute the loading picture if loading is still taking place
+                if (loading) {
+                    drawLoader();
+                    
+                    //If the loader has not been displayed yet and loading is still taking place, we put it in the table
+                    if (loading && !loaderDisplayed) {
+                        table.setValueAt(this, selectedRow, 0);
+                        loaderDisplayed = true;
+                    }
+
+                    //Since the table consolidates paint updates, the animation would not show up unless
+                    //we implicitly force it to repaint.
+                    //This paintImmediately function causes problems in windows (paints on every component sometimes)
+                    //Rectangle bounds = table.getCellRect(selectedRow, 0, false);
+                    //if (loading) table.paintImmediately(bounds);
+                    //This fireTableCellUpdated function seems to consolidate some painting too so it is not very responsive in windows
+                    if (loading)
+                    	((AbstractTableModel) table.getModel()).fireTableCellUpdated(selectedRow, 0);
+                    //Both work on the mac just fine
+                }
+            }
+            
+            //This sleep time generates a ~30 fps animation
+            Thread.sleep(30);
+        } catch (Exception e) {}
     }
 
     /**
@@ -212,7 +204,7 @@ public class MCODELoader extends ImageIcon implements Runnable {
         int r = 20;//radius of the disk
         //To draw the animated rotating disk, we must create the Mask, or drawable area, in which we will
         //rotate a triangular polygon around a common center
-        //the inner circle is subracted from the outter to create the disk area
+        //the inner circle is subtracted from the outer to create the disk area
         Ellipse2D circOutter = new Ellipse2D.Double((loader.getWidth() / 2) - r, (loader.getHeight() / 2) - r, 2 * r, 2 * r);
         Ellipse2D circInner = new Ellipse2D.Double((loader.getWidth() / 2) - (r / 2), (loader.getHeight() / 2) - (r / 2), r, r);
 
@@ -240,10 +232,10 @@ public class MCODELoader extends ImageIcon implements Runnable {
         //In order for the leading portion of the rotating disk to be one color and the trailing portion another we use
         //this weighting variable to slowly change the weighting of the two colors in finding the average between the two
         double markerLeadColorWeighting = 1.0;
-        //this is the transparency of the initial polygon which is exponantially decremented to fade away the polygons
+        //this is the transparency of the initial polygon which is exponentially decremented to fade away the polygons
         double markerAlpha = 255 * fadeInAlpha;
 
-        //In order for the polygons to cover the disk entirely, the outter polygon points must circle in an orbit that is further
+        //In order for the polygons to cover the disk entirely, the outer polygon points must circle in an orbit that is further
         //than the disk itself, otherwise we would get a flat line between the two points and the resulting circle would not be smooth
         r = r + 10;
         //We will only draw the polygons as long as they are visible
@@ -356,8 +348,4 @@ public class MCODELoader extends ImageIcon implements Runnable {
         this.progress = progress;
         this.process = process;
     }
-
-	public void start() {
-		t.start();
-	}
 }

@@ -28,6 +28,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
@@ -74,6 +78,8 @@ import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
 import org.cytoscape.view.vizmap.VisualStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -126,8 +132,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private int resultId;
 	private MCODEAlgorithm alg;
 	private MCODECluster[] clusters;
-	private JTable table;
-	private MCODEResultsPanel.MCODEClusterBrowserTableModel modelBrowser;
+	
 	// Actual cluster data
 	private CyNetwork network; // Keep a record of the original input record for use in
 	// the table row selection listener
@@ -141,10 +146,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private int enumerationSelection = 0;
 
 	// Graphical classes
-	private MCODELoader loader;
+	private MCODEClusterBrowserPanel clusterBrowserPanel;
 
 	private final MCODEUtil mcodeUtil;
 	private final MCODEDiscardResultAction discardResultAction;
+	
+	private static final Logger logger = LoggerFactory.getLogger(MCODEResultsPanel.class);
 
 	/**
 	 * Constructor for the Results Panel which displays the clusters in a
@@ -153,7 +160,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @param clusters Found clusters from the MCODEAnalyzeTask
 	 * @param alg A reference to the alg for this particular network
 	 * @param network Network were these clusters were found
-	 * @param imageList A list of images of the found clusters
+	 * @param clusterImages A list of images of the found clusters
 	 * @param resultId Title of this result as determined by MCODESCoreAndFindAction
 	 */
 	public MCODEResultsPanel(MCODECluster[] clusters,
@@ -161,7 +168,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							 MCODEUtil mcodeUtil,
 							 CyNetwork network,
 							 CyNetworkView networkView,
-							 Image[] imageList,
+							 Image[] clusterImages,
 							 int resultId,
 							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
@@ -174,17 +181,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
 		this.discardResultAction = discardResultAction;
-
-		currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
-
-		JPanel clusterBrowserPanel = createClusterBrowserPanel(imageList);
-		JPanel bottomPanel = createBottomPanel();
-
+		this.currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
+		
+		this.clusterBrowserPanel = new MCODEClusterBrowserPanel(clusterImages);
 		add(clusterBrowserPanel, BorderLayout.CENTER);
-		add(bottomPanel, BorderLayout.SOUTH);
-
-		loader = new MCODELoader(table, graphPicSize, graphPicSize);
-		loader.start();
+		add(createBottomPanel(), BorderLayout.SOUTH);
 
 		this.setSize(this.getMinimumSize());
 	}
@@ -217,6 +218,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	public CyNetworkView getNetworkView() {
 		return networkView;
 	}
+	
+	public int getSelectedClusterRow() {
+		return clusterBrowserPanel.getSelectedRow();
+	}
 
 	public void discard(final boolean requestUserConfirmation) {
 		SwingUtilities.invokeLater(new Runnable() {
@@ -233,39 +238,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 											 oldRequestUserConfirmation);
 			}
 		});
-	}
-
-	/**
-	 * Creates a panel that contains the browser table with a scroll bar.
-	 * 
-	 * @param imageList
-	 *            images of cluster graphs
-	 * @return panel
-	 */
-	private JPanel createClusterBrowserPanel(Image[] imageList) {
-		JPanel panel = new JPanel();
-		panel.setLayout(new BorderLayout());
-		panel.setBorder(BorderFactory.createTitledBorder("Cluster Browser"));
-
-		// main data table
-		modelBrowser = new MCODEResultsPanel.MCODEClusterBrowserTableModel(imageList);
-
-		table = new JTable(modelBrowser);
-		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		table.setDefaultRenderer(StringBuffer.class, new MCODEResultsPanel.JTextAreaRenderer(defaultRowHeight));
-		table.setIntercellSpacing(new Dimension(0, 4)); // gives a little vertical room between clusters
-		table.setFocusable(false); // removes an outline that appears when the user clicks on the images
-
-		// Ask to be notified of selection changes.
-		ListSelectionModel rowSM = table.getSelectionModel();
-		rowSM.addListSelectionListener(new MCODEResultsPanel.TableRowSelectionHandler());
-
-		JScrollPane tableScrollPane = new JScrollPane(table);
-		tableScrollPane.getViewport().setBackground(Color.WHITE);
-
-		panel.add(tableScrollPane, BorderLayout.CENTER);
-
-		return panel;
 	}
 
 	/**
@@ -447,7 +419,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					if (nodeRow.isSet(CLUSTER_ATTR))
 						clusterNameSet.addAll(nodeRow.getList(CLUSTER_ATTR, String.class));
 
-					clusterNameSet.add(cluster.getClusterName());
+					clusterNameSet.add(cluster.getName());
 					nodeRow.set(CLUSTER_ATTR, new ArrayList<String>(clusterNameSet));
 
 					if (cluster.getSeedNode() == rgi)
@@ -459,6 +431,29 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 
 		return alg.getMaxScore(resultId);
+	}
+	
+	private static StringBuffer getClusterDetails(final MCODECluster cluster) {
+		StringBuffer details = new StringBuffer();
+
+		details.append("Rank: ");
+		details.append(String.valueOf(cluster.getRank() + 1));
+
+		details.append("\n");
+		details.append("Score: ");
+		NumberFormat nf = NumberFormat.getInstance();
+		nf.setMaximumFractionDigits(3);
+		details.append(nf.format(cluster.getScore()));
+
+		details.append("\n");
+		details.append("Nodes: ");
+		details.append(cluster.getNetwork().getNodeCount());
+
+		details.append("\n");
+		details.append("Edges: ");
+		details.append(cluster.getNetwork().getEdgeCount());
+
+		return details;
 	}
 
 	/**
@@ -480,8 +475,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nf.setMaximumFractionDigits(3);
 			final MCODECluster cluster = clusters[selectedRow];
 			final CyNetwork clusterNetwork = cluster.getNetwork();
-			final String title = trigger.getResultId() + ": " + cluster.getClusterName() + " (Score: " +
-								 nf.format(cluster.getClusterScore()) + ")";
+			final String title = trigger.getResultId() + ": " + cluster.getName() + " (Score: " +
+								 nf.format(cluster.getScore()) + ")";
 			// Create the child network and view
 			final SwingWorker<CyNetworkView, ?> worker = new SwingWorker<CyNetworkView, Object>() {
 
@@ -549,13 +544,62 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	/**
+	 * Panel that contains the browser table with a scroll bar.
+	 */
+	private class MCODEClusterBrowserPanel extends JPanel {
+		
+		private final MCODEResultsPanel.MCODEClusterBrowserTableModel browserModel;
+		private final JTable table;
+		
+		public MCODEClusterBrowserPanel(final Image[] images) {
+			super();
+			setLayout(new BorderLayout());
+			setBorder(BorderFactory.createTitledBorder("Cluster Browser"));
+
+			// main data table
+			browserModel = new MCODEResultsPanel.MCODEClusterBrowserTableModel(images);
+
+			table = new JTable(browserModel);
+			table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			table.setDefaultRenderer(StringBuffer.class, new MCODEResultsPanel.JTextAreaRenderer(defaultRowHeight));
+			table.setIntercellSpacing(new Dimension(0, 4)); // gives a little vertical room between clusters
+			table.setFocusable(false); // removes an outline that appears when the user clicks on the images
+
+			// Ask to be notified of selection changes.
+			ListSelectionModel rowSM = table.getSelectionModel();
+			rowSM.addListSelectionListener(new MCODEResultsPanel.TableRowSelectionHandler());
+
+			JScrollPane tableScrollPane = new JScrollPane(table);
+			tableScrollPane.getViewport().setBackground(Color.WHITE);
+
+			add(tableScrollPane, BorderLayout.CENTER);
+		}
+
+		public int getSelectedRow() {
+			return table.getSelectedRow();
+		}
+		
+		public void update(final ImageIcon image, final int row) {
+			table.setValueAt(image, row, 0);
+		}
+		
+		public void update(final MCODECluster cluster, final int row) {
+			final StringBuffer details = getClusterDetails(cluster);
+			table.setValueAt(details, row, 1);
+		}
+
+		JTable getTable() { // TODO: delete it: do not expose the JTable
+			return table;
+		}
+	}
+	
+	/**
 	 * Handles the data to be displayed in the cluster browser table
 	 */
 	private class MCODEClusterBrowserTableModel extends AbstractTableModel {
 
-		// Create column headings
-		String[] columnNames = { "Network", "Details" };
-		Object[][] data; // the actual table data
+		private final String[] columnNames = { "Network", "Details" };
+		private final Object[][] data; // the actual table data
 
 		public MCODEClusterBrowserTableModel(Image[] imageList) {
 			exploreContent = new JPanel[clusters.length];
@@ -563,7 +607,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			for (int i = 0; i < clusters.length; i++) {
 				clusters[i].setRank(i);
-				StringBuffer details = new StringBuffer(getClusterDetails(clusters[i]));
+				StringBuffer details = getClusterDetails(clusters[i]);
 				data[i][1] = new StringBuffer(details);
 
 				// get an image for each cluster - make it a nice layout of the cluster
@@ -572,60 +616,36 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			}
 		}
 
+		@Override
 		public String getColumnName(int col) {
 			return columnNames[col];
 		}
 
+		@Override
 		public int getColumnCount() {
 			return columnNames.length;
 		}
 
+		@Override
 		public int getRowCount() {
 			return data.length;
 		}
 
+		@Override
 		public Object getValueAt(int row, int col) {
 			return data[row][col];
 		}
 
+		@Override
 		public void setValueAt(Object object, int row, int col) {
 			data[row][col] = object;
 			fireTableCellUpdated(row, col);
 		}
 
+		@Override
 		public Class<?> getColumnClass(int c) {
 			return getValueAt(0, c).getClass();
 		}
-	}
-
-	/**
-	 * Generates a string buffer with the cluster's details
-	 * 
-	 * @param cluster
-	 *            The cluster
-	 * @return details String buffer containing the details
-	 */
-	private StringBuffer getClusterDetails(MCODECluster cluster) {
-		StringBuffer details = new StringBuffer();
-
-		details.append("Rank: ");
-		details.append(String.valueOf(cluster.getRank() + 1));
-
-		details.append("\n");
-		details.append("Score: ");
-		NumberFormat nf = NumberFormat.getInstance();
-		nf.setMaximumFractionDigits(3);
-		details.append(nf.format(cluster.getClusterScore()));
-
-		details.append("\n");
-		details.append("Nodes: ");
-		details.append(cluster.getNetwork().getNodeCount());
-
-		details.append("\n");
-		details.append("Edges: ");
-		details.append(cluster.getNetwork().getEdgeCount());
-
-		return details;
 	}
 
 	/**
@@ -873,8 +893,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				// event to display the new content with the name of the cluster, if it exists
 				String title = "Explore: ";
 
-				if (clusters[selectedRow].getClusterName() != null) {
-					title = title + clusters[selectedRow].getClusterName();
+				if (clusters[selectedRow].getName() != null) {
+					title = title + clusters[selectedRow].getName();
 				} else {
 					title = title + "Cluster " + (selectedRow + 1);
 				}
@@ -992,96 +1012,88 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	/**
-	 * Getter for the browser table used in MCODEVisualStyleAction to reselect
-	 * the selected cluster whenever the user focuses on this result set
-	 */
-	public JTable getClusterBrowserTable() {
-		return table;
-	}
-
-	/**
 	 * Handles the dynamic cluster size manipulation via the JSlider
 	 */
 	private class SizeAction implements ChangeListener {
 
+		private final ScheduledExecutorService scheduler =  Executors.newScheduledThreadPool(3);
+		private ScheduledFuture<?> futureLoader;
+		
 		private int selectedRow;
-		public boolean loaderSet = false;
 		private JComboBox nodeAttributesComboBox;
-		private GraphDrawer drawer;
 		private boolean drawPlaceHolder;
-
+		private final GraphDrawer drawer;
+		private final MCODELoader loader;
+		
 		/**
-		 * Constructor
-		 * 
-		 * @param selectedRow
-		 *            The selected cluster
-		 * @param nodeAttributesComboBox
-		 *            Reference to the attribute enumeration picker
+		 * @param selectedRow The selected cluster
+		 * @param nodeAttributesComboBox Reference to the attribute enumeration picker
 		 */
-		SizeAction(int selectedRow, JComboBox nodeAttributesComboBox) {
+		SizeAction(final int selectedRow, final JComboBox nodeAttributesComboBox) {
 			this.selectedRow = selectedRow;
 			this.nodeAttributesComboBox = nodeAttributesComboBox;
-			drawer = new GraphDrawer();
-			loaderSet = false;
+			loader = new MCODELoader(selectedRow, clusterBrowserPanel.getTable(), graphPicSize, graphPicSize);
+			drawer = new GraphDrawer(loader);
 		}
 
-		public void stateChanged(ChangeEvent e) {
+		public void stateChanged(final ChangeEvent e) {
 			// This method as been written so that the slider is responsive to the user's input at all times, despite
 			// the computationally challenging drawing, layout out, and selection of large clusters. As such, we only
 			// perform real work if the slider produces a different cluster, and furthermore we only perform the quick
 			// processes here, while the heavy weights are handled by the drawer's thread.
-			JSlider source = (JSlider) e.getSource();
-			double nodeScoreCutoff = (((double) source.getValue()) / 1000);
-
+			final JSlider source = (JSlider) e.getSource();
+			final double nodeScoreCutoff = (((double) source.getValue()) / 1000);
+			final int clusterRow = selectedRow;
 			// Store current cluster content for comparison
-			List<Long> oldCluster = clusters[selectedRow].getALCluster();
-
-			// Find the new cluster given the node score cutoff
-			MCODECluster cluster = alg.exploreCluster(clusters[selectedRow], nodeScoreCutoff, network, resultId);
-
-			// We only want to do the following work if the newly found cluster
-			// is actually different
-			// So we get the new cluster content
-			List<Long> newCluster = cluster.getALCluster();
-
-			// If the new cluster is too large to draw within a reasonable time
-			// and won't look understandable in the table cell then we draw a place holder
-			drawPlaceHolder = newCluster.size() > 300;
-
-			// And compare the old and new
-			if (!newCluster.equals(oldCluster)) {
-				// If the cluster has changed, then we conduct all
-				// non-rate-limiting steps:
-				// Interrupt the drawing
-				drawer.interruptDrawing();
-				// Update the cluster array
-				clusters[selectedRow] = cluster;
-				// Update the details
-				StringBuffer details = getClusterDetails(cluster);
-				table.setValueAt(details, selectedRow, 1);
-				// Fire the enumeration action
-				nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
-
-				// Ensure that a loader is set with the selected row and table object
-				// Also, we want to set the loader only once during continuous exploration
-				// It is only set again when a graph is fully loaded and placed in the table
-				if (!loaderSet && !drawPlaceHolder) {
-					// internally, the loader is only drawn into the appropriate
-					// cell after a short sleep period
-					// to ensure that quick loads are not displayed unecessarily
-					loader.setLoader(selectedRow, table);
-					loaderSet = true;
-				}
-
-				// There is a small difference between expanding and retracting the cluster size.
-				// When expanding, new nodes need random position and thus must go through the layout.
-				// When retracting, we simply use the layout that was generated and stored.
-				// This speeds up the drawing process greatly.
-				boolean layoutNecessary = newCluster.size() > oldCluster.size();
-				// Draw Graph and select the cluster in the view in a separate thread so that it can be
-				// interrupted by the slider movement
-				drawer.drawGraph(cluster, layoutNecessary, this, drawPlaceHolder);
+        	final MCODECluster oldCluster = clusters[clusterRow];
+			
+			if (futureLoader != null && !futureLoader.isDone()) {
+				drawer.stop();
+				futureLoader.cancel(false);
 			}
+			
+			final Runnable command = new Runnable() {
+	            @Override
+	        	public void run() {
+	            	final List<Long> oldALCluster = oldCluster.getALCluster();
+					// Find the new cluster given the node score cutoff
+					final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
+					
+					// We only want to do the following work if the newly found cluster is actually different
+					// So we get the new cluster content
+					List<Long> newALCluster = newCluster.getALCluster();
+					
+					// If the new cluster is too large to draw within a reasonable time
+					// and won't look understandable in the table cell, then we draw a place holder
+					drawPlaceHolder = newALCluster.size() > 300;
+					
+					// And compare the old and new
+					if (!newALCluster.equals(oldALCluster)) {
+						// If the cluster has changed, then we conduct all non-rate-limiting steps:
+						// Update the cluster array
+						clusters[clusterRow] = newCluster;
+						// Update the cluster details
+						clusterBrowserPanel.update(newCluster, clusterRow);
+						// Fire the enumeration action
+						nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
+		
+						// There is a small difference between expanding and retracting the cluster size.
+						// When expanding, new nodes need random position and thus must go through the layout.
+						// When retracting, we simply use the layout that was generated and stored.
+						// This speeds up the drawing process greatly.
+						boolean layoutNecessary = newALCluster.size() > oldALCluster.size();
+						// Draw Graph and select the cluster in the view in a separate thread so that it can be
+						// interrupted by the slider movement
+						if (!newCluster.isDisposed())
+							drawer.drawGraph(newCluster, layoutNecessary, drawPlaceHolder);
+						
+						// Prevent memory leaks
+						oldCluster.dispose();
+					}
+	            }
+	        };
+	        
+	        futureLoader = scheduler.schedule(command, 100, TimeUnit.MILLISECONDS);
 		}
 	}
 
@@ -1091,22 +1103,19 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private class GraphDrawer implements Runnable {
 
-		private Thread t;
 		private boolean drawGraph; // run switch
 		private boolean placeHolderDrawn;
 		private boolean drawPlaceHolder;
 		MCODECluster cluster;
 		SpringEmbeddedLayouter layouter;
-		MCODEResultsPanel.SizeAction trigger;
 		boolean layoutNecessary;
 		boolean clusterSelected;
+		private Thread t;
+		private final  MCODELoader loader;
 
-		GraphDrawer() {
-			drawGraph = false;
-			drawPlaceHolder = false;
+		GraphDrawer(final MCODELoader loader) {
+			this.loader = loader;
 			layouter = new SpringEmbeddedLayouter();
-			t = new Thread(this);
-			t.start();
 		}
 
 		/**
@@ -1120,10 +1129,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		 */
 		public void drawGraph(MCODECluster cluster,
 							  boolean layoutNecessary,
-							  MCODEResultsPanel.SizeAction trigger,
 							  boolean drawPlaceHolder) {
 			this.cluster = cluster;
-			this.trigger = trigger;
 			this.layoutNecessary = layoutNecessary;
 
 			// Graph drawing will only occur if the cluster is not too large,
@@ -1131,11 +1138,23 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			drawGraph = !drawPlaceHolder;
 			this.drawPlaceHolder = drawPlaceHolder;
 			clusterSelected = false;
+			t = new Thread(this);
+			t.start();
 		}
 
 		public void run() {
 			try {
-				while (true) {
+				// We want to set the loader only once during continuous exploration
+				// It is only set again when a graph is fully loaded and placed in the table
+				if (!drawPlaceHolder) {
+					// internally, the loader is only drawn into the appropriate cell after a short sleep period
+					// to ensure that quick loads are not displayed unnecessarily
+					loader.start();
+				}
+				
+				final Thread currentThread = Thread.currentThread(); 
+				
+				while (t == currentThread) {
 					// This ensures that the drawing of this cluster is only attempted once
 					// if it is unsuccessful it is because the setup or layout
 					// process was interrupted by the slider movement
@@ -1157,12 +1176,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							selectCluster(cluster.getNetwork());
 							clusterSelected = true;
 							// Update the table
-							table.setValueAt(new ImageIcon(image), cluster.getRank(), 0);
-							// Loader is no longer showing, so we let the SizeAction know that
-							trigger.loaderSet = false;
-							// stop loader from animating and taking up computer processing power
-							loader.loaded();
-
+							clusterBrowserPanel.update(new ImageIcon(image), cluster.getRank());
 							drawGraph = false;
 						}
 
@@ -1172,13 +1186,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						// draw place holder, only once though (as per the if statement)
 						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
 						// Update the table
-						table.setValueAt(new ImageIcon(image), cluster.getRank(), 0);
+						clusterBrowserPanel.update(new ImageIcon(image), cluster.getRank());
 						// select the cluster
 						selectCluster(cluster.getNetwork());
-						// Loader is no longer showing, so we let the SizeAction know that
-						trigger.loaderSet = false;
-						// stop loader from animating and taking up computer processing power
-						loader.loaded();
 						drawGraph = false;
 						// Make sure this block is not run again unless if we need to reload the image
 						placeHolderDrawn = true;
@@ -1187,17 +1197,24 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						clusterSelected = true;
 					}
 
+					if ((!drawGraph && !drawPlaceHolder) || placeHolderDrawn)
+						stop();
+					
 					// This sleep time produces the drawing response time of 1 20th of a second
 					Thread.sleep(100);
 				}
 			} catch (Exception e) {
+				logger.error("Error while drawing cluster image", e);
 			}
 		}
 
-		public void interruptDrawing() {
-			drawGraph = false;
+		void stop() {
+			// stop loader from animating and taking up computer processing power
+			loader.stop();
 			layouter.interruptDoLayout();
 			mcodeUtil.interruptLoading();
+			drawGraph = false;
+			t = null;
 		}
 	}
 }

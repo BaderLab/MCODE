@@ -333,6 +333,8 @@ public class MCODEUtil {
 									SpringEmbeddedLayouter layouter,
 									boolean layoutNecessary,
 									final MCODELoader loader) {
+		final CyNetwork net = cluster.getNetwork();
+		
 		// Progress reporters.
 		// There are three basic tasks, the progress of each is calculated and then combined
 		// using the respective weighting to get an overall progress global progress
@@ -349,14 +351,14 @@ public class MCODEUtil {
 		double progress = 0;
 
 		final VisualStyle vs = getClusterStyle();
-		final CyNetworkView clusterView = createNetworkView(cluster.getNetwork(), vs);
+		final CyNetworkView clusterView = createNetworkView(net, vs);
 
 		clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
 		clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
 
 		for (View<CyNode> nv : clusterView.getNodeViews()) {
 			if (interrupted) {
-				logger.error("Interrupted: Node Setup");
+				logger.debug("Interrupted: Node Setup");
 				// before we short-circuit the method we reset the interruption so that the method can run without
 				// problems the next time around
 				if (layouter != null) layouter.resetDoLayout();
@@ -446,7 +448,6 @@ public class MCODEUtil {
 		final Graphics2D g = (Graphics2D) image.getGraphics();
 
 		SwingUtilities.invokeLater(new Runnable() {
-
 			@Override
 			public void run() {
 				try {
@@ -476,7 +477,8 @@ public class MCODEUtil {
 
 					if (clusterView.getNodeViews().size() > 0) {
 						cluster.setView(clusterView);
-					}
+					} else {
+System.out.println("\t>> no node views--nodes: " + clusterView.getModel().getNodeCount() + " | " + net.getNodeCount());}// TODO: delete
 				} catch (Exception ex) {
 					throw new RuntimeException(ex);
 				}
@@ -485,7 +487,7 @@ public class MCODEUtil {
 
 		layouter.resetDoLayout();
 		resetLoading();
-
+		
 		return image;
 	}
 
@@ -525,6 +527,7 @@ public class MCODEUtil {
 		if (vs == null) vs = visualMappingMgr.getDefaultVisualStyle();
 		visualMappingMgr.setVisualStyle(vs, view);
 		vs.apply(view);
+		view.updateView();
 
 		return view;
 	}
@@ -711,8 +714,8 @@ public class MCODEUtil {
 
 			//sorting clusters by decreasing score
 			public int compare(MCODECluster c1, MCODECluster c2) {
-				double d1 = c1.getClusterScore();
-				double d2 = c2.getClusterScore();
+				double d1 = c1.getScore();
+				double d2 = c2.getScore();
 				if (d1 == d2) {
 					return 0;
 				} else if (d1 < d2) {
@@ -795,7 +798,7 @@ public class MCODEUtil {
 					fout.write((i + 1) + "\t"); //rank
 					NumberFormat nf = NumberFormat.getInstance();
 					nf.setMaximumFractionDigits(3);
-					fout.write(nf.format(clusters[i].getClusterScore()) + "\t");
+					fout.write(nf.format(clusters[i].getScore()) + "\t");
 					// cluster size - format: (# prot, # intx)
 					fout.write(clusterNetwork.getNodeCount() + "\t");
 					fout.write(clusterNetwork.getEdgeCount() + "\t");

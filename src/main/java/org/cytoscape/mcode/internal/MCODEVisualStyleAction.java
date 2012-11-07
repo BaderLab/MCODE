@@ -97,13 +97,14 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 			double maxScore = resultsPanel.setNodeAttributesAndGetMaxScore();
 			// We also need the selected row if one is selected at all
 			resultsPanel.selectCluster(null);
-			int selectedRow = resultsPanel.getClusterBrowserTable().getSelectedRow();
-			resultsPanel.getClusterBrowserTable().clearSelection();
-
-			if (selectedRow >= 0) {
-				resultsPanel.getClusterBrowserTable().setRowSelectionInterval(selectedRow, selectedRow);
-			}
-
+// TODO: delete/fix
+//			int selectedRow = resultsPanel.getSelectedRow();
+//			resultsPanel.getClusterBrowserTable().clearSelection();
+//
+//			if (selectedRow >= 0) {
+//				resultsPanel.getClusterBrowserTable().setRowSelectionInterval(selectedRow, selectedRow);
+//			}
+			
 			// Get the updated app's style
 			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
 			// Register the app's style but don't make it active by default

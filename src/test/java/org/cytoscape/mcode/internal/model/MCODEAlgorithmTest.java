@@ -125,7 +125,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		
 		assertNotNull(cn);
 		assertEquals(resultId, c.getResultId());
-		assertEquals(16, c.getClusterScore(), 0.0);
+		assertEquals(16, c.getScore(), 0.0);
 		assertEquals(16, cn.getNodeCount());
 		assertEquals(120, cn.getEdgeCount());
 		assertNotNull(c.getSeedNode());
@@ -152,7 +152,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		
 		assertNotNull(cn);
 		assertEquals(resultId, c.getResultId());
-		assertEquals(14.118, c.getClusterScore(), 0.0009);
+		assertEquals(14.118, c.getScore(), 0.0009);
 		assertEquals(16, cn.getNodeCount());
 		assertEquals(120, cn.getEdgeCount());
 		assertNotNull(c.getSeedNode());

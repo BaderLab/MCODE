@@ -1,7 +1,6 @@
 package org.cytoscape.mcode.internal.view;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -66,7 +65,6 @@ public class MCODEAboutDialog extends JDialog {
 
 	private static final long serialVersionUID = 635333288924094273L;
 
-	private final CySwingApplication swingApplication;
 	private final OpenBrowser openBrowser;
 	private final String version;
 	private final String buildDate;
@@ -79,8 +77,7 @@ public class MCODEAboutDialog extends JDialog {
 	public MCODEAboutDialog(final CySwingApplication swingApplication,
 							final OpenBrowser openBrowser,
 							final MCODEUtil mcodeUtil) {
-		super(swingApplication.getJFrame(), "About MCODE", true);
-		this.swingApplication = swingApplication;
+		super(swingApplication.getJFrame(), "About MCODE", false);
 		this.openBrowser = openBrowser;
 		version = mcodeUtil.getProperty("project.version");
 		buildDate = mcodeUtil.getProperty("buildDate");
@@ -89,7 +86,6 @@ public class MCODEAboutDialog extends JDialog {
 		getContentPane().add(getMainContainer(), BorderLayout.CENTER);
 		getContentPane().add(getButtonPanel(), BorderLayout.SOUTH);
 		pack();
-		setLocationRelativeTo(getApplicationParent());
 	}
 
 	private JEditorPane getMainContainer() {
@@ -176,14 +172,5 @@ public class MCODEAboutDialog extends JDialog {
 				openBrowser.openURL(event.getURL().toString());
 			}
 		}
-	}
-
-	private Component getApplicationParent() {
-		Component c = swingApplication.getJFrame();
-		
-		while (c.getParent() != null)
-			c = c.getParent();
-		
-		return c;
 	}
 }

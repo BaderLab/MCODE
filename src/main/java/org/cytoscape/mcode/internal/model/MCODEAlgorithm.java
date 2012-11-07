@@ -335,7 +335,7 @@ public class MCODEAlgorithm {
 				currentNode = alNodesWithSameScore.get(j);
 
 				if (!nodeSeenHashMap.containsKey(currentNode)) {
-					// We store the current node seen hash map for later exploration purposes
+					// Store the list of all the nodes that have already been seen and incorporated in other clusters
 					Map<Long, Boolean> nodeSeenHashMapSnapShot = new HashMap<Long, Boolean>(nodeSeenHashMap);
 
 					// Here we use the original node score cutoff
@@ -361,15 +361,11 @@ public class MCODEAlgorithm {
 								fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
 
 							clusterNet = createClusterNetwork(alCluster, inputNetwork);
+							final double score = scoreCluster(clusterNet);
 							
-							MCODECluster currentCluster = new MCODECluster();
-							currentCluster.setALCluster(alCluster);
-							currentCluster.setSeedNode(currentNode);//store the current node as the seed node
-							currentCluster.setNetwork(clusterNet);
-							currentCluster.setClusterScore(scoreCluster(currentCluster));
-							currentCluster.setNodeSeenHashMap(nodeSeenHashMapSnapShot);//store the list of all the nodes that have already been seen and incorporated in other clusters
-							currentCluster.setResultId(resultId);
-							//store detected cluster for later
+							MCODECluster currentCluster = new MCODECluster(resultId, currentNode, clusterNet, score,
+									alCluster, nodeSeenHashMapSnapShot);
+							
 							alClusters.add(currentCluster);
 						}
 					}
@@ -446,22 +442,21 @@ public class MCODEAlgorithm {
 									   final int resultId) {
 		// This method is similar to the finding method with the exception of the filtering so that the decrease of the cluster size
 		// can produce a single node, also the use of the node seen hash map is differentially applied...
-		Map<Long, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
-		MCODEParameterSet params = mcodeUtil.getCurrentParameters().getResultParams(cluster.getResultId());
+		final Map<Long, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
+		final MCODEParameterSet params = mcodeUtil.getCurrentParameters().getResultParams(cluster.getResultId());
 		final Map<Long, Boolean> nodeSeenHashMap;
 
 		// If the size slider is below the set node score cutoff we use the node seen hash map so that clusters
 		// with higher scoring seeds have priority, however when the slider moves higher than the node score cutoff
 		// we allow the cluster to accrue nodes from all around without the priority restriction
-		if (nodeScoreCutoff <= params.getNodeScoreCutoff()) {
+		if (nodeScoreCutoff <= params.getNodeScoreCutoff())
 			nodeSeenHashMap = new HashMap<Long, Boolean>(cluster.getNodeSeenHashMap());
-		} else {
+		else
 			nodeSeenHashMap = new HashMap<Long, Boolean>();
-		}
 
-		Long seedNode = cluster.getSeedNode();
+		final Long seedNode = cluster.getSeedNode();
 
-		List<Long> alCluster = getClusterCore(seedNode, nodeSeenHashMap, nodeScoreCutoff, params
+		final List<Long> alCluster = getClusterCore(seedNode, nodeSeenHashMap, nodeScoreCutoff, params
 				.getMaxDepthFromStart(), nodeInfoHashMap);
 
 		// Make sure seed node is part of cluster, if not already in there
@@ -478,12 +473,13 @@ public class MCODEAlgorithm {
 			fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
 
 		clusterNet = createClusterNetwork(alCluster, inputNet);
+		final double score = scoreCluster(clusterNet);
 		
-		cluster.setNetwork(clusterNet);
-		cluster.setALCluster(alCluster);
-		cluster.setClusterScore(scoreCluster(cluster));
+		final MCODECluster newCluster = new MCODECluster(resultId, seedNode, clusterNet, score, alCluster,
+				nodeSeenHashMap);
+		newCluster.setRank(cluster.getRank());
 		
-		return cluster;
+		return newCluster;
 	}
 
 	private CySubNetwork createClusterNetwork(final List<Long> alCluster, final CyNetwork inputNet) {
@@ -521,15 +517,15 @@ public class MCODEAlgorithm {
 	 * Score a cluster.  Currently this ranks larger, denser clusters higher, although
 	 * in the future other scoring functions could be created
 	 *
-	 * @param cluster
+	 * @param clusterNet
 	 * @return The score of the cluster
 	 */
-	public double scoreCluster(MCODECluster cluster) {
+	public double scoreCluster(final CySubNetwork clusterNet) {
 		int numNodes = 0;
 		double density = 0.0, score = 0.0;
 
-		numNodes = cluster.getNetwork().getNodeCount();
-		density = calcDensity(cluster.getNetwork(), params.isIncludeLoops());
+		numNodes = clusterNet.getNodeCount();
+		density = calcDensity(clusterNet, params.isIncludeLoops());
 		score = density * numNodes;
 
 		return score;
