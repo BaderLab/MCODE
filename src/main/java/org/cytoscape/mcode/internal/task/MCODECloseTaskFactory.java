@@ -1,5 +1,6 @@
 package org.cytoscape.mcode.internal.task;
 
+import java.util.Collection;
 import java.util.Set;
 
 import org.cytoscape.application.swing.CySwingApplication;
@@ -28,7 +29,16 @@ public class MCODECloseTaskFactory implements TaskFactory, NetworkAboutToBeDestr
 
 	@Override
 	public TaskIterator createTaskIterator() {
-		return new TaskIterator(new MCODECloseTask(swingApplication, registrar, mcodeUtil));
+		final TaskIterator taskIterator = new TaskIterator();
+		final Collection<MCODEResultsPanel> resultPanels = mcodeUtil.getResultPanels();
+		final MCODECloseAllResultsTask closeResultsTask = new MCODECloseAllResultsTask(swingApplication, mcodeUtil);
+
+		if (resultPanels.size() > 0)
+			taskIterator.append(closeResultsTask);
+		
+		taskIterator.append(new MCODECloseTask(closeResultsTask, registrar, mcodeUtil));
+		
+		return taskIterator;
 	}
 
 	@Override
