@@ -98,7 +98,7 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		MCODECluster[] clusters = findClusters(net, resultId);
 		assertEquals(1, clusters.length);
 		
-		mcodeUtil.disposeUnusedSubNetworks(net, clusters);
+		mcodeUtil.destroyUnusedNetworks(net, clusters);
 		
 		assertEquals(originalNetCount + clusters.length, rn.getSubNetworkList().size());
 	}

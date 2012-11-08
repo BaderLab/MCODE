@@ -163,13 +163,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @param clusterImages A list of images of the found clusters
 	 * @param resultId Title of this result as determined by MCODESCoreAndFindAction
 	 */
-	public MCODEResultsPanel(MCODECluster[] clusters,
-							 MCODEAlgorithm alg,
-							 MCODEUtil mcodeUtil,
-							 CyNetwork network,
-							 CyNetworkView networkView,
-							 Image[] clusterImages,
-							 int resultId,
+	public MCODEResultsPanel(final MCODECluster[] clusters,
+							 final MCODEAlgorithm alg,
+							 final MCODEUtil mcodeUtil,
+							 final CyNetwork network,
+							 final CyNetworkView networkView,
+							 final Image[] clusterImages,
+							 final int resultId,
 							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
 
@@ -219,6 +219,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		return networkView;
 	}
 	
+	public MCODECluster[] getClusters() {
+		return clusters;
+	}
+
+	public CyNetwork getNetwork() {
+		return network;
+	}
+
 	public int getSelectedClusterRow() {
 		return clusterBrowserPanel.getSelectedRow();
 	}
@@ -1050,6 +1058,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			if (futureLoader != null && !futureLoader.isDone()) {
 				drawer.stop();
 				futureLoader.cancel(false);
+				
+				if (!oldCluster.equals(clusters[clusterRow]))
+					oldCluster.dispose();
 			}
 			
 			final Runnable command = new Runnable() {
@@ -1068,7 +1079,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					drawPlaceHolder = newALCluster.size() > 300;
 					
 					// And compare the old and new
-					if (!newALCluster.equals(oldALCluster)) {
+					if (!newALCluster.equals(oldALCluster)) { // TODO
 						// If the cluster has changed, then we conduct all non-rate-limiting steps:
 						// Update the cluster array
 						clusters[clusterRow] = newCluster;
@@ -1084,12 +1095,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						boolean layoutNecessary = newALCluster.size() > oldALCluster.size();
 						// Draw Graph and select the cluster in the view in a separate thread so that it can be
 						// interrupted by the slider movement
-						if (!newCluster.isDisposed())
+						if (!newCluster.isDisposed()) {
 							drawer.drawGraph(newCluster, layoutNecessary, drawPlaceHolder);
-						
-						// Prevent memory leaks
-						oldCluster.dispose();
+							oldCluster.dispose();
+						}
 					}
+					mcodeUtil.destroyUnusedNetworks(network, clusters);// TODO
 	            }
 	        };
 	        

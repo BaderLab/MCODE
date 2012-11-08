@@ -61,6 +61,7 @@ import org.cytoscape.mcode.internal.CyActivator;
 import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
 import org.cytoscape.mcode.internal.model.MCODECluster;
 import org.cytoscape.mcode.internal.model.MCODECurrentParameters;
+import org.cytoscape.mcode.internal.model.MCODEGraph;
 import org.cytoscape.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import org.cytoscape.mcode.internal.view.MCODELoader;
 import org.cytoscape.mcode.internal.view.MCODEMainPanel;
@@ -171,7 +172,7 @@ public class MCODEUtil {
 	private Map<CyRootNetwork, Set<CySubNetwork>> createdSubNetworks;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
-
+	
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 					 final CyNetworkViewFactory networkViewFactory,
 					 final CyRootNetworkManager rootNetworkMgr,
@@ -219,7 +220,7 @@ public class MCODEUtil {
 		createdSubNetworks = new HashMap<CyRootNetwork, Set<CySubNetwork>>();
 	}	
 	
-	public void disposeUnusedSubNetworks(final CyNetwork network, final MCODECluster[] clusters) {
+	public synchronized void destroyUnusedNetworks(final CyNetwork network, final MCODECluster[] clusters) {
 		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
 		if (clusters != null && clusters.length > 0) {
@@ -237,12 +238,10 @@ public class MCODEUtil {
 				// Only remove the subnetwork if it is not registered
 				if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
 					try {
-						if (rootNet.containsNetwork(sn)) {
-							dispose(sn);
-							disposedSet.add(sn);
-						}
+						destroy(sn);
+						disposedSet.add(sn);
 					} catch (Exception e) {
-						logger.error("Error disposing: " + sn);
+						logger.error("Error disposing: " + sn, e);
 					}
 				}
 			}
@@ -251,6 +250,17 @@ public class MCODEUtil {
 		}
 	}
 
+	public void destroy(final CySubNetwork net) {
+		if (net != null) {
+			final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(net);
+			
+			if (rootNet.containsNetwork(net)) {
+				rootNet.removeSubNetwork(net);
+				net.dispose();
+			}
+		}
+	}
+	
 	public MCODECurrentParameters getCurrentParameters() {
 		return currentParameters;
 	}
@@ -311,8 +321,8 @@ public class MCODEUtil {
 		if (networkId != null)
 			networkResults.remove(networkId);
 
-		this.getCurrentParameters().removeResultParams(resultId);
-
+		getCurrentParameters().removeResultParams(resultId);
+		
 		return removed;
 	}
 
@@ -477,8 +487,7 @@ public class MCODEUtil {
 
 					if (clusterView.getNodeViews().size() > 0) {
 						cluster.setView(clusterView);
-					} else {
-System.out.println("\t>> no node views--nodes: " + clusterView.getModel().getNodeCount() + " | " + net.getNodeCount());}// TODO: delete
+					}
 				} catch (Exception ex) {
 					throw new RuntimeException(ex);
 				}
@@ -491,6 +500,26 @@ System.out.println("\t>> no node views--nodes: " + clusterView.getModel().getNod
 		return image;
 	}
 
+	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes) {
+		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
+		final Set<CyEdge> edges = new HashSet<CyEdge>();
+
+		for (final CyNode n : nodes) {
+			final Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+
+			// Get only the edges that connect nodes that belong to the subnetwork:
+			for (final CyEdge e : adjacentEdges) {
+				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
+					edges.add(e);
+				}
+			}
+		}
+
+		final MCODEGraph graph = new MCODEGraph(root, nodes, edges, this); // TODO remove circular dependency MCODEUtil/MCODEGraph
+
+		return graph;
+	}
+	
 	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes, final SavePolicy policy) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
@@ -900,14 +929,5 @@ System.out.println("\t>> no node views--nodes: " + clusterView.getModel().getNod
 		}
 
 		return props;
-	}
-	
-	public static void dispose(final CyNetwork net) {
-		if (net != null) {
-			if (net instanceof CySubNetwork)
-				((CySubNetwork) net).getRootNetwork().removeSubNetwork((CySubNetwork) net);
-			
-			net.dispose();
-		}
 	}
 }

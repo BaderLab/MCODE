@@ -48,8 +48,8 @@ import org.cytoscape.view.model.CyNetworkView;
 public class MCODECluster {
 
 	private List<Long> alCluster;
+	private MCODEGraph graph;
 	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unnecessarily
-	private CySubNetwork network;
 	private Long seedNode;
 	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double score;
@@ -60,18 +60,18 @@ public class MCODECluster {
 
 	public MCODECluster(final int resultId,
 						final Long seedNode,
-						final CySubNetwork network,
+						final MCODEGraph graph,
 						final double score,
 						final List<Long> alCluster,
 						final Map<Long, Boolean> nodeSeenHashMap) {
 		assert seedNode != null;
-		assert network != null;
+		assert graph != null;
 		assert alCluster != null;
 		assert nodeSeenHashMap != null;
 		
 		this.resultId = resultId;
 		this.seedNode = seedNode;
-		this.network = network;
+		this.graph = graph;
 		this.score = score;
 		this.alCluster = alCluster;
 		this.nodeSeenHashMap = nodeSeenHashMap;
@@ -90,6 +90,10 @@ public class MCODECluster {
 		this.name = name;
 	}
 
+	public MCODEGraph getGraph() {
+		return graph;
+	}
+	
 	public synchronized CyNetworkView getView() {
 		return view;
 	}
@@ -104,7 +108,7 @@ public class MCODECluster {
 	}
 
 	public synchronized CySubNetwork getNetwork() {
-		return network;
+		return graph.getSubNetwork();
 	}
 
 	public double getScore() {
@@ -142,8 +146,7 @@ public class MCODECluster {
 		if (view != null)
 			view.dispose();
 		
-		network.getRootNetwork().removeSubNetwork(network);
-		network.dispose();
+		graph.dispose();
 		
 		disposed = true;
 	}
@@ -152,6 +155,12 @@ public class MCODECluster {
 	public String toString() {
 		return "MCODECluster [clusterName=" + name + ", clusterScore=" + score + 
 				", rank=" + rank + ", resultId=" + resultId + ", disposed=" + disposed + "]";
+	}
+	
+	@Override
+	protected void finalize() throws Throwable {
+		dispose();
+		super.finalize();
 	}
 
 	private void throwExceptionIfDisposed() {

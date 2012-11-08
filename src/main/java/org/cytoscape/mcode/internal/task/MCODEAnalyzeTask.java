@@ -149,7 +149,7 @@ public class MCODEAnalyzeTask implements Task {
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		} finally {
-			mcodeUtil.disposeUnusedSubNetworks(network, clusters);
+			mcodeUtil.destroyUnusedNetworks(network, clusters);
 			
 			if (listener != null) {
 				listener.handleEvent(new AnalysisCompletedEvent(success, clusters, imageList));
