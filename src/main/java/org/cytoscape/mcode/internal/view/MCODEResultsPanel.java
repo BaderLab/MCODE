@@ -19,6 +19,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -129,12 +130,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private static final int graphPicSize = 80;
 	private static final int defaultRowHeight = graphPicSize + 8;
 	
-	private int resultId;
-	private MCODEAlgorithm alg;
-	private MCODECluster[] clusters;
+	private final int resultId;
+	private final MCODEAlgorithm alg;
+	private final List<MCODECluster> clusters;
 	
 	// Actual cluster data
-	private CyNetwork network; // Keep a record of the original input record for use in
+	private final CyNetwork network; // Keep a record of the original input record for use in
 	// the table row selection listener
 	private CyNetworkView networkView; // Keep a record of this too, if it exists
 	private MCODECollapsiblePanel explorePanel;
@@ -163,12 +164,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @param clusterImages A list of images of the found clusters
 	 * @param resultId Title of this result as determined by MCODESCoreAndFindAction
 	 */
-	public MCODEResultsPanel(final MCODECluster[] clusters,
+	public MCODEResultsPanel(final List<MCODECluster> clusters,
 							 final MCODEAlgorithm alg,
 							 final MCODEUtil mcodeUtil,
 							 final CyNetwork network,
 							 final CyNetworkView networkView,
-							 final Image[] clusterImages,
 							 final int resultId,
 							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
@@ -176,14 +176,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
 		this.resultId = resultId;
-		this.clusters = clusters;
+		this.clusters = Collections.synchronizedList(clusters);
 		this.network = network;
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
 		this.discardResultAction = discardResultAction;
 		this.currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
 		
-		this.clusterBrowserPanel = new MCODEClusterBrowserPanel(clusterImages);
+		this.clusterBrowserPanel = new MCODEClusterBrowserPanel();
 		add(clusterBrowserPanel, BorderLayout.CENTER);
 		add(createBottomPanel(), BorderLayout.SOUTH);
 
@@ -219,7 +219,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		return networkView;
 	}
 	
-	public MCODECluster[] getClusters() {
+	public List<MCODECluster> getClusters() {
 		return clusters;
 	}
 
@@ -418,9 +418,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
 			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
 
-			for (int c = 0; c < clusters.length; c++) {
-				MCODECluster cluster = clusters[c];
-				
+			for (final MCODECluster cluster : clusters) {
 				if (cluster.getALCluster().contains(rgi)) {
 					Set<String> clusterNameSet = new LinkedHashSet<String>();
 
@@ -481,7 +479,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		public void actionPerformed(final ActionEvent evt) {
 			final NumberFormat nf = NumberFormat.getInstance();
 			nf.setMaximumFractionDigits(3);
-			final MCODECluster cluster = clusters[selectedRow];
+			final MCODECluster cluster = clusters.get(selectedRow);
 			final CyNetwork clusterNetwork = cluster.getNetwork();
 			final String title = trigger.getResultId() + ": " + cluster.getName() + " (Score: " +
 								 nf.format(cluster.getScore()) + ")";
@@ -559,13 +557,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private final MCODEResultsPanel.MCODEClusterBrowserTableModel browserModel;
 		private final JTable table;
 		
-		public MCODEClusterBrowserPanel(final Image[] images) {
+		public MCODEClusterBrowserPanel() {
 			super();
 			setLayout(new BorderLayout());
 			setBorder(BorderFactory.createTitledBorder("Cluster Browser"));
 
 			// main data table
-			browserModel = new MCODEResultsPanel.MCODEClusterBrowserTableModel(images);
+			browserModel = new MCODEResultsPanel.MCODEClusterBrowserTableModel();
 
 			table = new JTable(browserModel);
 			table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -609,17 +607,18 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private final String[] columnNames = { "Network", "Details" };
 		private final Object[][] data; // the actual table data
 
-		public MCODEClusterBrowserTableModel(Image[] imageList) {
-			exploreContent = new JPanel[clusters.length];
-			data = new Object[clusters.length][columnNames.length];
+		public MCODEClusterBrowserTableModel() {
+			exploreContent = new JPanel[clusters.size()];
+			data = new Object[clusters.size()][columnNames.length];
 
-			for (int i = 0; i < clusters.length; i++) {
-				clusters[i].setRank(i);
-				StringBuffer details = getClusterDetails(clusters[i]);
+			for (int i = 0; i < clusters.size(); i++) {
+				final MCODECluster c = clusters.get(i);
+				c.setRank(i);
+				StringBuffer details = getClusterDetails(c);
 				data[i][1] = new StringBuffer(details);
 
 				// get an image for each cluster - make it a nice layout of the cluster
-				final Image image = imageList[i];
+				final Image image = c.getImage();
 				data[i][0] = image != null ? new ImageIcon(image) : new ImageIcon();
 			}
 		}
@@ -796,7 +795,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			// If its the generic 'please select' option then we don't do any enumeration
 			if (!attributeName.equals("Please Select")) {
-				final CyNetwork net = clusters[selectedRow].getNetwork();
+				final CyNetwork net = clusters.get(selectedRow).getNetwork();
 				
 				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
 				for (CyNode node : net.getNodeList()) {
@@ -869,7 +868,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			if (!lsm.isSelectionEmpty()) {
 				final int selectedRow = lsm.getMinSelectionIndex();
-				gpCluster = clusters[selectedRow].getNetwork();
+				final MCODECluster c = clusters.get(selectedRow);
+				gpCluster = c.getNetwork();
 				selectCluster(gpCluster);
 
 				// Upon selection of a cluster, we must show the corresponding explore panel content
@@ -901,8 +901,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				// event to display the new content with the name of the cluster, if it exists
 				String title = "Explore: ";
 
-				if (clusters[selectedRow].getName() != null) {
-					title = title + clusters[selectedRow].getName();
+				if (c.getName() != null) {
+					title = title + c.getName();
 				} else {
 					title = title + "Cluster " + (selectedRow + 1);
 				}
@@ -1053,13 +1053,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final double nodeScoreCutoff = (((double) source.getValue()) / 1000);
 			final int clusterRow = selectedRow;
 			// Store current cluster content for comparison
-        	final MCODECluster oldCluster = clusters[clusterRow];
+        	final MCODECluster oldCluster = clusters.get(clusterRow);
 			
 			if (futureLoader != null && !futureLoader.isDone()) {
 				drawer.stop();
 				futureLoader.cancel(false);
 				
-				if (!oldCluster.equals(clusters[clusterRow]))
+				if (!oldCluster.equals(clusters.get(clusterRow)))
 					oldCluster.dispose();
 			}
 			
@@ -1082,7 +1082,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					if (!newALCluster.equals(oldALCluster)) { // TODO
 						// If the cluster has changed, then we conduct all non-rate-limiting steps:
 						// Update the cluster array
-						clusters[clusterRow] = newCluster;
+						clusters.set(clusterRow, newCluster);
 						// Update the cluster details
 						clusterBrowserPanel.update(newCluster, clusterRow);
 						// Fire the enumeration action
@@ -1186,6 +1186,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							loader.setProgress(100, "Selecting Nodes");
 							selectCluster(cluster.getNetwork());
 							clusterSelected = true;
+							cluster.setImage(image);
 							// Update the table
 							clusterBrowserPanel.update(new ImageIcon(image), cluster.getRank());
 							drawGraph = false;
@@ -1196,6 +1197,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					} else if (drawPlaceHolder && !placeHolderDrawn) {
 						// draw place holder, only once though (as per the if statement)
 						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
+						cluster.setImage(image);
 						// Update the table
 						clusterBrowserPanel.update(new ImageIcon(image), cluster.getRank());
 						// select the cluster

@@ -1,6 +1,7 @@
 package org.cytoscape.mcode.internal;
 
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 import javax.swing.JOptionPane;
 
@@ -63,7 +64,7 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 			}
 
 			if (confirmed == JOptionPane.YES_OPTION) {
-				final MCODECluster[] clusters = panel.getClusters();
+				final List<MCODECluster> clusters = panel.getClusters();
 				
 				registrar.unregisterService(panel, CytoPanelComponent.class);
 				mcodeUtil.removeNetworkResult(resultId);

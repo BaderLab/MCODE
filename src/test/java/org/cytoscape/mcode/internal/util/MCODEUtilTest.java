@@ -2,6 +2,8 @@ package org.cytoscape.mcode.internal.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.List;
+
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.event.CyEventHelper;
@@ -95,11 +97,11 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		final CyRootNetwork rn = netViewTestSupport.getRootNetworkFactory().getRootNetwork(net);
 		int originalNetCount = rn.getSubNetworkList().size(); 
 		int resultId = 1;
-		MCODECluster[] clusters = findClusters(net, resultId);
-		assertEquals(1, clusters.length);
+		List<MCODECluster> clusters = findClusters(net, resultId);
+		assertEquals(1, clusters.size());
 		
 		mcodeUtil.destroyUnusedNetworks(net, clusters);
 		
-		assertEquals(originalNetCount + clusters.length, rn.getSubNetworkList().size());
+		assertEquals(originalNetCount + clusters.size(), rn.getSubNetworkList().size());
 	}
 }

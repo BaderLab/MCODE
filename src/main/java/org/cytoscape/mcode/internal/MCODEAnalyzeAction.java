@@ -226,7 +226,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 					// Display clusters in a new modal dialog box
 					if (e.isSuccessful()) {
-						if (e.getClusters() != null && e.getClusters().length > 0) {
+						if (e.getClusters() != null && !e.getClusters().isEmpty()) {
 							resultFound = true;
 							mcodeUtil.addNetworkResult(network.getSUID());
 
@@ -240,7 +240,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 																										mcodeUtil);
 
 							resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network, networkView,
-																 e.getImageList(), resultId, discardResultAction);
+																 resultId, discardResultAction);
 
 							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 						} else {

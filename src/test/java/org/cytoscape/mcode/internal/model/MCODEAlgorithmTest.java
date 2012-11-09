@@ -3,6 +3,8 @@ package org.cytoscape.mcode.internal.model;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.util.List;
+
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.ding.NetworkViewTestSupport;
@@ -116,11 +118,11 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	public void testCompleteGraphWithDefaultParameters() {
 		CyNetwork net = createCompleteGraph(16);
 		int resultId = 1;
-		MCODECluster[] clusters = findClusters(net, resultId);
+		List<MCODECluster> clusters = findClusters(net, resultId);
 		
-		assertEquals(1, clusters.length);
+		assertEquals(1, clusters.size());
 		
-		MCODECluster c = clusters[0];
+		MCODECluster c = clusters.get(0);
 		CySubNetwork cn = c.getNetwork();
 		
 		assertNotNull(cn);
@@ -143,11 +145,11 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		MCODEParameterSet params = new MCODEParameterSet();
 		params.setIncludeLoops(true);
 		
-		MCODECluster[] clusters = findClusters(net, resultId, params);
+		List<MCODECluster> clusters = findClusters(net, resultId, params);
 		
-		assertEquals(1, clusters.length);
+		assertEquals(1, clusters.size());
 		
-		MCODECluster c = clusters[0];
+		MCODECluster c = clusters.get(0);
 		CySubNetwork cn = c.getNetwork();
 		
 		assertNotNull(cn);

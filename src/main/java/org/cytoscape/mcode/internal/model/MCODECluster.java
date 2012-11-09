@@ -1,5 +1,6 @@
 package org.cytoscape.mcode.internal.model;
 
+import java.awt.Image;
 import java.util.List;
 import java.util.Map;
 
@@ -47,15 +48,16 @@ import org.cytoscape.view.model.CyNetworkView;
  */
 public class MCODECluster {
 
-	private List<Long> alCluster;
-	private MCODEGraph graph;
-	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unnecessarily
+	private int resultId;
 	private Long seedNode;
+	private MCODEGraph graph;
+	private List<Long> alCluster;
+	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unnecessarily
 	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
 	private double score;
 	private String name; // pretty much unused so far, but could store name by user's input
 	private int rank;
-	private int resultId;
+	private Image image;
 	private boolean disposed;
 
 	public MCODECluster(final int resultId,
@@ -136,6 +138,14 @@ public class MCODECluster {
 		this.name = "Cluster " + (rank + 1);
 	}
 	
+	public synchronized Image getImage() {
+		return image;
+	}
+
+	public synchronized void setImage(Image image) {
+		this.image = image;
+	}
+
 	public synchronized boolean isDisposed() {
 		return disposed;
 	}

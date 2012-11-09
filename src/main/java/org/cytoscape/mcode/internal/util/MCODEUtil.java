@@ -38,10 +38,12 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -220,10 +222,10 @@ public class MCODEUtil {
 		createdSubNetworks = new HashMap<CyRootNetwork, Set<CySubNetwork>>();
 	}	
 	
-	public synchronized void destroyUnusedNetworks(final CyNetwork network, final MCODECluster[] clusters) {
+	public synchronized void destroyUnusedNetworks(final CyNetwork network, final List<MCODECluster> clusters) {
 		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
-		if (clusters != null && clusters.length > 0) {
+		if (clusters != null) {
 			for (MCODECluster c : clusters)
 				clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		}
@@ -733,28 +735,23 @@ public class MCODEUtil {
 	}
 
 	/**
-	 * Converts a list of MCODE generated clusters to a list of networks that is sorted by the score of the cluster
+	 * Sorts a list of MCODE generated clusters by the score.
 	 *
 	 * @param clusters   List of MCODE generated clusters
-	 * @return A sorted array of cluster objects based on cluster score.
 	 */
-	public MCODECluster[] sortClusters(MCODECluster[] clusters) {
-		Arrays.sort(clusters, new Comparator<MCODECluster>() {
-
-			//sorting clusters by decreasing score
+	public void sortClusters(final List<MCODECluster> clusters) {
+		Collections.sort(clusters, new Comparator<MCODECluster>() {
+			@Override
 			public int compare(MCODECluster c1, MCODECluster c2) {
+				//sorting clusters by decreasing score
 				double d1 = c1.getScore();
 				double d2 = c2.getScore();
-				if (d1 == d2) {
-					return 0;
-				} else if (d1 < d2) {
-					return 1;
-				} else {
-					return -1;
-				}
+				
+				if (d1 == d2)     return 0;
+				else if (d1 < d2) return 1;
+				return -1;
 			}
 		});
-		return clusters;
 	}
 
 	/**
@@ -792,7 +789,7 @@ public class MCODEUtil {
 	 * @param fileName  The file name to write to
 	 * @return True if the file was written, false otherwise
 	 */
-	public boolean exportMCODEResults(MCODEAlgorithm alg, MCODECluster[] clusters, CyNetwork network) {
+	public boolean exportMCODEResults(final MCODEAlgorithm alg, final List<MCODECluster> clusters, CyNetwork network) {
 		if (alg == null || clusters == null || network == null) {
 			return false;
 		}
@@ -822,12 +819,13 @@ public class MCODEUtil {
 
 				// Get sub-networks for all clusters, score and rank them
 				// convert the ArrayList to an array of CyNetworks and sort it by cluster score
-				for (int i = 0; i < clusters.length; i++) {
-					CyNetwork clusterNetwork = clusters[i].getNetwork();
+				for (int i = 0; i < clusters.size(); i++) {
+					final MCODECluster c = clusters.get(i);
+					final CyNetwork clusterNetwork = c.getNetwork();
 					fout.write((i + 1) + "\t"); //rank
 					NumberFormat nf = NumberFormat.getInstance();
 					nf.setMaximumFractionDigits(3);
-					fout.write(nf.format(clusters[i].getScore()) + "\t");
+					fout.write(nf.format(c.getScore()) + "\t");
 					// cluster size - format: (# prot, # intx)
 					fout.write(clusterNetwork.getNodeCount() + "\t");
 					fout.write(clusterNetwork.getEdgeCount() + "\t");

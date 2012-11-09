@@ -276,9 +276,9 @@ public class MCODEAlgorithm {
 	 *
 	 * @param inputNetwork The scored network to find clusters in.
 	 * @param resultSetName Title of the result
-	 * @return An array containing an MCODECluster object for each cluster.
+	 * @return A list containing an MCODECluster object for each cluster.
 	 */
-	public MCODECluster[] findClusters(final CyNetwork inputNetwork, int resultId) {
+	public List<MCODECluster> findClusters(final CyNetwork inputNetwork, final int resultId) {
 		final SortedMap<Double, List<Long>> nodeScoreSortedMap;
 		final Map<Long, NodeInfo> nodeInfoHashMap;
 
@@ -410,13 +410,10 @@ public class MCODEAlgorithm {
 			alClusters = selectedALClusters;
 		}
 
-		// Finally convert the list into a fixed array
-		MCODECluster[] clusters = alClusters.toArray(new MCODECluster[alClusters.size()]);
-		
 		long msTimeAfter = System.currentTimeMillis();
 		lastFindTime = msTimeAfter - msTimeBefore;
 
-		return clusters;
+		return alClusters;
 	}
 
 	/**

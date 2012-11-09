@@ -22,11 +22,11 @@ public abstract class AbstractMCODETest {
 		netViewTestSupport = new NetworkViewTestSupport();
 	}
 
-	protected MCODECluster[] findClusters(CyNetwork net, int resultId) {
+	protected List<MCODECluster> findClusters(final CyNetwork net, final int resultId) {
 		return findClusters(net, resultId, new MCODEParameterSet());
 	}
 
-	protected MCODECluster[] findClusters(CyNetwork net, int resultId, MCODEParameterSet params) {
+	protected List<MCODECluster> findClusters(CyNetwork net, int resultId, MCODEParameterSet params) {
 		mcodeUtil.getCurrentParameters().setParams(params, resultId, net.getSUID());
 		alg = new MCODEAlgorithm(net.getSUID(), mcodeUtil);
 		alg.scoreGraph(net, resultId);

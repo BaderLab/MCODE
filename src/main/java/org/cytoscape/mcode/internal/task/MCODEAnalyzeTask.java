@@ -1,6 +1,7 @@
 package org.cytoscape.mcode.internal.task;
 
 import java.awt.Image;
+import java.util.List;
 
 import org.cytoscape.mcode.internal.MCODEAnalyzeAction;
 import org.cytoscape.mcode.internal.event.AnalysisCompletedEvent;
@@ -63,7 +64,6 @@ public class MCODEAnalyzeTask implements Task {
 
 	private boolean interrupted;
 	private CyNetwork network;
-	private Image imageList[];
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
 
@@ -99,7 +99,8 @@ public class MCODEAnalyzeTask implements Task {
 		}
 
 		boolean success = false;
-		MCODECluster[] clusters = null;
+		List<MCODECluster> clusters = null;
+		mcodeUtil.resetLoading();
 
 		try {
 			// Run MCODE scoring algorithm - node scores are saved in the alg object
@@ -132,17 +133,16 @@ public class MCODEAnalyzeTask implements Task {
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
 
 			// Also create all the images here for the clusters, since it can be a time consuming operation
-			clusters = mcodeUtil.sortClusters(clusters);
-			imageList = new Image[clusters.length];
+			mcodeUtil.sortClusters(clusters);
 			int imageSize = mcodeUtil.getCurrentParameters().getResultParams(resultId).getDefaultRowHeight();
+			int count = 0;
 
-			for (int i = 0; i < clusters.length; i++) {
-				if (interrupted) {
-					return;
-				}
-
-				imageList[i] = mcodeUtil.createClusterImage(clusters[i], imageSize, imageSize, null, true, null);
-				taskMonitor.setProgress((i+1) / (double) clusters.length);
+			for (final MCODECluster c : clusters) {
+				if (interrupted) return;
+				
+				final Image img = mcodeUtil.createClusterImage(c, imageSize, imageSize, null, true, null);
+				c.setImage(img);
+				taskMonitor.setProgress((++count) / (double) clusters.size());
 			}
 
 			success = true;
@@ -152,7 +152,7 @@ public class MCODEAnalyzeTask implements Task {
 			mcodeUtil.destroyUnusedNetworks(network, clusters);
 			
 			if (listener != null) {
-				listener.handleEvent(new AnalysisCompletedEvent(success, clusters, imageList));
+				listener.handleEvent(new AnalysisCompletedEvent(success, clusters));
 			}
 		}
 	}

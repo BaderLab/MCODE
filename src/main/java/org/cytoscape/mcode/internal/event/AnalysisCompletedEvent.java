@@ -1,19 +1,17 @@
 package org.cytoscape.mcode.internal.event;
 
-import java.awt.Image;
+import java.util.List;
 
 import org.cytoscape.mcode.internal.model.MCODECluster;
 
 public class AnalysisCompletedEvent {
 
 	private final boolean successful;
-	private final MCODECluster[] clusters;
-	private final Image[] imageList;
+	private final List<MCODECluster> clusters;
 
-	public AnalysisCompletedEvent(final boolean successful, final MCODECluster[] clusters, final Image[] imageList) {
+	public AnalysisCompletedEvent(final boolean successful, final List<MCODECluster> clusters) {
 		this.successful = successful;
 		this.clusters = clusters;
-		this.imageList = imageList;
 	}
 
 	/**
@@ -27,15 +25,7 @@ public class AnalysisCompletedEvent {
 	 * Get computed clusters once MCODE has been run.  Will be null if not computed.
 	 * @return
 	 */
-	public MCODECluster[] getClusters() {
+	public List<MCODECluster> getClusters() {
 		return clusters;
-	}
-
-	/**
-	 * Get image list of computed clusters to be used for display.
-	 * @return
-	 */
-	public Image[] getImageList() {
-		return imageList;
 	}
 }
