@@ -36,7 +36,6 @@ import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -503,7 +502,6 @@ public class MCODEUtil {
 	}
 
 	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes) {
-		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
 
 		for (final CyNode n : nodes) {
@@ -517,7 +515,7 @@ public class MCODEUtil {
 			}
 		}
 
-		final MCODEGraph graph = new MCODEGraph(root, nodes, edges, this); // TODO remove circular dependency MCODEUtil/MCODEGraph
+		final MCODEGraph graph = new MCODEGraph(net, nodes, edges, this); // TODO remove circular dependency MCODEUtil/MCODEGraph
 
 		return graph;
 	}
