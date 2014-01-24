@@ -65,9 +65,8 @@ public class NodeDistances implements MonitorableTask {
 	 *            spawning the thread that performs the task
 	 */
 	@Override
-	@SuppressWarnings("unchecked")
 	public void start(boolean return_when_done) {
-		final SwingWorker worker = new SwingWorker() {
+		final SwingWorker<Object, Object> worker = new SwingWorker<Object, Object>() {
 
 			@Override
 			protected Object doInBackground() throws Exception {

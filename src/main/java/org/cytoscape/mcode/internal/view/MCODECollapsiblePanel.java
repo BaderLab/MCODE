@@ -251,6 +251,8 @@ public class MCODECollapsiblePanel extends JPanel {
 	 */
 	private class ExpandAndCollapseAction extends AbstractAction implements ActionListener, ItemListener {
 
+		private static final long serialVersionUID = -3295569673664049943L;
+
 		public void actionPerformed(ActionEvent e) {
 			setCollapsed(!isCollapsed());
 		}
@@ -265,15 +267,9 @@ public class MCODECollapsiblePanel extends JPanel {
 	 */
 	private class CollapsableTitledBorder extends TitledBorder {
 
+		private static final long serialVersionUID = 3593059350237466135L;
+		
 		JComponent component;
-
-		public CollapsableTitledBorder(JComponent component) {
-			this(null, component, LEFT, TOP);
-		}
-
-		public CollapsableTitledBorder(Border border) {
-			this(border, null, LEFT, TOP);
-		}
 
 		public CollapsableTitledBorder(Border border, JComponent component) {
 			this(border, component, LEFT, TOP);
@@ -373,14 +369,6 @@ public class MCODECollapsiblePanel extends JPanel {
 					break;
 			}
 			return insets;
-		}
-
-		public JComponent getTitleComponent() {
-			return component;
-		}
-
-		public void setTitleComponent(JComponent component) {
-			this.component = component;
 		}
 
 		public Rectangle getComponentRect(Rectangle rect, Insets borderInsets) {
