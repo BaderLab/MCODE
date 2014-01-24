@@ -120,9 +120,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 /**
  * Reports the results of MCODE cluster finding. This class sets up the UI.
  */
-@SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
+	private static final long serialVersionUID = 868213052692609076L;
+	
 	private static final String SCORE_ATTR = "MCODE_Score";
 	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
 	private static final String CLUSTER_ATTR = "MCODE_Cluster";

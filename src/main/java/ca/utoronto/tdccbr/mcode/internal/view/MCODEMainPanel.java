@@ -76,9 +76,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * The parameter change cytpanel which the user can use to select scope and change the scoring and finding parameters
  */
-@SuppressWarnings("serial")
 public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
+	private static final long serialVersionUID = -4442491309881609088L;
+	
 	private final CySwingApplication swingApplication;
 	private final MCODEUtil mcodeUtil;
 	private final List<CyAction> actions;
