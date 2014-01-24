@@ -612,6 +612,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		if (bottomPanel == null) {
 			bottomPanel = new JPanel();
 			bottomPanel.setLayout(new FlowLayout());
+			bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
 		}
 
 		return bottomPanel;
