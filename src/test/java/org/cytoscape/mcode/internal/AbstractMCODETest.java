@@ -5,12 +5,13 @@ import static org.junit.Assert.assertEquals;
 import java.util.List;
 
 import org.cytoscape.ding.NetworkViewTestSupport;
-import org.cytoscape.mcode.internal.model.MCODEAlgorithm;
-import org.cytoscape.mcode.internal.model.MCODECluster;
-import org.cytoscape.mcode.internal.model.MCODEParameterSet;
-import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 public abstract class AbstractMCODETest {
 

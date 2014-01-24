@@ -10,7 +10,6 @@ import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.ding.NetworkViewTestSupport;
 import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.AbstractMCODETest;
-import org.cytoscape.mcode.internal.util.MCODEUtil;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
@@ -27,6 +26,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
  * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center

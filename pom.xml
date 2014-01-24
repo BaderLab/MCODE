@@ -6,7 +6,7 @@
 
 	<properties>
 		<bundle.symbolicName>org.cytoscape.mcode</bundle.symbolicName>
-		<bundle.namespace>org.cytoscape.mcode.internal</bundle.namespace>
+		<bundle.namespace>ca.utoronto.tdccbr.mcode.internal</bundle.namespace>
 		<cytoscape.api.version>3.0.2</cytoscape.api.version>
 		<cytoscape.impl.version>3.0.2</cytoscape.impl.version>
 		<maven-bundle-plugin.version>2.3.4</maven-bundle-plugin.version>
@@ -15,7 +15,7 @@
 	</properties>
 
 	<groupId>org.cytoscape.mcode</groupId>
-	<artifactId>mcode-cy3</artifactId>
+	<artifactId>mcode-app</artifactId>
 	<name>MCODE</name>
 	<packaging>bundle</packaging>
 	<version>1.4.0</version>

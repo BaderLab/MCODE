@@ -36,7 +36,6 @@ INSTALLATION
 ================================================================================
 
 This app requires Cytoscape version 3.0 or higher (http://cytoscape.org/).
-TODO: explain installation
 
 ================================================================================
 BUILDING WITH APACHE MAVEN
