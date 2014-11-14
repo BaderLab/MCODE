@@ -503,7 +503,7 @@ public class MCODEUtil {
 		return image;
 	}
 
-	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes) {
+	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes, final boolean includeLoops) {
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
 
 		for (final CyNode n : nodes) {
@@ -511,9 +511,11 @@ public class MCODEUtil {
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
 			for (final CyEdge e : adjacentEdges) {
-				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
+				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
+					continue;
+				
+				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget()))
 					edges.add(e);
-				}
 			}
 		}
 
@@ -522,7 +524,26 @@ public class MCODEUtil {
 		return graph;
 	}
 	
-	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes, final SavePolicy policy) {
+	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes,
+			final Collection<CyEdge> edges, SavePolicy policy) {
+		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
+		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
+		
+		// Save it for later disposal
+		Set<CySubNetwork> snSet = createdSubNetworks.get(root);
+		
+		if (snSet == null) {
+			snSet = new HashSet<CySubNetwork>();
+			createdSubNetworks.put(root, snSet);
+		}
+		
+		snSet.add(subNet);
+		
+		return subNet;
+	}
+	
+	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes,
+			final boolean includeLoops, SavePolicy policy) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final Set<CyEdge> edges = new HashSet<CyEdge>();
 
@@ -531,9 +552,11 @@ public class MCODEUtil {
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
 			for (CyEdge e : adjacentEdges) {
-				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget())) {
+				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
+					continue;
+				
+				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget()))
 					edges.add(e);
-				}
 			}
 		}
 		

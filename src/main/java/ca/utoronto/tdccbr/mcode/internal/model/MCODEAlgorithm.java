@@ -480,7 +480,7 @@ public class MCODEAlgorithm {
 			nodes.add(n);
 		}
 
-		final MCODEGraph clusterGraph = mcodeUtil.createGraph(inputNet, nodes);
+		final MCODEGraph clusterGraph = mcodeUtil.createGraph(inputNet, nodes, params.isIncludeLoops());
 
 		return clusterGraph;
 	}
@@ -576,7 +576,7 @@ public class MCODEAlgorithm {
 		}
 		
 		// extract neighborhood subgraph
-		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors);
+		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors, params.isIncludeLoops());
 		
 		if (neighborhoodGraph == null) {
 			// this shouldn't happen
@@ -806,7 +806,7 @@ public class MCODEAlgorithm {
 		}
 
 		int nodeCount = graph.getNodeCount();
-		int actualEdgeNum = getMergedEdgeCount(graph, includeLoops);
+		int actualEdgeNum = getMergedEdgeCount(graph.getEdgeList(), includeLoops);
 		int possibleEdgeNum = 0;
 		
 		if (includeLoops)
@@ -819,10 +819,16 @@ public class MCODEAlgorithm {
 		return density;
 	}
 
-	private int getMergedEdgeCount(final MCODEGraph graph, final boolean includeLoops) {
+	private int getDegree(final MCODEGraph graph, final CyNode n, final boolean includeLoops) {
+		List<CyEdge> edgeList = graph.getAdjacentEdgeList(n, CyEdge.Type.ANY);
+		
+		return getMergedEdgeCount(edgeList, includeLoops);
+	}
+	
+	private int getMergedEdgeCount(final List<CyEdge> edgeList, final boolean includeLoops) {
 		Set<String> suidPairs = new HashSet<String>();
 		
-		for (CyEdge e : graph.getEdgeList()) {
+		for (CyEdge e : edgeList) {
 			Long id1 = e.getSource().getSUID();
 			Long id2 = e.getTarget().getSUID();
 			
@@ -835,7 +841,7 @@ public class MCODEAlgorithm {
 		
 		return suidPairs.size();
 	}
-
+	
 	/**
 	 * Find a k-core of a network. A k-core is a subgraph of minimum degree k
 	 *
@@ -861,7 +867,7 @@ public class MCODEAlgorithm {
 			final List<CyNode> nodes = outputGraph.getNodeList();
 
 			for (CyNode n : nodes) {
-				int degree = outputGraph.getAdjacentEdgeList(n, CyEdge.Type.ANY).size();
+				int degree = getDegree(outputGraph, n, params.isIncludeLoops());
 
 				if (degree >= k)
 					alCoreNodeIndices.add(n.getSUID()); //contains all nodes with degree >= k
@@ -877,7 +883,7 @@ public class MCODEAlgorithm {
 					outputNodes.add(n);
 				}
 				
-				outputGraph = mcodeUtil.createGraph(outputGraph.getSubNetwork(), outputNodes);
+				outputGraph = mcodeUtil.createGraph(outputGraph.getSubNetwork(), outputNodes, params.isIncludeLoops());
 				
 				if (outputGraph.getNodeCount() == 0)
 					return null;

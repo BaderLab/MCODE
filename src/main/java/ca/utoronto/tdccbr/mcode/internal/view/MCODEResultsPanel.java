@@ -404,7 +404,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				@Override
 				protected CyNetworkView doInBackground() throws Exception {
 					CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
-							SavePolicy.SESSION_FILE);
+							alg.getParams().isIncludeLoops(), SavePolicy.SESSION_FILE);
 					newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
 					
 					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
@@ -484,7 +484,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 			table.setRowHeight(graphPicSize + 8);
 			table.setDefaultRenderer(MCODECluster.class, new ClusterDetailsRenderer());
-			table.setIntercellSpacing(new Dimension(0, 0));
+			table.setIntercellSpacing(new Dimension(0, 4));
 			table.setShowGrid(false);
 			table.setShowHorizontalLines(true);
 			table.setGridColor(new JSeparator().getForeground());
@@ -1049,11 +1049,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final MCODECluster cluster = (MCODECluster) value;
 			
 			if (isSelected) {
-				this.setOpaque(true);
 				this.setBackground(table.getSelectionBackground());
 				this.setForeground(table.getSelectionForeground());
 			} else {
-				this.setOpaque(false);
 				this.setBackground(table.getBackground());
 				this.setForeground(table.getForeground());
 			}

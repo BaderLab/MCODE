@@ -145,7 +145,7 @@ public class MCODEGraph {
 
 	public synchronized CySubNetwork getSubNetwork() {
 		if (!disposed && subNetwork == null)
-			subNetwork = mcodeUtil.createSubNetwork(parentNetwork, nodes, SavePolicy.DO_NOT_SAVE);
+			subNetwork = mcodeUtil.createSubNetwork(parentNetwork, nodes, edges, SavePolicy.DO_NOT_SAVE);
 
 		return subNetwork;
 	}
