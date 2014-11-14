@@ -4,11 +4,13 @@ import static org.cytoscape.work.ServiceProperties.MENU_GRAVITY;
 import static org.cytoscape.work.ServiceProperties.PREFERRED_MENU;
 import static org.cytoscape.work.ServiceProperties.TITLE;
 
+import java.awt.Component;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
 import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.model.CyNetwork;
@@ -32,9 +34,14 @@ import org.osgi.framework.BundleContext;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODECloseTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 public class CyActivator extends AbstractCyActivator {
 
+	private CyServiceRegistrar serviceRegistrar;
+	private MCODEUtil mcodeUtil;
+	
 	public CyActivator() {
 		super();
 	}
@@ -42,7 +49,8 @@ public class CyActivator extends AbstractCyActivator {
 	@Override
 	@SuppressWarnings("unchecked")
 	public void start(BundleContext bc) {
-
+		serviceRegistrar = getService(bc, CyServiceRegistrar.class);
+		
 		CyApplicationManager appMgr = getService(bc, CyApplicationManager.class);
 		CyNetworkViewManager netViewMgr = getService(bc, CyNetworkViewManager.class);
 		CyNetworkManager netMgr = getService(bc, CyNetworkManager.class);
@@ -53,7 +61,6 @@ public class CyActivator extends AbstractCyActivator {
 		
 		CySwingApplication swingApp = getService(bc, CySwingApplication.class);
 		RenderingEngineFactory<CyNetwork> dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
-		CyServiceRegistrar serviceRegistrar = getService(bc, CyServiceRegistrar.class);
 		
 		VisualStyleFactory visualStyleFactory = getService(bc, VisualStyleFactory.class);
 		VisualMappingManager visualMappingMgr = getService(bc, VisualMappingManager.class);
@@ -64,12 +71,14 @@ public class CyActivator extends AbstractCyActivator {
 		OpenBrowser openBrowser = getService(bc, OpenBrowser.class);
 		CyEventHelper eventHelper = getService(bc, CyEventHelper.class);
 		
-		MCODEUtil mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
-											appMgr, netMgr, netViewMgr, visualStyleFactory,
-											visualMappingMgr, swingApp, eventHelper, discreteMappingFactory,
-											continuousMappingFactory, fileUtil);
+		mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
+								  appMgr, netMgr, netViewMgr, visualStyleFactory,
+								  visualMappingMgr, swingApp, eventHelper, discreteMappingFactory,
+								  continuousMappingFactory, fileUtil);
 		
-		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze current network", appMgr, swingApp, netViewMgr, serviceRegistrar, taskMgr, mcodeUtil);
+		closeMCODEPanels();
+		
+		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze Current Network", appMgr, swingApp, netViewMgr, serviceRegistrar, taskMgr, mcodeUtil);
 		MCODEHelpAction helpAction = new MCODEHelpAction("Help", appMgr, swingApp, netViewMgr, openBrowser);
 		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", appMgr, swingApp, netViewMgr, visualMappingMgr, mcodeUtil);
 		MCODEAboutAction aboutAction = new MCODEAboutAction("About", appMgr, swingApp, netViewMgr, openBrowser, mcodeUtil);
@@ -96,6 +105,49 @@ public class CyActivator extends AbstractCyActivator {
 		
 		registerService(bc, closeTaskFactory, TaskFactory.class, closeTaskFactoryProps);
 		registerService(bc, closeTaskFactory, NetworkAboutToBeDestroyedListener.class, new Properties());
+	}
+	
+	@Override
+	public void shutDown() {
+		closeMCODEPanels();
+		super.shutDown();
+	}
+	
+	private void closeMCODEPanels() {
+		// First, unregister result panels...
+		final CytoPanel resPanel = mcodeUtil.getResultsCytoPanel();
 		
+		if (resPanel != null) {
+			int count = resPanel.getCytoPanelComponentCount();
+			
+			try {
+				for (int i = 0; i < count; i++) {
+					final Component comp = resPanel.getComponentAt(i);
+					
+					// Compare the class names to also get panels that may have been left by old versions of MCODE
+					if (comp.getClass().getName().equals(MCODEResultsPanel.class.getName()))
+						serviceRegistrar.unregisterAllServices(comp);
+				}
+			} catch (Exception e) {
+			}
+		}
+		
+		// Now, unregister main panels...
+		final CytoPanel ctrlPanel = mcodeUtil.getControlCytoPanel();
+		
+		if (ctrlPanel != null) {
+			int count = ctrlPanel.getCytoPanelComponentCount();
+	
+			for (int i = 0; i < count; i++) {
+				try {
+					final Component comp = ctrlPanel.getComponentAt(i);
+					
+					// Compare the class names to also get panels that may have been left by old versions of MCODE
+					if (comp.getClass().getName().equals(MCODEMainPanel.class.getName()))
+						serviceRegistrar.unregisterAllServices(comp);
+				} catch (Exception e) {
+				}
+			}
+		}
 	}
 }
