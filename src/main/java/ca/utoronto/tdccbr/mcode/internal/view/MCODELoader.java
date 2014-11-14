@@ -110,7 +110,7 @@ public class MCODELoader extends ImageIcon implements Runnable {
     }
 
     public void start() {
-        graphImage = (ImageIcon) table.getValueAt(selectedRow, 0);
+        graphImage = (ImageIcon) table.getValueAt(selectedRow, 1);
         fadeInAlpha = 0.0;
         degreesForDisk = 0;
         progress = 0;
@@ -148,18 +148,18 @@ public class MCODELoader extends ImageIcon implements Runnable {
                     
                     //If the loader has not been displayed yet and loading is still taking place, we put it in the table
                     if (loading && !loaderDisplayed) {
-                        table.setValueAt(this, selectedRow, 0);
+                        table.setValueAt(this, selectedRow, 1);
                         loaderDisplayed = true;
                     }
 
                     //Since the table consolidates paint updates, the animation would not show up unless
                     //we implicitly force it to repaint.
                     //This paintImmediately function causes problems in windows (paints on every component sometimes)
-                    //Rectangle bounds = table.getCellRect(selectedRow, 0, false);
+                    //Rectangle bounds = table.getCellRect(selectedRow, 1, false);
                     //if (loading) table.paintImmediately(bounds);
                     //This fireTableCellUpdated function seems to consolidate some painting too so it is not very responsive in windows
                     if (loading)
-                    	((AbstractTableModel) table.getModel()).fireTableCellUpdated(selectedRow, 0);
+                    	((AbstractTableModel) table.getModel()).fireTableCellUpdated(selectedRow, 1);
                     //Both work on the mac just fine
                 }
             }

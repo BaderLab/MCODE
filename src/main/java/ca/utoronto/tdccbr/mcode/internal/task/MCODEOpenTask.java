@@ -38,7 +38,7 @@ public class MCODEOpenTask implements Task {
 		// Display MCODEMainPanel in left cytopanel
 		synchronized (this) {
 			MCODEMainPanel mainPanel = null;
-
+			
 			// First we must make sure that the app is not already open
 			if (!mcodeUtil.isOpened()) {
 				mainPanel = new MCODEMainPanel(swingApplication, mcodeUtil);

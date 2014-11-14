@@ -21,6 +21,7 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -873,8 +874,10 @@ public class MCODEUtil {
 		int count = cytoPanel.getCytoPanelComponentCount();
 
 		for (int i = 0; i < count; i++) {
-			if (cytoPanel.getComponentAt(i) instanceof MCODEMainPanel)
-				return (MCODEMainPanel) cytoPanel.getComponentAt(i);
+			final Component comp = cytoPanel.getComponentAt(i);
+			
+			if (comp instanceof MCODEMainPanel)
+				return (MCODEMainPanel) comp;
 		}
 
 		return null;

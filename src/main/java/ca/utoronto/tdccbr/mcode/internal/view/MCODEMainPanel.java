@@ -2,8 +2,8 @@ package ca.utoronto.tdccbr.mcode.internal.view;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -16,8 +16,10 @@ import java.util.List;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
+import javax.swing.Box;
 import javax.swing.ButtonGroup;
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -27,7 +29,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JToolTip;
+import javax.swing.SwingConstants;
 
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
@@ -38,6 +40,7 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.util.UIUtil;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -84,43 +87,23 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private final MCODEUtil mcodeUtil;
 	private final List<CyAction> actions;
 
-	// Panels
+	private JPanel bottomPnl;
+	private JPanel scopePnl;
+	private MCODECollapsiblePanel advancedOptionsPnl;
+	private JPanel networkScoringPnl;
+	private JPanel clusterFindingPnl;
+	private JLabel densityCutoffLabel;
+	private JCheckBox includeLoopsCkb;
+	private JFormattedTextField degreeCutoffTxt;
+	private JFormattedTextField kCoreTxt;
+	private JFormattedTextField scoreCutoffTxt;
+	private JCheckBox haircutCkb;
+	private JCheckBox fluffCkb;
+	private JFormattedTextField densityCutoffTxt;
+	private JFormattedTextField maxDepthTxt;
 
-	private JPanel bottomPanel;
-	private JPanel scopePanel;
-	private JPanel advancedOptionsPanel;
-	private MCODECollapsiblePanel collapsibleOptionsPanel;
-	private MCODECollapsiblePanel networkScoringPanel;
-
-	// These are used to dynamically toggle the way cluster finding content is organized based
-	// on the scope that is selected.  For network scope, the user has the option of using a
-	// benchmark or customizing the parameters while for the other scopes, benchmarks are not appropriate.
-	private MCODECollapsiblePanel clusterFindingPanel;
-	private MCODECollapsiblePanel customizeClusterFindingPanel;
-
-	// Parameters for MCODE
 	private MCODEParameterSet currentParamsCopy; // stores current parameters - populates panel fields
-
-	DecimalFormat decFormat; // used in the formatted text fields
-
-	JPanel clusterFindingContent;
-	JPanel customizeClusterFindingContent;
-
-	// resetable UI elements
-
-	// Scoring
-	JCheckBox includeLoopsCheckBox;
-	JFormattedTextField degreeCutOffFormattedTextField;
-	JFormattedTextField kCoreFormattedTextField;
-	JFormattedTextField nodeScoreCutoffFormattedTextField;
-	// cluster finding
-	JRadioButton optimizeOption; // only for network scope
-	JRadioButton customizeOption;
-	JCheckBox preprocessCheckBox; // only for node and node set scopes
-	JCheckBox haircutCheckBox;
-	JCheckBox fluffCheckBox;
-	JFormattedTextField fluffNodeDensityCutOffFormattedTextField;
-	JFormattedTextField maxDepthFormattedTextField;
+	private DecimalFormat decFormat; // used in the formatted text fields
 
 	/**
 	 * The actual parameter change panel that builds the UI
@@ -130,7 +113,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		this.mcodeUtil = mcodeUtil;
 		actions = new ArrayList<CyAction>();
 
+		setMinimumSize(new Dimension(340, 400));
+		setPreferredSize(new Dimension(360, 400));
 		setLayout(new BorderLayout());
+		setOpaque(false);
 
 		// get the current parameters
 		currentParamsCopy = this.mcodeUtil.getCurrentParameters().getParamsCopy(null);
@@ -139,24 +125,20 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		decFormat = new DecimalFormat();
 		decFormat.setParseIntegerOnly(true);
 
+		densityCutoffLabel = new JLabel("Node Density Cutoff:");
+		densityCutoffLabel.setMinimumSize(getDensityCutoffTxt().getMinimumSize());
+		densityCutoffLabel.setToolTipText(getDensityCutoffTxt().getToolTipText());
+		
 		// Create the three main panels: scope, advanced options, and bottom
-		// Add all the vertically alligned components to the main panel
-		add(getScopePanel(), BorderLayout.NORTH);
-		add(getAdvancedOptionsPanel(), BorderLayout.CENTER);
-		add(getBottomPanel(), BorderLayout.SOUTH);
-
-		//TODO: Remove this ({...}) when benchmarking is implemented
-		// {
-		//remove content with 2 options
-		getClusterFindingPanel().getContentPane().remove(clusterFindingContent);
-		//add customize content
-		getClusterFindingPanel().getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
-		// }
+		// Add all the vertically aligned components to the main panel
+		add(getScopePnl(), BorderLayout.NORTH);
+		add(getAdvancedOptionsPnl(), BorderLayout.CENTER);
+		add(getBottomPnl(), BorderLayout.SOUTH);
 	}
 
 	public void addAction(CyAction action) {
 		JButton bt = new JButton(action);
-		getBottomPanel().add(bt);
+		getBottomPnl().add(bt);
 
 		this.actions.add(action);
 	}
@@ -188,420 +170,300 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 	/**
 	 * Creates a JPanel containing scope radio buttons
-	 *
 	 * @return panel containing the scope option buttons
 	 */
-	private JPanel getScopePanel() {
-		if (scopePanel == null) {
-			scopePanel = new JPanel();
-			scopePanel.setLayout(new BoxLayout(scopePanel, BoxLayout.Y_AXIS));
-			scopePanel.setBorder(BorderFactory.createTitledBorder("Find Cluster(s)"));
+	private JPanel getScopePnl() {
+		if (scopePnl == null) {
+			scopePnl = new JPanel();
+			scopePnl.setOpaque(false);
+			scopePnl.setBorder(UIUtil.createTitledBorder(""));
 
-			JRadioButton scopeNetwork = new JRadioButton("in Whole Network", currentParamsCopy.getScope()
-					.equals(MCODEParameterSet.NETWORK));
-			JRadioButton scopeSelection = new JRadioButton("from Selection", currentParamsCopy.getScope()
-					.equals(MCODEParameterSet.SELECTION));
+			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
+					currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK));
+			final JRadioButton selScopeBtn = new JRadioButton("from selection",
+					currentParamsCopy.getScope().equals(MCODEParameterSet.SELECTION));
+			
+			netScopeBtn.setActionCommand(MCODEParameterSet.NETWORK);
+			selScopeBtn.setActionCommand(MCODEParameterSet.SELECTION);
 
-			scopeNetwork.setActionCommand(MCODEParameterSet.NETWORK);
-			scopeSelection.setActionCommand(MCODEParameterSet.SELECTION);
+			netScopeBtn.addActionListener(new ScopeAction());
+			selScopeBtn.addActionListener(new ScopeAction());
 
-			scopeNetwork.addActionListener(new ScopeAction());
-			scopeSelection.addActionListener(new ScopeAction());
+			final ButtonGroup scopeOptions = new ButtonGroup();
+			scopeOptions.add(netScopeBtn);
+			scopeOptions.add(selScopeBtn);
+			
+			final JLabel findLabel = new JLabel("Find Clusters:");
+			findLabel.setHorizontalAlignment(JLabel.RIGHT);
+			findLabel.setMinimumSize(new Dimension(findLabel.getMinimumSize().width, netScopeBtn.getMinimumSize().height));
 
-			ButtonGroup scopeOptions = new ButtonGroup();
-			scopeOptions.add(scopeNetwork);
-			scopeOptions.add(scopeSelection);
-
-			scopePanel.add(scopeNetwork);
-			scopePanel.add(scopeSelection);
+			final GroupLayout layout = new GroupLayout(scopePnl);
+			scopePnl.setLayout(layout);
+			layout.setAutoCreateContainerGaps(true);
+			
+			layout.setHorizontalGroup(layout.createSequentialGroup()
+					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
+							.addComponent(findLabel)
+					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
+							.addComponent(netScopeBtn)
+							.addComponent(selScopeBtn)
+					)
+			);
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(findLabel)
+					).addGroup(layout.createSequentialGroup()
+							.addComponent(netScopeBtn)
+							.addComponent(selScopeBtn)
+					)
+			);
 		}
 
-		return scopePanel;
+		return scopePnl;
 	}
 
-	private JPanel getAdvancedOptionsPanel() {
-		if (advancedOptionsPanel == null) {
-			//Since the advanced options panel is being added to the center of this border layout
-			//it will stretch it's height to fit the main panel.  To prevent this we create an
-			//additional border layout panel and add advanced options to it's north compartment
-			advancedOptionsPanel = new JPanel(new BorderLayout());
-			advancedOptionsPanel.add(getCollapsibleOptionsPanel(), BorderLayout.NORTH);
+	private MCODECollapsiblePanel getAdvancedOptionsPnl() {
+		if (advancedOptionsPnl == null) {
+			advancedOptionsPnl = new MCODECollapsiblePanel("Advanced Options");
+			advancedOptionsPnl.setOpaque(false);
+			
+			advancedOptionsPnl.getContentPane().add(getNetworkScoringPnl());
+			advancedOptionsPnl.getContentPane().add(getClusterFindingPnl());
 		}
 
-		return advancedOptionsPanel;
+		return advancedOptionsPnl;
 	}
 
 	/**
-	 * Creates a collapsible panel that holds 2 other collapsable panels for
-	 * network scoring and cluster finding parameter inputs
-	 * @return collapsablePanel
-	 */
-	private MCODECollapsiblePanel getCollapsibleOptionsPanel() {
-		if (collapsibleOptionsPanel == null) {
-			collapsibleOptionsPanel = new MCODECollapsiblePanel("Advanced Options");
-
-			JPanel panel = new JPanel();
-			panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-			panel.add(getNetworkScoringPanel());
-			panel.add(getClusterFindingPanel());
-
-			collapsibleOptionsPanel.getContentPane().add(panel, BorderLayout.NORTH);
-		}
-
-		return collapsibleOptionsPanel;
-	}
-
-	/**
-	 * Creates a collapsable panel that holds network scoring parameter inputs
-	 *
+	 * Creates a panel that holds network scoring parameter inputs
 	 * @return panel containing the network scoring parameter inputs
 	 */
-	private MCODECollapsiblePanel getNetworkScoringPanel() {
-		if (networkScoringPanel == null) {
-			networkScoringPanel = new MCODECollapsiblePanel("Network Scoring");
+	private JPanel getNetworkScoringPnl() {
+		if (networkScoringPnl == null) {
+			networkScoringPnl = new JPanel();
+			networkScoringPnl.setBorder(UIUtil.createTitledBorder("Network Scoring"));
+			networkScoringPnl.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
 
-			JPanel panel = new JPanel();
-			panel.setLayout(new GridLayout(0, 1));
+			final JLabel degreeCutoffLabel = new JLabel("Degree Cutoff:");
+			degreeCutoffLabel.setMinimumSize(getDegreeCutoffTxt().getMinimumSize());
+			degreeCutoffLabel.setToolTipText(getDegreeCutoffTxt().getToolTipText());
 
-			//Include loops input
-			JLabel includeLoopsLabel = new JLabel("Include Loops");
-			includeLoopsCheckBox = new JCheckBox() {
-
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-			includeLoopsCheckBox.addItemListener(new MCODEMainPanel.IncludeLoopsCheckBoxAction());
-			String includeLoopsTip = "Self-edges may increase a\n" + "node's score slightly";
-			includeLoopsCheckBox.setToolTipText(includeLoopsTip);
-			includeLoopsCheckBox.setSelected(currentParamsCopy.isIncludeLoops());
-
-			JPanel includeLoopsPanel = new JPanel() {
-
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-			includeLoopsPanel.setLayout(new BorderLayout());
-			includeLoopsPanel.setToolTipText(includeLoopsTip);
-
-			includeLoopsPanel.add(includeLoopsLabel, BorderLayout.WEST);
-			includeLoopsPanel.add(includeLoopsCheckBox, BorderLayout.EAST);
-
-			//Degree cutoff input
-			JLabel degreeCutOffLabel = new JLabel("Degree Cutoff");
-
-			degreeCutOffFormattedTextField = new JFormattedTextField(decFormat) {
-
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			degreeCutOffFormattedTextField.setColumns(3);
-			degreeCutOffFormattedTextField.addPropertyChangeListener("value",
-																	 new MCODEMainPanel.FormattedTextFieldAction());
-			String degreeCutOffTip = "Sets the minimum number of\n" + "edges for a node to be scored.";
-			degreeCutOffFormattedTextField.setToolTipText(degreeCutOffTip);
-			degreeCutOffFormattedTextField.setText(String.valueOf(currentParamsCopy.getDegreeCutoff()));
-
-			JPanel degreeCutOffPanel = new JPanel() {
-
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			degreeCutOffPanel.setLayout(new BorderLayout());
-			degreeCutOffPanel.setToolTipText(degreeCutOffTip);
-
-			degreeCutOffPanel.add(degreeCutOffLabel, BorderLayout.WEST);
-			degreeCutOffPanel.add(degreeCutOffFormattedTextField, BorderLayout.EAST);
-
-			//add the components to the panel
-			panel.add(includeLoopsPanel);
-			panel.add(degreeCutOffPanel);
-
-			networkScoringPanel.getContentPane().add(panel, BorderLayout.NORTH);
+			final GroupLayout layout = new GroupLayout(networkScoringPnl);
+			networkScoringPnl.setLayout(layout);
+			layout.setAutoCreateContainerGaps(true);
+			
+			final Component hStrut = Box.createRigidArea(getIncludeLoopsCkb().getMinimumSize());
+			
+			layout.setHorizontalGroup(layout.createSequentialGroup()
+					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
+							.addComponent(hStrut)
+							.addComponent(degreeCutoffLabel)
+					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
+							.addComponent(getIncludeLoopsCkb())
+							.addComponent(getDegreeCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
+							          GroupLayout.PREFERRED_SIZE)
+					)
+			);
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(hStrut)
+							.addComponent(degreeCutoffLabel)
+					).addGroup(layout.createSequentialGroup()
+							.addComponent(getIncludeLoopsCkb())
+							.addComponent(getDegreeCutoffTxt())
+					)
+			);
 		}
 
-		return networkScoringPanel;
+		return networkScoringPnl;
 	}
 
 	/**
-	 * Creates a collapsible panel that holds 2 other collapsible panels for either
-	 * customizing or optimized cluster finding parameters
-	 * @return Collapsible Panel
+	 * Creates a panel that holds 2 other panels for either customizing or optimized cluster finding parameters
+	 * @return Panel
 	 */
-	private MCODECollapsiblePanel getClusterFindingPanel() {
-		if (clusterFindingPanel == null) {
-			clusterFindingPanel = new MCODECollapsiblePanel("Cluster Finding");
+	private JPanel getClusterFindingPnl() {
+		if (clusterFindingPnl == null) {
+			clusterFindingPnl = new JPanel();
+			clusterFindingPnl.setBorder(UIUtil.createTitledBorder("Cluster Finding"));
+			clusterFindingPnl.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
 
-			JPanel panel = new JPanel();
-			panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-			customizeOption = new JRadioButton("Customize", !currentParamsCopy.isOptimize());
-			optimizeOption = new JRadioButton("Optimize", currentParamsCopy.isOptimize());
-			ButtonGroup clusterFindingOptions = new ButtonGroup();
-			clusterFindingOptions.add(customizeOption);
-			clusterFindingOptions.add(optimizeOption);
-
-			customizeOption.addActionListener(new ClusterFindingAction());
-			optimizeOption.addActionListener(new ClusterFindingAction());
-
-			//optimize parameters panel
-			MCODECollapsiblePanel optimizeClusterFindingPanel = createOptimizeClusterFindingPanel(optimizeOption);
-
-			panel.add(getCustomizeClusterFindingPanel(customizeOption));
-			panel.add(optimizeClusterFindingPanel);
-
-			this.clusterFindingContent = panel;
-
-			clusterFindingPanel.getContentPane().add(panel, BorderLayout.NORTH);
+			final JLabel scoreCutoffLabel = new JLabel("Node Score Cutoff:");
+			scoreCutoffLabel.setMinimumSize(getScoreCutoffTxt().getMinimumSize());
+			scoreCutoffLabel.setToolTipText(getScoreCutoffTxt().getToolTipText());
+			
+			final JLabel kCoreLabel = new JLabel("K-Core:");
+			kCoreLabel.setMinimumSize(getScoreCutoffTxt().getMinimumSize());
+			kCoreLabel.setToolTipText(getScoreCutoffTxt().getToolTipText());
+			
+			final JLabel maxDepthLabel = new JLabel("Max. Depth:");
+			maxDepthLabel.setMinimumSize(getMaxDepthTxt().getMinimumSize());
+			maxDepthLabel.setToolTipText(getMaxDepthTxt().getToolTipText());
+			
+			final GroupLayout layout = new GroupLayout(clusterFindingPnl);
+			clusterFindingPnl.setLayout(layout);
+			layout.setAutoCreateContainerGaps(true);
+			
+			final Component hStrut1 = Box.createRigidArea(getHaircutCkb().getMinimumSize());
+			final Component hStrut2 = Box.createRigidArea(getFluffCkb().getMinimumSize());
+			
+			layout.setHorizontalGroup(layout.createSequentialGroup()
+					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
+							.addComponent(hStrut1)
+							.addComponent(hStrut2)
+							.addComponent(densityCutoffLabel)
+							.addComponent(scoreCutoffLabel)
+							.addComponent(kCoreLabel)
+							.addComponent(maxDepthLabel)
+					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
+							.addComponent(getHaircutCkb())
+							.addComponent(getFluffCkb())
+							.addComponent(getDensityCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
+							          GroupLayout.PREFERRED_SIZE)
+							.addComponent(getScoreCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
+							          GroupLayout.PREFERRED_SIZE)
+							.addComponent(getkCoreTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
+							          GroupLayout.PREFERRED_SIZE)
+							.addComponent(getMaxDepthTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
+							          GroupLayout.PREFERRED_SIZE)
+					)
+			);
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(hStrut1)
+							.addComponent(hStrut2)
+							.addComponent(densityCutoffLabel)
+							.addComponent(scoreCutoffLabel)
+							.addComponent(kCoreLabel)
+							.addComponent(maxDepthLabel)
+					).addGroup(layout.createSequentialGroup()
+							.addComponent(getHaircutCkb())
+							.addComponent(getFluffCkb())
+							.addComponent(getDensityCutoffTxt())
+							.addComponent(getScoreCutoffTxt())
+							.addComponent(getkCoreTxt())
+							.addComponent(getMaxDepthTxt())
+					)
+			);
+			
+			updateClusterFindingPanel();
 		}
 
-		return clusterFindingPanel;
+		return clusterFindingPnl;
 	}
-
-	/**
-	 * Creates a collapsible panel that holds cluster finding parameter inputs,
-	 * placed within the cluster finding collapsible panel
-	 *
-	 * @param component Any JComponent that may appear in the titled border of the panel
-	 * @return collapsablePanel
-	 */
-	private MCODECollapsiblePanel getCustomizeClusterFindingPanel(JRadioButton component) {
-		if (customizeClusterFindingPanel == null) {
-			customizeClusterFindingPanel = new MCODECollapsiblePanel(component);
-			JPanel panel = new JPanel();
-			panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-			//Node Score Cutoff
-			JLabel nodeScoreCutoffLabel = new JLabel("Node Score Cutoff");
-			nodeScoreCutoffFormattedTextField = new JFormattedTextField(new DecimalFormat("0.000")) {
-
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			nodeScoreCutoffFormattedTextField.setColumns(3);
-			nodeScoreCutoffFormattedTextField.addPropertyChangeListener("value",
-																		new MCODEMainPanel.FormattedTextFieldAction());
-			String nodeScoreCutoffTip = "Sets the acceptable score deviance from\n"
-										+ "the seed node's score for expanding a cluster\n"
-										+ "(most influental parameter for cluster size).";
-			nodeScoreCutoffFormattedTextField.setToolTipText(nodeScoreCutoffTip);
-			nodeScoreCutoffFormattedTextField.setText((new Double(currentParamsCopy.getNodeScoreCutoff()).toString()));
-
-			JPanel nodeScoreCutoffPanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			nodeScoreCutoffPanel.setToolTipText(nodeScoreCutoffTip);
-			nodeScoreCutoffPanel.add(nodeScoreCutoffLabel, BorderLayout.WEST);
-			nodeScoreCutoffPanel.add(nodeScoreCutoffFormattedTextField, BorderLayout.EAST);
-
-			//K-Core input
-			JLabel kCoreLabel = new JLabel("K-Core");
-			kCoreFormattedTextField = new JFormattedTextField(decFormat) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			kCoreFormattedTextField.setColumns(3);
-			kCoreFormattedTextField.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			String kCoreTip = "Filters out clusters lacking a\n" + "maximally inter-connected core\n"
-							  + "of at least k edges per node.";
-			kCoreFormattedTextField.setToolTipText(kCoreTip);
-			kCoreFormattedTextField.setText(String.valueOf(currentParamsCopy.getKCore()));
-
-			JPanel kCorePanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			kCorePanel.setToolTipText(kCoreTip);
-			kCorePanel.add(kCoreLabel, BorderLayout.WEST);
-			kCorePanel.add(kCoreFormattedTextField, BorderLayout.EAST);
-
-			//Haircut Input
-			JLabel haircutLabel = new JLabel("Haircut");
-			haircutCheckBox = new JCheckBox() {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			haircutCheckBox.addItemListener(new MCODEMainPanel.HaircutCheckBoxAction());
-			String haircutTip = "Remove singly connected\n" + "nodes from clusters.";
-			haircutCheckBox.setToolTipText(haircutTip);
-			haircutCheckBox.setSelected(currentParamsCopy.isHaircut());
-
-			JPanel haircutPanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			haircutPanel.setToolTipText(haircutTip);
-			haircutPanel.add(haircutLabel, BorderLayout.WEST);
-			haircutPanel.add(haircutCheckBox, BorderLayout.EAST);
-
-			// Fluff Input
-			JLabel fluffLabel = new JLabel("Fluff");
-			fluffCheckBox = new JCheckBox() {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			fluffCheckBox.addItemListener(new MCODEMainPanel.FluffCheckBoxAction());
-			String fluffTip = "Expand core cluster by one\n" + "neighbour shell (applied\n"
-							  + "after the optional haircut).";
-			fluffCheckBox.setToolTipText(fluffTip);
-			fluffCheckBox.setSelected(currentParamsCopy.isFluff());
-
-			JPanel fluffPanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			fluffPanel.setToolTipText(fluffTip);
-			fluffPanel.add(fluffLabel, BorderLayout.WEST);
-			fluffPanel.add(fluffCheckBox, BorderLayout.EAST);
-
-			// Fluff node density cutoff input
-			JLabel fluffNodeDensityCutOffLabel = new JLabel("   Node Density Cutoff");
-
-			fluffNodeDensityCutOffFormattedTextField = new JFormattedTextField(new DecimalFormat("0.000")) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			fluffNodeDensityCutOffFormattedTextField.setColumns(3);
-			fluffNodeDensityCutOffFormattedTextField
-					.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			String fluffNodeDensityCutoffTip = "Limits fluffing by setting the acceptable\n"
-											   + "node density deviance from the core cluster\n"
-											   + "density (allows clusters' edges to overlap).";
-			fluffNodeDensityCutOffFormattedTextField.setToolTipText(fluffNodeDensityCutoffTip);
-			fluffNodeDensityCutOffFormattedTextField.setText((new Double(currentParamsCopy.getFluffNodeDensityCutoff())
+	
+	private JCheckBox getIncludeLoopsCkb() {
+		if (includeLoopsCkb == null) {
+			includeLoopsCkb = new JCheckBox("Include Loops");
+			includeLoopsCkb.addItemListener(new IncludeLoopsCheckBoxAction());
+			includeLoopsCkb.setToolTipText("<html>Self-edges may increase a<br>node's score slightly</html>");
+			includeLoopsCkb.setSelected(currentParamsCopy.isIncludeLoops());
+		}
+		
+		return includeLoopsCkb;
+	}
+	
+	private JFormattedTextField getDegreeCutoffTxt() {
+		if (degreeCutoffTxt == null) {
+			degreeCutoffTxt = new JFormattedTextField(decFormat);
+			degreeCutoffTxt.setColumns(3);
+			degreeCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
+			degreeCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
+			degreeCutoffTxt.setToolTipText(
+					"<html><html>Sets the minimum number of<br>edges for a node to be scored.</html>");
+			degreeCutoffTxt.setText(String.valueOf(currentParamsCopy.getDegreeCutoff()));
+		}
+		
+		return degreeCutoffTxt;
+	}
+	
+	private JCheckBox getHaircutCkb() {
+		if (haircutCkb == null) {
+			haircutCkb = new JCheckBox("Haircut");
+			haircutCkb.addItemListener(new MCODEMainPanel.HaircutCheckBoxAction());
+			haircutCkb.setToolTipText("<html>Remove singly connected<br>nodes from clusters.</html>");
+			haircutCkb.setSelected(currentParamsCopy.isHaircut());
+		}
+		
+		return haircutCkb;
+	}
+	
+	private JCheckBox getFluffCkb() {
+		if (fluffCkb == null) {
+			fluffCkb = new JCheckBox("Fluff");
+			fluffCkb.addItemListener(new MCODEMainPanel.FluffCheckBoxAction());
+			fluffCkb.setToolTipText(
+					"<html>Expand core cluster by one neighbour shell<br>" +
+					"(applied after the optional haircut).</html>");
+			fluffCkb.setSelected(currentParamsCopy.isFluff());
+		}
+		
+		return fluffCkb;
+	}
+	
+	private JFormattedTextField getDensityCutoffTxt() {
+		if (densityCutoffTxt == null) {
+			densityCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
+			densityCutoffTxt.setColumns(3);
+			densityCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
+			densityCutoffTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
+			densityCutoffTxt.setToolTipText(
+					"<html>Limits fluffing by setting the acceptable<br>"
+					+ "node density deviance from the core cluster<br>"
+					+ "density (allows clusters' edges to overlap).</html>");
+			densityCutoffTxt.setText((new Double(currentParamsCopy.getFluffNodeDensityCutoff())
 					.toString()));
-
-			JPanel fluffNodeDensityCutOffPanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			fluffNodeDensityCutOffPanel.setToolTipText(fluffNodeDensityCutoffTip);
-			fluffNodeDensityCutOffPanel.add(fluffNodeDensityCutOffLabel, BorderLayout.WEST);
-			fluffNodeDensityCutOffPanel.add(fluffNodeDensityCutOffFormattedTextField, BorderLayout.EAST);
-			fluffNodeDensityCutOffPanel.setVisible(currentParamsCopy.isFluff());
-
-			//Max depth input
-			JLabel maxDepthLabel = new JLabel("Max. Depth");
-
-			maxDepthFormattedTextField = new JFormattedTextField(decFormat) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			maxDepthFormattedTextField.setColumns(3);
-			maxDepthFormattedTextField
-					.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			String maxDepthTip = "Limits the cluster size by setting the\n" + "maximum search distance from a seed\n"
-								 + "node (100 virtually means no limit).";
-			maxDepthFormattedTextField.setToolTipText(maxDepthTip);
-			maxDepthFormattedTextField.setText(String.valueOf(currentParamsCopy.getMaxDepthFromStart()));
-
-			JPanel maxDepthPanel = new JPanel(new BorderLayout()) {
-
-				@Override
-				public JToolTip createToolTip() {
-					return new JMultiLineToolTip();
-				}
-			};
-
-			maxDepthPanel.setToolTipText(maxDepthTip);
-			maxDepthPanel.add(maxDepthLabel, BorderLayout.WEST);
-			maxDepthPanel.add(maxDepthFormattedTextField, BorderLayout.EAST);
-
-			//Add all inputs to the panel
-			panel.add(haircutPanel);
-			panel.add(fluffPanel);
-			panel.add(fluffNodeDensityCutOffPanel);
-			panel.add(nodeScoreCutoffPanel);
-			panel.add(kCorePanel);
-			panel.add(maxDepthPanel);
-
-			this.customizeClusterFindingContent = panel;
-
-			customizeClusterFindingPanel.getContentPane().add(panel, BorderLayout.NORTH);
 		}
-
-		return customizeClusterFindingPanel;
+		
+		return densityCutoffTxt;
 	}
-
-	/**
-	 * Creates a collapsable panel that holds a benchmark file input, placed within the cluster finding collapsable panel
-	 *
-	 * @param component the radio button that appears in the titled border of the panel
-	 * @return A collapsable panel holding a file selection input
-	 * @see MCODECollapsiblePanel
-	 */
-	private MCODECollapsiblePanel createOptimizeClusterFindingPanel(JRadioButton component) {
-		MCODECollapsiblePanel collapsiblePanel = new MCODECollapsiblePanel(component);
-
-		JPanel panel = new JPanel();
-		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-		JLabel benchmarkStarter = new JLabel("Benchmark file location");
-
-		JPanel benchmarkStarterPanel = new JPanel(new BorderLayout());
-		benchmarkStarterPanel.add(benchmarkStarter, BorderLayout.WEST);
-
-		JFormattedTextField benchmarkFileLocation = new JFormattedTextField();
-		JButton browseButton = new JButton("Browse...");
-
-		JPanel fileChooserPanel = new JPanel(new BorderLayout());
-		fileChooserPanel.add(benchmarkFileLocation, BorderLayout.CENTER);
-		fileChooserPanel.add(browseButton, BorderLayout.EAST);
-
-		panel.add(benchmarkStarterPanel);
-		panel.add(fileChooserPanel);
-
-		collapsiblePanel.getContentPane().add(panel, BorderLayout.NORTH);
-		return collapsiblePanel;
+	
+	private JFormattedTextField getScoreCutoffTxt() {
+		if (scoreCutoffTxt == null) {
+			scoreCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
+			scoreCutoffTxt.setColumns(3);
+			scoreCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
+			scoreCutoffTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
+			scoreCutoffTxt.setToolTipText(
+					"<html>Sets the acceptable score deviance from<br>" +
+					"the seed node's score for expanding a cluster<br>" +
+					"(most influental parameter for cluster size).</html>");
+			scoreCutoffTxt.setText((new Double(currentParamsCopy.getNodeScoreCutoff()).toString()));
+		}
+		
+		return scoreCutoffTxt;
+	}
+	
+	private JFormattedTextField getkCoreTxt() {
+		if (kCoreTxt == null) {
+			kCoreTxt = new JFormattedTextField(decFormat);
+			kCoreTxt.setColumns(3);
+			kCoreTxt.setHorizontalAlignment(SwingConstants.RIGHT);
+			kCoreTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
+			kCoreTxt.setToolTipText(
+					"<html>Filters out clusters lacking a<br>" +
+					"maximally inter-connected core<br>" +
+					"of at least k edges per node.</html>");
+			kCoreTxt.setText(String.valueOf(currentParamsCopy.getKCore()));
+		}
+		
+		return kCoreTxt;
+	}
+	
+	private JFormattedTextField getMaxDepthTxt() {
+		if (maxDepthTxt == null) {
+			maxDepthTxt = new JFormattedTextField(decFormat);
+			maxDepthTxt.setColumns(3);
+			maxDepthTxt.setHorizontalAlignment(SwingConstants.RIGHT);
+			maxDepthTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
+			maxDepthTxt.setToolTipText(
+					"<html>Limits the cluster size by setting the<br>" +
+					"maximum search distance from a seed<br>" +
+					"node (100 virtually means no limit).</html>");
+			maxDepthTxt.setText(String.valueOf(currentParamsCopy.getMaxDepthFromStart()));
+		}
+		
+		return maxDepthTxt;
 	}
 
 	/**
@@ -609,22 +471,28 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	 *
 	 * @return a flow layout panel containing the analyze and quite buttons
 	 */
-	private JPanel getBottomPanel() {
-		if (bottomPanel == null) {
-			bottomPanel = new JPanel();
-			bottomPanel.setLayout(new FlowLayout());
-			bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
+	private JPanel getBottomPnl() {
+		if (bottomPnl == null) {
+			bottomPnl = new JPanel();
+			bottomPnl.setOpaque(false);
+			bottomPnl.setLayout(new FlowLayout());
+			bottomPnl.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
 		}
 
-		return bottomPanel;
+		return bottomPnl;
+	}
+	
+	private void updateClusterFindingPanel() {
+		if (densityCutoffLabel != null) densityCutoffLabel.setEnabled(currentParamsCopy.isFluff());
+		getDensityCutoffTxt().setEnabled(currentParamsCopy.isFluff());
 	}
 
 	/**
 	 * Handles the press of a scope option. Makes sure that appropriate advanced options
 	 * inputs are added and removed depending on which scope is selected
 	 */
+	@SuppressWarnings("serial")
 	private class ScopeAction extends AbstractAction {
-
 		/*
 		//TODO: Uncomment this action event handler when benchmarking is implemented, and delete the one below
 		public void actionPerformed(ActionEvent e) {
@@ -634,18 +502,18 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		        //content allows the user to choose between optimize and customize.  When the other scopes are selected
 		        //the user should only see the customize cluster parameters content.
 		        //Here we ensured that these two contents are toggled depending on the scope selection.
-		        clusterFindingPanel.getContentPane().remove(customizeClusterFindingContent);
+		        clusterFindingPnl.getContentPane().remove(customizeClusterFindingContent);
 		        //add content with 2 options
-		        clusterFindingPanel.getContentPane().add(clusterFindingContent, BorderLayout.NORTH);
+		        clusterFindingPnl.getContentPane().add(clusterFindingContent, BorderLayout.NORTH);
 		        //need to re-add the customize content to its original container
 		        customizeClusterFindingPanel.getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
 		    } else {
 		        //since only one option will be left, it must be selected so that its content is visible
 		        customizeOption.setSelected(true);
 		        //remove content with 2 options
-		        clusterFindingPanel.getContentPane().remove(clusterFindingContent);
+		        clusterFindingPnl.getContentPane().remove(clusterFindingContent);
 		        //add customize content; this automatically removes it from its original container
-		        clusterFindingPanel.getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
+		        clusterFindingPnl.getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
 
 
 		    }
@@ -655,6 +523,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 		//TODO: Delete this ({...}) when benchmarking is implemented
 		// TEMPORARY ACTION EVENT HANDLER {
+		@Override
 		public void actionPerformed(ActionEvent e) {
 			String scope = e.getActionCommand();
 			currentParamsCopy.setScope(scope);
@@ -662,31 +531,23 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		// }
 	}
 
-	/**
-	 * Sets the optimization parameter depending on which radio button is selected (cusomize/optimize)
-	 */
-	private class ClusterFindingAction extends AbstractAction {
-
-		public void actionPerformed(ActionEvent e) {
-			if (optimizeOption.isSelected()) {
-				currentParamsCopy.setOptimize(true);
-			} else {
-				currentParamsCopy.setOptimize(false);
-			}
-		}
-	}
+//	/**
+//	 * Sets the optimization parameter depending on which radio button is selected (cusomize/optimize)
+//	 */
+//	private class ClusterFindingAction extends AbstractAction {
+//		@Override
+//		public void actionPerformed(ActionEvent e) {
+//			currentParamsCopy.setOptimize(optimizeOption.isSelected());
+//		}
+//	}
 
 	/**
 	 * Handles setting of the include loops parameter
 	 */
 	private class IncludeLoopsCheckBoxAction implements ItemListener {
-
+		@Override
 		public void itemStateChanged(ItemEvent e) {
-			if (e.getStateChange() == ItemEvent.DESELECTED) {
-				currentParamsCopy.setIncludeLoops(false);
-			} else {
-				currentParamsCopy.setIncludeLoops(true);
-			}
+			currentParamsCopy.setIncludeLoops(e.getStateChange() != ItemEvent.DESELECTED);
 		}
 	}
 
@@ -695,15 +556,15 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	 * Makes sure that the numbers make sense.
 	 */
 	private class FormattedTextFieldAction implements PropertyChangeListener {
-
+		@Override
 		public void propertyChange(PropertyChangeEvent e) {
-			JFormattedTextField source = (JFormattedTextField) e.getSource();
+			final JFormattedTextField source = (JFormattedTextField) e.getSource();
 
 			String message = "The value you have entered is invalid.\n";
 			boolean invalid = false;
 
-			if (source == degreeCutOffFormattedTextField) {
-				Number value = (Number) degreeCutOffFormattedTextField.getValue();
+			if (source == degreeCutoffTxt) {
+				Number value = (Number) degreeCutoffTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setDegreeCutoff(value.intValue());
@@ -712,8 +573,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					message += "The degree cutoff must be greater than 1.";
 					invalid = true;
 				}
-			} else if (source == nodeScoreCutoffFormattedTextField) {
-				Number value = (Number) nodeScoreCutoffFormattedTextField.getValue();
+			} else if (source == getScoreCutoffTxt()) {
+				Number value = (Number) getScoreCutoffTxt().getValue();
 				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					currentParamsCopy.setNodeScoreCutoff(value.doubleValue());
@@ -722,8 +583,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					message += "The node score cutoff must be between 0 and 1.";
 					invalid = true;
 				}
-			} else if (source == kCoreFormattedTextField) {
-				Number value = (Number) kCoreFormattedTextField.getValue();
+			} else if (source == kCoreTxt) {
+				Number value = (Number) kCoreTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 1)) {
 					currentParamsCopy.setKCore(value.intValue());
@@ -732,8 +593,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					message += "The K-Core must be greater than 1.";
 					invalid = true;
 				}
-			} else if (source == maxDepthFormattedTextField) {
-				Number value = (Number) maxDepthFormattedTextField.getValue();
+			} else if (source == maxDepthTxt) {
+				Number value = (Number) maxDepthTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 0)) {
 					currentParamsCopy.setMaxDepthFromStart(value.intValue());
@@ -742,8 +603,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					message += "The maximum depth must be greater than 0.";
 					invalid = true;
 				}
-			} else if (source == fluffNodeDensityCutOffFormattedTextField) {
-				Number value = (Number) fluffNodeDensityCutOffFormattedTextField.getValue();
+			} else if (source == densityCutoffTxt) {
+				Number value = (Number) densityCutoffTxt.getValue();
 				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					currentParamsCopy.setFluffNodeDensityCutoff(value.doubleValue());
@@ -767,13 +628,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	 * Handles setting of the haircut parameter
 	 */
 	private class HaircutCheckBoxAction implements ItemListener {
-
+		@Override
 		public void itemStateChanged(ItemEvent e) {
-			if (e.getStateChange() == ItemEvent.DESELECTED) {
-				currentParamsCopy.setHaircut(false);
-			} else {
-				currentParamsCopy.setHaircut(true);
-			}
+			currentParamsCopy.setHaircut(e.getStateChange() != ItemEvent.DESELECTED);
 		}
 	}
 
@@ -781,16 +638,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	 * Handles setting of the fluff parameter and showing or hiding of the fluff node density cutoff input
 	 */
 	private class FluffCheckBoxAction implements ItemListener {
-
+		@Override
 		public void itemStateChanged(ItemEvent e) {
-			if (e.getStateChange() == ItemEvent.DESELECTED) {
-				currentParamsCopy.setFluff(false);
-			} else {
-				currentParamsCopy.setFluff(true);
-			}
-
-			fluffNodeDensityCutOffFormattedTextField.getParent().setVisible(currentParamsCopy.isFluff());
+			currentParamsCopy.setFluff(e.getStateChange() != ItemEvent.DESELECTED);
+			updateClusterFindingPanel();
 		}
 	}
-
 }
