@@ -1,5 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static javax.swing.GroupLayout.DEFAULT_SIZE;
+import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_X_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_Y_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
@@ -17,7 +19,6 @@ import java.awt.event.ActionEvent;
 import java.net.URL;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,6 +29,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,14 +37,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.AbstractAction;
-import javax.swing.BoxLayout;
+import javax.swing.Box;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -52,6 +57,7 @@ import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
@@ -82,7 +88,6 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.util.UIUtil;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 
 /**
@@ -148,7 +153,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private final MCODEDiscardResultAction discardResultAction;
 
 	// Graphical classes
-	private MCODEClusterBrowserPanel clusterBrowserPnl;
+	private ClusterBrowserPanel clusterBrowserPnl;
 	private MCODECollapsiblePanel explorePnl;
 	private JPanel bottomPnl;
 	private JButton closeBtn;
@@ -158,7 +163,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 	/**
 	 * Constructor for the Results Panel which displays the clusters in a
-	 * browswer table and explore panels for each cluster.
+	 * browser table and explore panels for each cluster.
 	 * 
 	 * @param clusters Found clusters from the MCODEAnalyzeTask
 	 * @param alg A reference to the alg for this particular network
@@ -174,8 +179,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							 final int resultId,
 							 final MCODEDiscardResultAction discardResultAction) {
 		setLayout(new BorderLayout());
-		setOpaque(false);
-
+		
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
 		this.resultId = resultId;
@@ -186,12 +190,21 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.discardResultAction = discardResultAction;
 		this.currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
 		
-		this.clusterBrowserPnl = new MCODEClusterBrowserPanel();
+		this.clusterBrowserPnl = new ClusterBrowserPanel();
 		
-		add(clusterBrowserPnl, BorderLayout.CENTER);
-		add(getBottomPnl(), BorderLayout.SOUTH);
-
-		setSize(this.getMinimumSize());
+		final GroupLayout layout = new GroupLayout(this);
+		setLayout(layout);
+		layout.setAutoCreateContainerGaps(true);
+		layout.setAutoCreateGaps(true);
+		
+		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+				.addComponent(clusterBrowserPnl, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getBottomPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+		);
+		layout.setVerticalGroup(layout.createSequentialGroup()
+				.addComponent(clusterBrowserPnl, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getBottomPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+		);
 	}
 
 	@Override
@@ -260,11 +273,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getBottomPnl() {
 		if (bottomPnl == null) {
 			bottomPnl = new JPanel();
-			bottomPnl.setOpaque(false);
-			bottomPnl.setLayout(new BorderLayout());
 	
 			final JPanel buttonPanel = new JPanel();
-			buttonPanel.setOpaque(false);
 	
 			// The Export button
 			final JButton exportButton = new JButton("Export");
@@ -274,8 +284,19 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			buttonPanel.add(exportButton);
 			buttonPanel.add(getCloseBtn());
 	
-			bottomPnl.add(getExplorePnl(), BorderLayout.NORTH);
-			bottomPnl.add(buttonPanel, BorderLayout.SOUTH);
+			final GroupLayout layout = new GroupLayout(bottomPnl);
+			bottomPnl.setLayout(layout);
+			layout.setAutoCreateContainerGaps(false);
+			layout.setAutoCreateGaps(false);
+			
+			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+					.addComponent(getExplorePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(buttonPanel, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+			);
+			layout.setVerticalGroup(layout.createSequentialGroup()
+					.addComponent(getExplorePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(buttonPanel, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+			);
 		}
 
 		return bottomPnl;
@@ -285,7 +306,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		if (explorePnl == null) {
 			explorePnl = new MCODECollapsiblePanel("Explore");
 			explorePnl.setCollapsed(false);
-			explorePnl.setOpaque(false);
 			explorePnl.setVisible(false);
 		}
 		
@@ -323,7 +343,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private JPanel createBottomExplorePanel(int selectedRow) {
 		final JPanel panel = new JPanel();
-		panel.setOpaque(false);
+		
 		final JButton createChildButton = new JButton("Create Sub-Network");
 		createChildButton.addActionListener(new MCODEResultsPanel.CreateSubNetworkAction(this, selectedRow));
 		panel.add(createChildButton);
@@ -468,17 +488,16 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * Panel that contains the browser table with a scroll bar.
 	 */
 	@SuppressWarnings("serial")
-	private class MCODEClusterBrowserPanel extends JPanel {
+	private class ClusterBrowserPanel extends JPanel {
 		
-		private final MCODEClusterBrowserTableModel browserModel;
+		private final ClusterBrowserTableModel browserModel;
 		private final JTable table;
 		
-		public MCODEClusterBrowserPanel() {
+		public ClusterBrowserPanel() {
 			setLayout(new BorderLayout());
-			setOpaque(false);
 
 			// main data table
-			browserModel = new MCODEClusterBrowserTableModel();
+			browserModel = new ClusterBrowserTableModel();
 
 			table = new JTable(browserModel);
 			table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -492,12 +511,16 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			table.getTableHeader().setReorderingAllowed(false);
 			
 			table.getColumnModel().getColumn(0).setMinWidth(24);
-			table.getColumnModel().getColumn(0).setPreferredWidth(38);
+			table.getColumnModel().getColumn(0).setPreferredWidth(46);
 			table.getColumnModel().getColumn(0).setMaxWidth(52);
 			table.getColumnModel().getColumn(1).setMinWidth(84);
 			table.getColumnModel().getColumn(1).setPreferredWidth(84);
 			table.getColumnModel().getColumn(2).setMinWidth(84);
 			table.getColumnModel().getColumn(2).setPreferredWidth(124);
+			
+			// Looks better on Nimbus
+			table.setBackground(
+						(Color)UIManager.getLookAndFeelDefaults().get("Table:\"Table.cellRenderer\".background"));
 
 			// Ask to be notified of selection changes.
 			final ListSelectionModel rowSM = table.getSelectionModel();
@@ -507,6 +530,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			tableScrollPane.getViewport().setBackground(Color.WHITE);
 
 			add(tableScrollPane, BorderLayout.CENTER);
+			add(Box.createVerticalStrut(10), BorderLayout.SOUTH);
 		}
 
 		public int getSelectedRow() {
@@ -532,16 +556,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private JComboBox<String> nodeAttributesComboBox;
 		
 		ExploreContentPanel(final int selectedRow) {
-			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-
-			final JPanel sizePanel = new JPanel(new BorderLayout());
-			sizePanel.setOpaque(false);
-			sizePanel.setBorder(UIUtil.createTitledBorder("Size Threshold"));
-
-			// Create a slider to manipulate node score cutoff (goes to 1000 so that
-			// we get a more precise double variable out of it)
+			// Create a slider to manipulate node score cutoff
+			final JLabel sizeThreshouldLbl = new JLabel("Size Threshold:");
+			sizeThreshouldLbl.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+			
+			// (goes to 1000 so that we get a more precise double variable out of it)
 			final JSlider sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000,
 					(int) (currentParamsCopy.getNodeScoreCutoff() * 1000));
+			sizeSlider.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 
 			// Turn on ticks and labels at major and minor intervals.
 			sizeSlider.setMajorTickSpacing(200);
@@ -560,57 +582,86 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			sizeSlider.setFont(sizeSlider.getFont() != null ? 
 					sizeSlider.getFont().deriveFont(8.0f) : new Font("Arial", Font.PLAIN, 8));
 
-			final String sizeTip = "Move the slider to include or\nexclude nodes from the cluster";
-			sizeSlider.setToolTipText(sizeTip);
-
-			sizePanel.add(sizeSlider, BorderLayout.NORTH);
+			sizeSlider.setToolTipText("<html>Move the slider to include or<br>exclude nodes from the cluster</html>");
 
 			// Node attributes enumerator
-			final JPanel nodeAttributesPanel = new JPanel(new BorderLayout());
-			nodeAttributesPanel.setOpaque(false);
-			nodeAttributesPanel.setBorder(UIUtil.createTitledBorder("Node Attribute Enumerator"));
+			final JLabel attrEnumLbl = new JLabel("Node Attribute Enumerator:");
+			attrEnumLbl.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 
 			final CyNetwork net = clusters.get(selectedRow).getNetwork();
 			
 			final Collection<CyColumn> nodeColumns = net.getDefaultNodeTable().getColumns();
-			String[] availableAttributes = new String[nodeColumns.size()];
+			final List<String> attributesList = new ArrayList<>(nodeColumns.size());
 
-			int i = 0;
-			for (CyColumn column : nodeColumns)
-				availableAttributes[i++] = column.getName();
+			for (CyColumn column : nodeColumns) {
+				if (!column.getName().equals(CyNetwork.SUID) &&
+						!column.getName().equals(CyNetwork.SELECTED) &&
+						!column.getName().endsWith(".SUID"))
+					attributesList.add(column.getName());
+			}
 
-			Arrays.sort(availableAttributes, String.CASE_INSENSITIVE_ORDER);
+			Collections.sort(attributesList);
 
-			final String[] attributesList = new String[availableAttributes.length + 1];
-			System.arraycopy(availableAttributes, 0, attributesList, 1, availableAttributes.length);
-			attributesList[0] = "-- Please select --";
-
-			nodeAttributesComboBox = new JComboBox<>(attributesList);
+			nodeAttributesComboBox = new JComboBox<>(attributesList.toArray(new String[attributesList.size()]));
+			nodeAttributesComboBox.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+			nodeAttributesComboBox.setRenderer(new DefaultListCellRenderer() {
+				@Override
+				public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+						boolean isSelected, boolean cellHasFocus) {
+					super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+					if (value == null) this.setText("Please select...");
+					
+					return this;
+				}
+			});
 
 			sizeSlider.addChangeListener(new SizeAction(selectedRow, nodeAttributesComboBox));
 
 			// Create a table listing the node attributes and their enumerations
-			final MCODEResultsEnumeratorTableModel modelEnumerator;
-			modelEnumerator = new MCODEResultsEnumeratorTableModel(new HashMap());
+			final ResultsEnumeratorTableModel modelEnumerator;
+			modelEnumerator = new ResultsEnumeratorTableModel(new HashMap<Object, Integer>());
 
 			final JTable enumerationsTable = new JTable(modelEnumerator);
 			final JScrollPane tableScrollPane = new JScrollPane(enumerationsTable);
+			tableScrollPane.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, graphPicSize));
 			enumerationsTable.setGridColor(new JSeparator().getForeground());
 			enumerationsTable.setFont(new Font(enumerationsTable.getFont().getFontName(), Font.PLAIN, 11));
 			enumerationsTable.setFocusable(false);
+			enumerationsTable.getColumnModel().getColumn(0).setPreferredWidth(180);
 
 			// Create a combo box that lists all the available node attributes for enumeration
 			nodeAttributesComboBox.addActionListener(new EnumerateAction(modelEnumerator, selectedRow));
-
-			nodeAttributesPanel.add(nodeAttributesComboBox, BorderLayout.NORTH);
-			nodeAttributesPanel.add(tableScrollPane, BorderLayout.SOUTH);
+			nodeAttributesComboBox.setSelectedItem(null);
 
 			final JPanel bottomExplorePanel = createBottomExplorePanel(selectedRow);
+			bottomExplorePanel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
 
-			add(sizePanel);
-			add(nodeAttributesPanel);
-			add(bottomExplorePanel);
+			final GroupLayout layout = new GroupLayout(this);
+			this.setLayout(layout);
+			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(true);
+			
+			final JSeparator sep = new JSeparator();
+			
+			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+					.addComponent(sizeThreshouldLbl)
+					.addComponent(sizeSlider, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(sep)
+					.addComponent(attrEnumLbl)
+					.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(bottomExplorePanel, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+			);
+			layout.setVerticalGroup(layout.createSequentialGroup()
+					.addComponent(sizeThreshouldLbl)
+					.addComponent(sizeSlider)
+					.addComponent(sep, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					.addComponent(attrEnumLbl)
+					.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(bottomExplorePanel, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+			);
 		}
 
 		JComboBox<String> getNodeAttributesComboBox() {
@@ -622,12 +673,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * Handles the data to be displayed in the cluster browser table
 	 */
 	@SuppressWarnings("serial")
-	private class MCODEClusterBrowserTableModel extends AbstractTableModel {
+	private class ClusterBrowserTableModel extends AbstractTableModel {
 
 		private final String[] columnNames = { "Rank", "Cluster", "Details" };
 		private final Object[][] data; // the actual table data
 
-		public MCODEClusterBrowserTableModel() {
+		public ClusterBrowserTableModel() {
 			exploreContent = new ExploreContentPanel[clusters.size()];
 			data = new Object[clusters.size()][columnNames.length];
 
@@ -678,31 +729,28 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * Handles the data to be displayed in the node attribute enumeration table
 	 */
 	@SuppressWarnings("serial")
-	private class MCODEResultsEnumeratorTableModel extends AbstractTableModel {
+	private class ResultsEnumeratorTableModel extends AbstractTableModel {
 
-		// Create column headings
 		String[] columnNames = { "Value", "Occurrence" };
 		Object[][] data = new Object[0][columnNames.length]; // the actual table
 
-		// data
-
-		public MCODEResultsEnumeratorTableModel(HashMap<?, ?> enumerations) {
+		public ResultsEnumeratorTableModel(HashMap<Object, Integer> enumerations) {
 			listIt(enumerations);
 		}
 
-		@SuppressWarnings("rawtypes")
-		public void listIt(HashMap<?, ?> enumerations) {
+		public void listIt(final HashMap<Object, Integer> enumerations) {
 			// First we sort the hash map of attributes values and their occurrences
-			ArrayList<?> enumerationsSorted = sortMap(enumerations);
+			final List<Entry<Object, Integer>> enumerationsSorted = sortMap(enumerations);
 			// Then we put it into the data array in reverse order so that the
 			// most frequent attribute value is on top
-			Object[][] newData = new Object[enumerationsSorted.size()][columnNames.length];
+			final Object[][] newData = new Object[enumerationsSorted.size()][columnNames.length];
 			int c = enumerationsSorted.size() - 1;
 
-			for (Iterator i = enumerationsSorted.iterator(); i.hasNext();) {
-				Map.Entry mp = (Map.Entry) i.next();
-				newData[c][0] = new StringBuffer(mp.getKey().toString());
-				newData[c][1] = mp.getValue().toString();
+			for (Iterator<Map.Entry<Object, Integer>> i = enumerationsSorted.iterator(); i.hasNext();) {
+				final Map.Entry<Object, Integer> mp = i.next();
+				
+				newData[c][0] = mp.getKey();
+				newData[c][1] = mp.getValue();
 				c--;
 			}
 
@@ -765,35 +813,16 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 *            Has values mapped to keys
 	 * @return outputList of Map.Entries
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private ArrayList sortMap(Map map) {
-		
-		ArrayList outputList = null;
-		int count = 0;
-		Set set = null;
-		Map.Entry[] entries = null;
-
-		set = (Set) map.entrySet();
-		Iterator iterator = set.iterator();
-		entries = new Map.Entry[set.size()];
-
-		while (iterator.hasNext()) {
-			entries[count++] = (Map.Entry) iterator.next();
-		}
+	private List<Map.Entry<Object, Integer>> sortMap(final Map<Object, Integer> map) {
+		final List<Map.Entry<Object, Integer>> outputList = new ArrayList<>(map.entrySet());
 
 		// Sort the entries with own comparator for the values:
-		Arrays.sort(entries, new Comparator<Map.Entry>() {
+		Collections.sort(outputList, new Comparator<Map.Entry<Object, Integer>>() {
 			@Override
-			public int compare(Map.Entry o1, Map.Entry o2) {
-				return ((Comparable) o1.getValue()).compareTo((Comparable) o2.getValue());
+			public int compare(Map.Entry<Object, Integer> o1, Map.Entry<Object, Integer> o2) {
+				return o1.getValue().compareTo(o2.getValue());
 			}
 		});
-
-		outputList = new ArrayList();
-
-		for (int i = 0; i < entries.length; i++) {
-			outputList.add(entries[i]);
-		}
 
 		return outputList;
 	}
@@ -805,31 +834,33 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private class EnumerateAction extends AbstractAction {
 
 		int selectedRow;
-		MCODEResultsPanel.MCODEResultsEnumeratorTableModel modelEnumerator;
+		MCODEResultsPanel.ResultsEnumeratorTableModel modelEnumerator;
 
-		EnumerateAction(MCODEResultsPanel.MCODEResultsEnumeratorTableModel modelEnumerator, int selectedRow) {
+		EnumerateAction(MCODEResultsPanel.ResultsEnumeratorTableModel modelEnumerator, int selectedRow) {
 			this.selectedRow = selectedRow;
 			this.modelEnumerator = modelEnumerator;
 		}
 
-		@SuppressWarnings({ "unchecked", "rawtypes" })
+		
+		@Override
+		@SuppressWarnings("unchecked")
 		public void actionPerformed(final ActionEvent e) {
 			// The key is the attribute value and the value is the number of times that value appears in the cluster
-			final HashMap<String, Integer> attributeEnumerations = new HashMap<String, Integer>();
+			final HashMap<Object, Integer> attributeEnumerations = new HashMap<>();
 
 			// First we want to see which attribute was selected in the combo box
-			final String attributeName = (String) ((JComboBox) e.getSource()).getSelectedItem();
-			int selectionIndex = (int) ((JComboBox) e.getSource()).getSelectedIndex();
+			final String attributeName = (String) ((JComboBox<String>) e.getSource()).getSelectedItem();
+			final int selectionIndex = ((JComboBox<String>) e.getSource()).getSelectedIndex();
 
 			// If its the generic 'please select' option then we don't do any enumeration
-			if (!attributeName.equals("Please Select")) {
+			if (attributeName != null) {
 				final CyNetwork net = clusters.get(selectedRow).getNetwork();
 				
 				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
 				for (final CyNode node : net.getNodeList()) {
 					// The attribute value will be stored as a string no matter
 					// what it is but we need an array list because some attributes are maps or lists of any size
-					final ArrayList attributeValues = new ArrayList();
+					final ArrayList<Object> attributeValues = new ArrayList<>();
 					final CyRow row = net.getRow(node);
 					final CyColumn column = row.getTable().getColumn(attributeName);
 					
@@ -839,7 +870,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					final Class<?> type = column.getType();
 
 					if (Collection.class.isAssignableFrom(type)) {
-						final Collection valueList = (Collection) row.get(attributeName, type);
+						final Collection<Object> valueList = (Collection<Object>) row.get(attributeName, type);
 
 						if (valueList != null) {
 							for (Object value : valueList)
@@ -850,9 +881,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					}
 
 					// Next we must make a non-repeating list with the attribute values and enumerate the repetitions
-					for (Object aviElement : attributeValues) {
+					for (final Object aviElement : attributeValues) {
 						if (aviElement != null) {
-							final String value = aviElement.toString();
+							final Object value = aviElement instanceof Number ? aviElement : aviElement.toString();
 
 							if (!attributeEnumerations.containsKey(value)) {
 								// If the attribute value appears for the first
@@ -1016,7 +1047,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			}
 			
 			layout.setHorizontalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.TRAILING, false)
+					.addGroup(layout.createParallelGroup(Alignment.LEADING, false)
 							.addComponent(labels[(i=0)][(j=0)])
 							.addComponent(labels[i][++j])
 							.addComponent(labels[i][++j])
@@ -1040,6 +1071,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			);
 		}
 
+		@Override
 		public Component getTableCellRendererComponent(JTable table,
 													   Object value,
 													   boolean isSelected,

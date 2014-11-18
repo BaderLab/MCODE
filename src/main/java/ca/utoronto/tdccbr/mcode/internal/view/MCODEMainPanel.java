@@ -1,6 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
-import java.awt.BorderLayout;
+import static javax.swing.GroupLayout.DEFAULT_SIZE;
+import static javax.swing.GroupLayout.PREFERRED_SIZE;
+
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -29,6 +31,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.SwingConstants;
 
 import org.cytoscape.application.swing.CyAction;
@@ -114,10 +117,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		actions = new ArrayList<CyAction>();
 
 		setMinimumSize(new Dimension(340, 400));
-		setPreferredSize(new Dimension(360, 400));
-		setLayout(new BorderLayout());
-		setOpaque(false);
-
+		setPreferredSize(new Dimension(380, 400));
+		
 		// get the current parameters
 		currentParamsCopy = this.mcodeUtil.getCurrentParameters().getParamsCopy(null);
 		currentParamsCopy.setDefaultParams();
@@ -131,9 +132,22 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		
 		// Create the three main panels: scope, advanced options, and bottom
 		// Add all the vertically aligned components to the main panel
-		add(getScopePnl(), BorderLayout.NORTH);
-		add(getAdvancedOptionsPnl(), BorderLayout.CENTER);
-		add(getBottomPnl(), BorderLayout.SOUTH);
+		final GroupLayout layout = new GroupLayout(this);
+		setLayout(layout);
+		layout.setAutoCreateContainerGaps(true);
+		layout.setAutoCreateGaps(true);
+		
+		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+				.addComponent(getScopePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getAdvancedOptionsPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getBottomPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+		);
+		layout.setVerticalGroup(layout.createSequentialGroup()
+				.addComponent(getScopePnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				.addComponent(getAdvancedOptionsPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				.addGap(0, 0, Short.MAX_VALUE)
+				.addComponent(getBottomPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+		);
 	}
 
 	public void addAction(CyAction action) {
@@ -175,7 +189,6 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getScopePnl() {
 		if (scopePnl == null) {
 			scopePnl = new JPanel();
-			scopePnl.setOpaque(false);
 			scopePnl.setBorder(UIUtil.createTitledBorder(""));
 
 			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
@@ -200,16 +213,18 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			final GroupLayout layout = new GroupLayout(scopePnl);
 			scopePnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(false);
 			
 			layout.setHorizontalGroup(layout.createSequentialGroup()
 					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
 							.addComponent(findLabel)
-					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
+					).addPreferredGap(ComponentPlacement.RELATED)
+					.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
 							.addComponent(netScopeBtn)
 							.addComponent(selScopeBtn)
 					)
 			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, false)
 					.addGroup(layout.createSequentialGroup()
 							.addComponent(findLabel)
 					).addGroup(layout.createSequentialGroup()
@@ -225,10 +240,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private MCODECollapsiblePanel getAdvancedOptionsPnl() {
 		if (advancedOptionsPnl == null) {
 			advancedOptionsPnl = new MCODECollapsiblePanel("Advanced Options");
-			advancedOptionsPnl.setOpaque(false);
 			
 			advancedOptionsPnl.getContentPane().add(getNetworkScoringPnl());
 			advancedOptionsPnl.getContentPane().add(getClusterFindingPnl());
+			advancedOptionsPnl.getContentPane().add(Box.createVerticalGlue());
 		}
 
 		return advancedOptionsPnl;
@@ -242,7 +257,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		if (networkScoringPnl == null) {
 			networkScoringPnl = new JPanel();
 			networkScoringPnl.setBorder(UIUtil.createTitledBorder("Network Scoring"));
-			networkScoringPnl.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
+			networkScoringPnl.setMaximumSize(
+					new Dimension(Short.MAX_VALUE, networkScoringPnl.getPreferredSize().height));
 
 			final JLabel degreeCutoffLabel = new JLabel("Degree Cutoff:");
 			degreeCutoffLabel.setMinimumSize(getDegreeCutoffTxt().getMinimumSize());
@@ -251,6 +267,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			final GroupLayout layout = new GroupLayout(networkScoringPnl);
 			networkScoringPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(true);
 			
 			final Component hStrut = Box.createRigidArea(getIncludeLoopsCkb().getMinimumSize());
 			
@@ -260,11 +277,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 							.addComponent(degreeCutoffLabel)
 					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
 							.addComponent(getIncludeLoopsCkb())
-							.addComponent(getDegreeCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
-							          GroupLayout.PREFERRED_SIZE)
+							.addComponent(getDegreeCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					)
 			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
 					.addGroup(layout.createSequentialGroup()
 							.addComponent(hStrut)
 							.addComponent(degreeCutoffLabel)
@@ -286,7 +302,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		if (clusterFindingPnl == null) {
 			clusterFindingPnl = new JPanel();
 			clusterFindingPnl.setBorder(UIUtil.createTitledBorder("Cluster Finding"));
-			clusterFindingPnl.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
+			clusterFindingPnl.setMaximumSize(
+					new Dimension(Short.MAX_VALUE, clusterFindingPnl.getPreferredSize().height));
 
 			final JLabel scoreCutoffLabel = new JLabel("Node Score Cutoff:");
 			scoreCutoffLabel.setMinimumSize(getScoreCutoffTxt().getMinimumSize());
@@ -303,6 +320,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			final GroupLayout layout = new GroupLayout(clusterFindingPnl);
 			clusterFindingPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(true);
 			
 			final Component hStrut1 = Box.createRigidArea(getHaircutCkb().getMinimumSize());
 			final Component hStrut2 = Box.createRigidArea(getFluffCkb().getMinimumSize());
@@ -318,17 +336,13 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
 							.addComponent(getHaircutCkb())
 							.addComponent(getFluffCkb())
-							.addComponent(getDensityCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
-							          GroupLayout.PREFERRED_SIZE)
-							.addComponent(getScoreCutoffTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
-							          GroupLayout.PREFERRED_SIZE)
-							.addComponent(getkCoreTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
-							          GroupLayout.PREFERRED_SIZE)
-							.addComponent(getMaxDepthTxt(), GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE,
-							          GroupLayout.PREFERRED_SIZE)
+							.addComponent(getDensityCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+							.addComponent(getScoreCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+							.addComponent(getkCoreTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+							.addComponent(getMaxDepthTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					)
 			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
 					.addGroup(layout.createSequentialGroup()
 							.addComponent(hStrut1)
 							.addComponent(hStrut2)
@@ -474,7 +488,6 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getBottomPnl() {
 		if (bottomPnl == null) {
 			bottomPnl = new JPanel();
-			bottomPnl.setOpaque(false);
 			bottomPnl.setLayout(new FlowLayout());
 			bottomPnl.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
 		}
