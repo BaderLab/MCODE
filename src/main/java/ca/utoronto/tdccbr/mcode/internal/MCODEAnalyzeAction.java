@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkEvent;
@@ -245,13 +246,18 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 						} else {
-							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-														  "No clusters were found.\n"
-																  + "You can try changing the MCODE parameters or\n"
-																  + "modifying your node selection if you are using\n"
-																  + "a selection-specific scope.",
-														  "No Results",
-														  JOptionPane.WARNING_MESSAGE);
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {
+									JOptionPane.showMessageDialog(swingApplication.getJFrame(),
+																  "No clusters were found.\n"
+																		  + "You can try changing the MCODE parameters or\n"
+																		  + "modifying your node selection if you are using\n"
+																		  + "a selection-specific scope.",
+																  "No Results",
+																  JOptionPane.WARNING_MESSAGE);
+								}
+							});
 						}
 					}
 
@@ -263,7 +269,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 						int index = cytoPanel.indexOfComponent(resultsPanel);
 						cytoPanel.setSelectedIndex(index);
 
-						if (cytoPanel.getState() == CytoPanelState.HIDE) cytoPanel.setState(CytoPanelState.DOCK);
+						if (cytoPanel.getState() == CytoPanelState.HIDE)
+							cytoPanel.setState(CytoPanelState.DOCK);
 					}
 				}
 			};
