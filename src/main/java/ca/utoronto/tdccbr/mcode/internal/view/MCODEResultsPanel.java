@@ -1100,8 +1100,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final String score = nf.format(cluster.getScore());
 
 			((JLabel)labels[1][0]).setText(score);
-			((JLabel)labels[1][1]).setText("" + cluster.getNetwork().getNodeCount());
-			((JLabel)labels[1][2]).setText("" + cluster.getNetwork().getEdgeCount());
+			((JLabel)labels[1][1]).setText("" + cluster.getGraph().getNodeCount());
+			((JLabel)labels[1][2]).setText("" + cluster.getGraph().getEdgeCount());
 
 			return this;
 		}
