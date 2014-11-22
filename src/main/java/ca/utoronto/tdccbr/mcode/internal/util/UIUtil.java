@@ -47,17 +47,14 @@ public final class UIUtil {
 	}
 	
 	public static boolean isAquaLAF() {
-		return UIManager.getLookAndFeel() != null &&
-				"com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName());
+		return UIManager.getLookAndFeel() != null && "Mac OS X".equals(UIManager.getLookAndFeel().getName());
 	}
 	
 	public static boolean isNimbusLAF() {
-		return UIManager.getLookAndFeel() != null &&
-				"com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName());
+		return UIManager.getLookAndFeel() != null && "Nimbus".equals(UIManager.getLookAndFeel().getName());
 	}
 	
 	public static boolean isWinLAF() {
-		return UIManager.getLookAndFeel() != null &&
-				"com.sun.java.swing.plaf.windows.WindowsLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName());
+		return UIManager.getLookAndFeel() != null && "Windows".equals(UIManager.getLookAndFeel().getName());
 	}
 }

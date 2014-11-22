@@ -8,8 +8,8 @@ public class MCODEResources {
 		LOGO("/img/logo1.png"),
 		LOGO_SMALL("/img/logo2.png"),
 		LOGO_SIMPLE("/img/logo.png"),
-		ARROW_EXPANDED("/img/arrow_expanded.gif"),
-		ARROW_COLLAPSED("/img/arrow_collapsed.gif"),
+		ARROW_EXPANDED("/img/arrow_expanded.png"),
+		ARROW_COLLAPSED("/img/arrow_collapsed.png"),
 		NOTE("/img/note.gif");
 
 		private final String name;

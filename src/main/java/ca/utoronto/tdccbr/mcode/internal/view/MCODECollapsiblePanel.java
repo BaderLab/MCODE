@@ -1,5 +1,9 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.UIUtil.getLookAndFeelBorder;
+import static ca.utoronto.tdccbr.mcode.internal.util.UIUtil.isNimbusLAF;
+import static ca.utoronto.tdccbr.mcode.internal.util.UIUtil.isWinLAF;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
@@ -23,7 +27,6 @@ import javax.swing.border.Border;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
-import ca.utoronto.tdccbr.mcode.internal.util.UIUtil;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -78,7 +81,7 @@ public class MCODECollapsiblePanel extends JPanel {
 	private JButton arrowBtn;
 
 	// Content Pane
-	private JPanel panel;
+	private JPanel contentPane;
 
 	// Container State
 	private boolean collapsed; // stores current state of the collapsable panel
@@ -118,23 +121,28 @@ public class MCODECollapsiblePanel extends JPanel {
 	}
 	
 	private MCODECollapsiblePanel(final AbstractButton titleComponent, final boolean collapsed) {
-		border = UIUtil.getLookAndFeelBorder();
+		border = getLookAndFeelBorder();
     	iconArrow = createExpandAndCollapseIcon();
     	
     	this.titleComponent = titleComponent != null ? titleComponent : getArrowBtn();
     	this.collapsed = collapsed;
     	
+    	if (isWinLAF())
+    		setBorder(border);
+    	else
+    		getContentPane().setBorder(border);
+    	
 		setLayout(new BorderLayout());
 		
 		add(this.titleComponent, BorderLayout.NORTH);
-		add(getPanel(), BorderLayout.CENTER);
+		add(getContentPane(), BorderLayout.CENTER);
     }
 
 	private JButton getArrowBtn() {
 		if (arrowBtn == null) {
 			arrowBtn = new JButton("", iconArrow[COLLAPSED]);
 			
-			if (UIUtil.isWinLAF()) {
+			if (isWinLAF()) {
 				arrowBtn.setMargin(new Insets(2, 2, 2, 2));
 			} else {
 				arrowBtn.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
@@ -155,7 +163,7 @@ public class MCODECollapsiblePanel extends JPanel {
 			if (color == null) color = UIManager.getColor("Label.foreground");
 			
 			if (font != null) arrowBtn.setFont(font);
-			if (UIUtil.isNimbusLAF()) arrowBtn.setFont(arrowBtn.getFont().deriveFont(Font.BOLD));
+			if (isNimbusLAF()) arrowBtn.setFont(arrowBtn.getFont().deriveFont(Font.BOLD));
 			if (color != null) arrowBtn.setForeground(color);
 
 			arrowBtn.addActionListener(new MCODECollapsiblePanel.ExpandAndCollapseAction());
@@ -164,16 +172,6 @@ public class MCODECollapsiblePanel extends JPanel {
 		return arrowBtn;
 	}
 	
-	private JPanel getPanel() {
-		if (panel == null) {
-			panel = new JPanel();
-			panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
-	        panel.setBorder(border);
-		}
-		
-		return panel;
-	}
-
 	/**
 	 * Sets the title of of the border title component.
 	 * 
@@ -191,7 +189,12 @@ public class MCODECollapsiblePanel extends JPanel {
 	 * @return panel The content panel.
 	 */
 	public JPanel getContentPane() {
-		return getPanel();
+		if (contentPane == null) {
+			contentPane = new JPanel();
+			contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.PAGE_AXIS));
+		}
+		
+		return contentPane;
 	}
 
 	/**
@@ -204,12 +207,12 @@ public class MCODECollapsiblePanel extends JPanel {
 	 */
 	public void setCollapsed(boolean collapse) {
 		if (collapse) {
-			// collapse the panel, remove content and set border to empty border
-			getPanel().setVisible(false);
+			// collapse the contentPane, remove content and set border to empty border
+			getContentPane().setVisible(false);
 			getArrowBtn().setIcon(iconArrow[COLLAPSED]);
 		} else {
-			// expand the panel, add content and set border to titled border
-			getPanel().setVisible(true);
+			// expand the contentPane, add content and set border to titled border
+			getContentPane().setVisible(true);
 			getArrowBtn().setIcon(iconArrow[EXPANDED]);
 		}
 		
@@ -218,11 +221,9 @@ public class MCODECollapsiblePanel extends JPanel {
 	}
 
 	/**
-	 * Returns the current state of the panel, collapsed (true) or expanded
-	 * (false).
+	 * Returns the current state of the panel, collapsed (true) or expanded (false).
 	 * 
-	 * @return collapsed Returns true if the panel is collapsed and false if it
-	 *         is expanded
+	 * @return collapsed Returns true if the panel is collapsed and false if it is expanded
 	 */
 	public boolean isCollapsed() {
 		return collapsed;
@@ -256,12 +257,15 @@ public class MCODECollapsiblePanel extends JPanel {
 	 * the titledBorder component.
 	 */
 	private final class ExpandAndCollapseAction extends AbstractAction implements ActionListener, ItemListener {
+		
 		private static final long serialVersionUID = 2010434345567315525L;
 
+		@Override
 		public void actionPerformed(ActionEvent e) {
 			setCollapsed(!isCollapsed());
 		}
 
+		@Override
 		public void itemStateChanged(ItemEvent e) {
 			setCollapsed(!isCollapsed());
 		}
