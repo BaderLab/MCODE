@@ -23,16 +23,22 @@ public abstract class AbstractMCODETest {
 		netViewTestSupport = new NetworkViewTestSupport();
 	}
 
-	protected List<MCODECluster> findClusters(final CyNetwork net, final int resultId) {
-		return findClusters(net, resultId, new MCODEParameterSet());
+	protected List<MCODECluster> findClusters(final CyNetwork net) {
+		return findClusters(net, new MCODEParameterSet());
 	}
 
-	protected List<MCODECluster> findClusters(CyNetwork net, int resultId, MCODEParameterSet params) {
+	protected List<MCODECluster> findClusters(CyNetwork net, MCODEParameterSet params) {
+		final int resultId = mcodeUtil.getNextResultId();
+		
 		mcodeUtil.getCurrentParameters().setParams(params, resultId, net.getSUID());
 		alg = new MCODEAlgorithm(net.getSUID(), mcodeUtil);
 		alg.scoreGraph(net, resultId);
+		List<MCODECluster> clusters = alg.findClusters(net, resultId);
 		
-		return alg.findClusters(net, resultId);
+		if (!clusters.isEmpty())
+			mcodeUtil.addResult(net.getSUID(), clusters);
+		
+		return clusters;
 	}
 
 	protected CyNetwork createCompleteGraph(int totalNodes) {

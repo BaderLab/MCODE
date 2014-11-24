@@ -178,7 +178,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 			analyze = FIRST_TIME;
 		}
 
-		final int resultId = mcodeUtil.getCurrentResultId();
+		final int resultId = mcodeUtil.getNextResultId();
 		
 		// These statements determine which portion of the algorithm needs to be conducted by
 		// testing which parameters have been modified compared to the last saved parameters.
@@ -230,7 +230,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 					if (e.isSuccessful()) {
 						if (e.getClusters() != null && !e.getClusters().isEmpty()) {
 							resultFound = true;
-							mcodeUtil.addNetworkResult(network.getSUID());
+							mcodeUtil.addResult(network.getSUID(), e.getClusters());
 
 							MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
 																										"Discard Result",
@@ -272,6 +272,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 						if (cytoPanel.getState() == CytoPanelState.HIDE)
 							cytoPanel.setState(CytoPanelState.DOCK);
 					}
+					
+					mcodeUtil.disposeUnusedNetworks();
 				}
 			};
 

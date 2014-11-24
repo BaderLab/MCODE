@@ -54,6 +54,9 @@ public class MCODEGraph {
 	}
 
 	public boolean addNode(CyNode node) {
+		if (disposed)
+			throw new IllegalStateException("This cluster has been disposed.");
+		
 		if (nodes.contains(node))
 			return false;
 		
@@ -68,6 +71,9 @@ public class MCODEGraph {
 	}
 
 	public boolean addEdge(CyEdge edge) {
+		if (disposed)
+			throw new IllegalStateException("This cluster has been disposed.");
+		
 		if (edges.contains(edge))
 			return false;
 
@@ -167,6 +173,6 @@ public class MCODEGraph {
 		nodeMap.clear();
 		edgeMap.clear();
 		
-		disposed  = true;
+		disposed = true;
 	}
 }

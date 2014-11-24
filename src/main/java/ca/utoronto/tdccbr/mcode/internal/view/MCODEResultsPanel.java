@@ -1132,6 +1132,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			drawer = new GraphDrawer(loader);
 		}
 
+		@Override
 		public void stateChanged(final ChangeEvent e) {
 			// This method as been written so that the slider is responsive to the user's input at all times, despite
 			// the computationally challenging drawing, layout out, and selection of large clusters. As such, we only
@@ -1167,7 +1168,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					drawPlaceHolder = newALCluster.size() > 300;
 					
 					// And compare the old and new
-					if (!newALCluster.equals(oldALCluster)) { // TODO
+					if (!newALCluster.equals(oldALCluster)) {
 						// If the cluster has changed, then we conduct all non-rate-limiting steps:
 						// Update the cluster array
 						clusters.set(clusterRow, newCluster);
@@ -1188,7 +1189,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							oldCluster.dispose();
 						}
 					}
-					mcodeUtil.destroyUnusedNetworks(network, clusters);// TODO
 	            }
 	        };
 	        

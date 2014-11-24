@@ -95,9 +95,8 @@ public class MCODEAnalyzeTask implements Task {
 	 */
 	@Override
 	public void run(TaskMonitor taskMonitor) throws Exception {
-		if (taskMonitor == null) {
+		if (taskMonitor == null)
 			throw new IllegalStateException("Task Monitor is not set.");
-		}
 
 		boolean success = false;
 		List<MCODECluster> clusters = null;
@@ -114,9 +113,7 @@ public class MCODEAnalyzeTask implements Task {
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
 				alg.scoreGraph(network, resultId);
 
-				if (interrupted) {
-					return;
-				}
+				if (interrupted) return;
 
 				logger.info("Network was scored in " + alg.getLastScoreTime() + " ms.");
 			}
@@ -126,9 +123,7 @@ public class MCODEAnalyzeTask implements Task {
 
 			clusters = alg.findClusters(network, resultId);
 
-			if (interrupted) {
-				return;
-			}
+			if (interrupted) return;
 
 			taskMonitor.setProgress(0.001);
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
@@ -150,11 +145,8 @@ public class MCODEAnalyzeTask implements Task {
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		} finally {
-			mcodeUtil.destroyUnusedNetworks(network, clusters);
-			
-			if (listener != null) {
+			if (listener != null)
 				listener.handleEvent(new AnalysisCompletedEvent(success, clusters));
-			}
 		}
 	}
 
@@ -162,7 +154,7 @@ public class MCODEAnalyzeTask implements Task {
 	public void cancel() {
 		this.interrupted = true;
 		alg.setCancelled(true);
-		mcodeUtil.removeNetworkResult(resultId);
+		mcodeUtil.removeResult(resultId);
 		mcodeUtil.removeNetworkAlgorithm(network.getSUID());
 	}
 

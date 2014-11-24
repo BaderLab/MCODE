@@ -98,11 +98,10 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		final CyNetwork net = createCompleteGraph(16);
 		final CyRootNetwork rn = netViewTestSupport.getRootNetworkFactory().getRootNetwork(net);
 		int originalNetCount = rn.getSubNetworkList().size(); 
-		int resultId = 1;
-		List<MCODECluster> clusters = findClusters(net, resultId);
+		final List<MCODECluster> clusters = findClusters(net);
 		assertEquals(1, clusters.size());
 		
-		mcodeUtil.destroyUnusedNetworks(net, clusters);
+		mcodeUtil.disposeUnusedNetworks();
 		
 		assertEquals(originalNetCount + clusters.size(), rn.getSubNetworkList().size());
 	}

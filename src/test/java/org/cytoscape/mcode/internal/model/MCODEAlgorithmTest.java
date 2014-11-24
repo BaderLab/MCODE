@@ -120,8 +120,8 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Test
 	public void testCompleteGraphWithDefaultParameters() {
 		CyNetwork net = createCompleteGraph(16);
-		int resultId = 1;
-		List<MCODECluster> clusters = findClusters(net, resultId);
+		int resultId = mcodeUtil.getNextResultId();
+		List<MCODECluster> clusters = findClusters(net);
 		
 		assertEquals(1, clusters.size());
 		
@@ -144,11 +144,11 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Test
 	public void testCompleteGraphIncludingLoops() {
 		CyNetwork net = createCompleteGraph(16);
-		int resultId = 1;
+		int resultId = mcodeUtil.getNextResultId();
 		MCODEParameterSet params = new MCODEParameterSet();
 		params.setIncludeLoops(true);
 		
-		List<MCODECluster> clusters = findClusters(net, resultId, params);
+		List<MCODECluster> clusters = findClusters(net, params);
 		
 		assertEquals(1, clusters.size());
 		

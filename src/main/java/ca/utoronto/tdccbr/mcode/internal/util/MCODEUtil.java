@@ -43,6 +43,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -167,12 +168,14 @@ public class MCODEUtil {
 	private MCODECurrentParameters currentParameters;
 	// Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkAlgorithms;
-	// Keeps track of networks (id is key) and their respective results (list of result ids)
+	// Keeps track of analyzed networks (network SUID is key) and their respective results (list of result ids)
 	private Map<Long, Set<Integer>> networkResults;
+	// Keeps track of networks (id is key) and their respective results (list of result ids)
+	private Map<Integer, List<MCODECluster>> allClusters;
 
-	private int currentResultId;
+	private int nextResultId;
 	
-	private Map<CyRootNetwork, Set<CySubNetwork>> createdSubNetworks;
+	private Set<CySubNetwork> createdSubNetworks;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 	
@@ -207,8 +210,8 @@ public class MCODEUtil {
 		this.reset();
 	}
 
-	public int getCurrentResultId() {
-		return currentResultId;
+	public int getNextResultId() {
+		return nextResultId;
 	}
 	
 	public String getProperty(String key) {
@@ -216,40 +219,37 @@ public class MCODEUtil {
 	}
 
 	public void reset() {
-		currentResultId = 1;
+		nextResultId = 1;
 		currentParameters = new MCODECurrentParameters();
-		networkAlgorithms = new HashMap<Long, MCODEAlgorithm>();
-		networkResults = new HashMap<Long, Set<Integer>>();
-		createdSubNetworks = new HashMap<CyRootNetwork, Set<CySubNetwork>>();
+		networkAlgorithms = new HashMap<>();
+		networkResults = new HashMap<>();
+		allClusters = new HashMap<>();
+		createdSubNetworks = new HashSet<>();
 	}	
 	
-	public synchronized void destroyUnusedNetworks(final CyNetwork network, final List<MCODECluster> clusters) {
+	public synchronized void disposeUnusedNetworks() {
+		// Create an index of cluster networks
 		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
-		if (clusters != null) {
+		for (List<MCODECluster> clusters : allClusters.values()) {
 			for (MCODECluster c : clusters)
 				clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		}
 		
-		final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(network);
-		final Set<CySubNetwork> snSet = createdSubNetworks.get(rootNet);
+		final Iterator<CySubNetwork> iterator = createdSubNetworks.iterator();
 		
-		if (snSet != null) {
-			final Set<CySubNetwork> disposedSet = new HashSet<CySubNetwork>();
+		while (iterator.hasNext()) {
+			final CySubNetwork sn = iterator.next();
 			
-			for (final CySubNetwork sn : snSet) {
-				// Only remove the subnetwork if it is not registered
-				if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
-					try {
-						destroy(sn);
-						disposedSet.add(sn);
-					} catch (Exception e) {
-						logger.error("Error disposing: " + sn, e);
-					}
+			// Only remove the subnetwork if it is not registered and does not belong to a cluster
+			if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
+				try {
+					iterator.remove();
+					destroy(sn);
+				} catch (Exception e) {
+					logger.error("Error disposing: " + sn, e);
 				}
 			}
-			
-			snSet.removeAll(disposedSet);
 		}
 	}
 
@@ -294,7 +294,11 @@ public class MCODEUtil {
 		return ids != null ? ids : new HashSet<Integer>();
 	}
 
-	public void addNetworkResult(final long suid) {
+	/**
+	 * @param suid Target CyNetwork SUID
+	 * @param clusters Clusters created as result of the analysis.
+	 */
+	public void addResult(final long suid, final List<MCODECluster> clusters) {
 		Set<Integer> ids = networkResults.get(suid);
 
 		if (ids == null) {
@@ -302,11 +306,16 @@ public class MCODEUtil {
 			networkResults.put(suid, ids);
 		}
 
-		ids.add(currentResultId++);
+		ids.add(nextResultId);
+		allClusters.put(nextResultId, clusters);
+		
+		nextResultId++; // Increment next available ID
 	}
 
-	public boolean removeNetworkResult(final int resultId) {
+	public boolean removeResult(final int resultId) {
 		boolean removed = false;
+		getCurrentParameters().removeResultParams(resultId);
+		
 		Long networkId = null;
 
 		for (Entry<Long, Set<Integer>> entries : networkResults.entrySet()) {
@@ -323,8 +332,13 @@ public class MCODEUtil {
 
 		if (networkId != null)
 			networkResults.remove(networkId);
-
-		getCurrentParameters().removeResultParams(resultId);
+		
+		final List<MCODECluster> clusters = allClusters.remove(resultId);
+		
+		if (clusters != null) {
+			for (MCODECluster c : clusters)
+				c.dispose();
+		}
 		
 		return removed;
 	}
@@ -530,14 +544,7 @@ public class MCODEUtil {
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
 		
 		// Save it for later disposal
-		Set<CySubNetwork> snSet = createdSubNetworks.get(root);
-		
-		if (snSet == null) {
-			snSet = new HashSet<CySubNetwork>();
-			createdSubNetworks.put(root, snSet);
-		}
-		
-		snSet.add(subNet);
+		createdSubNetworks.add(subNet);
 		
 		return subNet;
 	}
@@ -563,14 +570,7 @@ public class MCODEUtil {
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
 		
 		// Save it for later disposal
-		Set<CySubNetwork> snSet = createdSubNetworks.get(root);
-		
-		if (snSet == null) {
-			snSet = new HashSet<CySubNetwork>();
-			createdSubNetworks.put(root, snSet);
-		}
-		
-		snSet.add(subNet);
+		createdSubNetworks.add(subNet);
 		
 		return subNet;
 	}

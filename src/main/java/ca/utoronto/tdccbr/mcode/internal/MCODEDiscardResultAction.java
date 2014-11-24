@@ -1,7 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal;
 
 import java.awt.event.ActionEvent;
-import java.util.List;
 
 import javax.swing.JOptionPane;
 
@@ -15,7 +14,6 @@ import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkViewManager;
 
-import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
@@ -65,16 +63,8 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 			}
 
 			if (confirmed == JOptionPane.YES_OPTION) {
-				final List<MCODECluster> clusters = panel.getClusters();
-				
 				registrar.unregisterService(panel, CytoPanelComponent.class);
-				mcodeUtil.removeNetworkResult(resultId);
-				
-				// Dispose all clusters
-				if (clusters != null) {
-					for (final MCODECluster c : clusters)
-						c.dispose();
-				}
+				mcodeUtil.removeResult(resultId);
 			}
 		}
 
