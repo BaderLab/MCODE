@@ -269,20 +269,16 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(true);
 			
-			final Component hStrut = Box.createRigidArea(getIncludeLoopsCkb().getMinimumSize());
-			
 			layout.setHorizontalGroup(layout.createSequentialGroup()
 					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(hStrut)
 							.addComponent(degreeCutoffLabel)
 					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
 							.addComponent(getIncludeLoopsCkb())
 							.addComponent(getDegreeCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					)
 			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.TRAILING, false)
 					.addGroup(layout.createSequentialGroup()
-							.addComponent(hStrut)
 							.addComponent(degreeCutoffLabel)
 					).addGroup(layout.createSequentialGroup()
 							.addComponent(getIncludeLoopsCkb())
@@ -322,13 +318,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(true);
 			
-			final Component hStrut1 = Box.createRigidArea(getHaircutCkb().getMinimumSize());
-			final Component hStrut2 = Box.createRigidArea(getFluffCkb().getMinimumSize());
-			
 			layout.setHorizontalGroup(layout.createSequentialGroup()
 					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(hStrut1)
-							.addComponent(hStrut2)
 							.addComponent(densityCutoffLabel)
 							.addComponent(scoreCutoffLabel)
 							.addComponent(kCoreLabel)
@@ -342,10 +333,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 							.addComponent(getMaxDepthTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					)
 			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.TRAILING, false)
 					.addGroup(layout.createSequentialGroup()
-							.addComponent(hStrut1)
-							.addComponent(hStrut2)
 							.addComponent(densityCutoffLabel)
 							.addComponent(scoreCutoffLabel)
 							.addComponent(kCoreLabel)
