@@ -127,11 +127,6 @@ public class MCODECollapsiblePanel extends JPanel {
     	this.titleComponent = titleComponent != null ? titleComponent : getArrowBtn();
     	this.collapsed = collapsed;
     	
-    	if (isWinLAF())
-    		setBorder(border);
-    	else
-    		getContentPane().setBorder(border);
-    	
 		setLayout(new BorderLayout());
 		
 		add(this.titleComponent, BorderLayout.NORTH);
@@ -143,13 +138,13 @@ public class MCODECollapsiblePanel extends JPanel {
 			arrowBtn = new JButton("", iconArrow[COLLAPSED]);
 			
 			if (isWinLAF()) {
-				arrowBtn.setMargin(new Insets(2, 2, 2, 2));
+				arrowBtn.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 			} else {
 				arrowBtn.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
-				arrowBtn.setMargin(new Insets(0, 0, 3, 0));
-				arrowBtn.setContentAreaFilled(false);
 			}
 			
+			arrowBtn.setMargin(new Insets(0, 0, 3, 0));
+			arrowBtn.setContentAreaFilled(false);
 			arrowBtn.setFocusable(false);
 			arrowBtn.setHorizontalAlignment(JButton.LEFT);
 			arrowBtn.setHorizontalTextPosition(JButton.RIGHT);
@@ -192,6 +187,7 @@ public class MCODECollapsiblePanel extends JPanel {
 		if (contentPane == null) {
 			contentPane = new JPanel();
 			contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.PAGE_AXIS));
+			contentPane.setBorder(border);
 		}
 		
 		return contentPane;
