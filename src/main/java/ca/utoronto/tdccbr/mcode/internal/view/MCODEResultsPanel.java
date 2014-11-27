@@ -194,10 +194,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		
 		final GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
-		layout.setAutoCreateContainerGaps(true);
-		layout.setAutoCreateGaps(true);
+		layout.setAutoCreateContainerGaps(false);
+		layout.setAutoCreateGaps(false);
 		
-		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+		layout.setHorizontalGroup(
+				layout.createParallelGroup(Alignment.CENTER, true)
 				.addComponent(clusterBrowserPnl, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getBottomPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 		);
@@ -273,29 +274,32 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getBottomPnl() {
 		if (bottomPnl == null) {
 			bottomPnl = new JPanel();
-	
-			final JPanel buttonPanel = new JPanel();
-	
+			
 			// The Export button
 			final JButton exportButton = new JButton("Export");
-			exportButton.addActionListener(new MCODEResultsPanel.ExportAction());
+			exportButton.addActionListener(new ExportAction());
 			exportButton.setToolTipText("Export result set to a text file");
-	
-			buttonPanel.add(exportButton);
-			buttonPanel.add(getCloseBtn());
 	
 			final GroupLayout layout = new GroupLayout(bottomPnl);
 			bottomPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(false);
-			layout.setAutoCreateGaps(false);
+			layout.setAutoCreateGaps(true);
 			
 			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
-					.addComponent(getExplorePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-					.addComponent(buttonPanel, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(getExplorePnl(), Alignment.CENTER, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addGroup(Alignment.CENTER, layout.createSequentialGroup()
+						.addGap(0, 1, Short.MAX_VALUE)
+						.addComponent(exportButton)
+						.addComponent(getCloseBtn())
+						.addGap(0, 1, Short.MAX_VALUE)
+					)
 			);
 			layout.setVerticalGroup(layout.createSequentialGroup()
 					.addComponent(getExplorePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-					.addComponent(buttonPanel, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
+						.addComponent(exportButton)
+						.addComponent(getCloseBtn())
+					)
 			);
 		}
 
@@ -332,21 +336,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private ExploreContentPanel createExploreContent(int selectedRow) {
 		final ExploreContentPanel panel = new ExploreContentPanel(selectedRow);
-
-		return panel;
-	}
-
-	/**
-	 * Creates a panel containing buttons for the cluster explore collapsable panel
-	 * @param selectedRow Currently selected row in the cluster browser table
-	 * @return panel
-	 */
-	private JPanel createBottomExplorePanel(int selectedRow) {
-		final JPanel panel = new JPanel();
-		
-		final JButton createChildButton = new JButton("Create Sub-Network");
-		createChildButton.addActionListener(new MCODEResultsPanel.CreateSubNetworkAction(this, selectedRow));
-		panel.add(createChildButton);
 
 		return panel;
 	}
@@ -634,8 +623,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeAttributesComboBox.addActionListener(new EnumerateAction(modelEnumerator, selectedRow));
 			nodeAttributesComboBox.setSelectedItem(null);
 
-			final JPanel bottomExplorePanel = createBottomExplorePanel(selectedRow);
-			bottomExplorePanel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+			final JButton createChildButton = new JButton("Create Sub-Network");
+			createChildButton.addActionListener(new CreateSubNetworkAction(MCODEResultsPanel.this, selectedRow));
 
 			final GroupLayout layout = new GroupLayout(this);
 			this.setLayout(layout);
@@ -651,7 +640,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					.addComponent(attrEnumLbl)
 					.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-					.addComponent(bottomExplorePanel, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(createChildButton, Alignment.CENTER, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 			);
 			layout.setVerticalGroup(layout.createSequentialGroup()
 					.addComponent(sizeThreshouldLbl)
@@ -660,7 +649,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					.addComponent(attrEnumLbl)
 					.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-					.addComponent(bottomExplorePanel, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					.addComponent(createChildButton, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 			);
 		}
 

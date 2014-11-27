@@ -41,8 +41,7 @@ public class MCODEOpenTask implements Task {
 			
 			// First we must make sure that the app is not already open
 			if (!mcodeUtil.isOpened()) {
-				mainPanel = new MCODEMainPanel(swingApplication, mcodeUtil);
-				mainPanel.addAction(analyzeAction);
+				mainPanel = new MCODEMainPanel(swingApplication, analyzeAction, mcodeUtil);
 
 				registrar.registerService(mainPanel, CytoPanelComponent.class, new Properties());
 				analyzeAction.updateEnableState();

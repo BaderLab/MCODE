@@ -5,7 +5,6 @@ import static javax.swing.GroupLayout.PREFERRED_SIZE;
 
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -13,11 +12,8 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.net.URL;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.AbstractAction;
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.GroupLayout;
@@ -34,11 +30,11 @@ import javax.swing.JRadioButton;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.SwingConstants;
 
-import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 
+import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
@@ -88,9 +84,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	
 	private final CySwingApplication swingApplication;
 	private final MCODEUtil mcodeUtil;
-	private final List<CyAction> actions;
 
-	private JPanel bottomPnl;
 	private JPanel scopePnl;
 	private MCODECollapsiblePanel advancedOptionsPnl;
 	private JPanel networkScoringPnl;
@@ -110,11 +104,13 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 	/**
 	 * The actual parameter change panel that builds the UI
+	 * @param analyzeAction 
 	 */
-	public MCODEMainPanel(final CySwingApplication swingApplication, final MCODEUtil mcodeUtil) {
+	public MCODEMainPanel(final CySwingApplication swingApplication,
+						  final MCODEAnalyzeAction analyzeAction,
+						  final MCODEUtil mcodeUtil) {
 		this.swingApplication = swingApplication;
 		this.mcodeUtil = mcodeUtil;
-		actions = new ArrayList<CyAction>();
 
 		setMinimumSize(new Dimension(340, 400));
 		setPreferredSize(new Dimension(380, 400));
@@ -130,31 +126,26 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		densityCutoffLabel.setMinimumSize(getDensityCutoffTxt().getMinimumSize());
 		densityCutoffLabel.setToolTipText(getDensityCutoffTxt().getToolTipText());
 		
+		final JButton analyzeBtn = new JButton(analyzeAction);
+		
 		// Create the three main panels: scope, advanced options, and bottom
 		// Add all the vertically aligned components to the main panel
 		final GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
-		layout.setAutoCreateContainerGaps(true);
+		layout.setAutoCreateContainerGaps(false);
 		layout.setAutoCreateGaps(true);
 		
 		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
 				.addComponent(getScopePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getAdvancedOptionsPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-				.addComponent(getBottomPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(analyzeBtn)
 		);
 		layout.setVerticalGroup(layout.createSequentialGroup()
 				.addComponent(getScopePnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 				.addComponent(getAdvancedOptionsPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-				.addGap(0, 0, Short.MAX_VALUE)
-				.addComponent(getBottomPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				.addGap(0, 1, Short.MAX_VALUE)
+				.addComponent(analyzeBtn)
 		);
-	}
-
-	public void addAction(CyAction action) {
-		JButton bt = new JButton(action);
-		getBottomPnl().add(bt);
-
-		this.actions.add(action);
 	}
 
 	@Override
@@ -469,21 +460,6 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		return maxDepthTxt;
 	}
 
-	/**
-	 * Utility method that creates a panel for buttons at the bottom of the <code>MCODEMainPanel</code>
-	 *
-	 * @return a flow layout panel containing the analyze and quite buttons
-	 */
-	private JPanel getBottomPnl() {
-		if (bottomPnl == null) {
-			bottomPnl = new JPanel();
-			bottomPnl.setLayout(new FlowLayout());
-			bottomPnl.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
-		}
-
-		return bottomPnl;
-	}
-	
 	private void updateClusterFindingPanel() {
 		if (densityCutoffLabel != null) densityCutoffLabel.setEnabled(currentParamsCopy.isFluff());
 		getDensityCutoffTxt().setEnabled(currentParamsCopy.isFluff());
