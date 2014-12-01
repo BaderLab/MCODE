@@ -694,16 +694,6 @@ public class MCODEUtil {
 			boolean select = elements.contains(nodeOrEdge);
 			network.getRow(nodeOrEdge).set(CyNetwork.SELECTED, select);
 		}
-
-		eventHelper.flushPayloadEvents();
-
-		final Collection<CyNetworkView> netViews = networkViewMgr.getNetworkViews(network);
-		
-		for (final CyNetworkView view : netViews) {
-			view.updateView();
-		}
-		
-		swingApplication.getJFrame().repaint(); // TODO: remove this ugly hack!!!
 	}
 
 	public void interruptLoading() {

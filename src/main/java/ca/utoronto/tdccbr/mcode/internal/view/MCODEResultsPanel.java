@@ -248,6 +248,15 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	public int getSelectedClusterRow() {
 		return clusterBrowserPnl.getSelectedRow();
 	}
+	
+	public MCODECluster getSelectedCluster() {
+		final int idx = getSelectedClusterRow();
+		
+		if (idx >= 0 && clusters.size() > idx)
+			return clusters.get(idx);
+		
+		return null;
+	}
 
 	public void discard(final boolean requestUserConfirmation) {
 		SwingUtilities.invokeLater(new Runnable() {

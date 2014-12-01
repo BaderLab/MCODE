@@ -2,17 +2,19 @@ package ca.utoronto.tdccbr.mcode.internal;
 
 import java.awt.Component;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
-import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 
+import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
@@ -76,7 +78,6 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 
 	@Override
 	public void actionPerformed(ActionEvent event) {
-		// TODO Auto-generated method stub
 	}
 
 	/**
@@ -85,6 +86,7 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 	 * Visual Style has to redraw the network given the new attributes.
 	 */
 	@Override
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void handleEvent(CytoPanelComponentSelectedEvent event) {
 		// When the user selects a tab in the east cytopanel we want to see if it is a results panel
 		// and if it is we want to re-draw the network with the MCODE visual style and reselect the
@@ -96,29 +98,20 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 
 			// To re-initialize the calculators we need the highest score of this particular result set
 			double maxScore = resultsPanel.setNodeAttributesAndGetMaxScore();
-			// We also need the selected row if one is selected at all
-			resultsPanel.selectCluster(null);
-// TODO: delete/fix
-//			int selectedRow = resultsPanel.getSelectedRow();
-//			resultsPanel.getClusterBrowserTable().clearSelection();
-//
-//			if (selectedRow >= 0) {
-//				resultsPanel.getClusterBrowserTable().setRowSelectionInterval(selectedRow, selectedRow);
-//			}
-			
 			// Get the updated app's style
 			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
 			// Register the app's style but don't make it active by default
 			mcodeUtil.registerVisualStyle(appStyle);
-
-			// Update the network view if there is one and it is using the app's style
-			CyNetworkView netView = resultsPanel.getNetworkView();
 			
-			if (netView != null) {
-				if (visualMappingMgr.getVisualStyle(netView) == appStyle) {
-					appStyle.apply(netView);
-					netView.updateView();
-				}
+			// Get selected cluster of this results panel and select its nodes/edges again
+			final MCODECluster cluster = resultsPanel.getSelectedCluster();
+			
+			if (cluster != null) {
+				final List elements = new ArrayList<>();
+				elements.addAll(cluster.getGraph().getEdgeList());
+				elements.addAll(cluster.getGraph().getNodeList());
+				
+				mcodeUtil.setSelected(elements, resultsPanel.getNetwork());
 			}
 		}
 	}
