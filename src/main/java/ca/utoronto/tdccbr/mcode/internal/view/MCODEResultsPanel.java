@@ -17,6 +17,7 @@ import java.awt.Font;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.net.URL;
+import java.text.Collator;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,6 +29,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -598,7 +600,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					attributesList.add(column.getName());
 			}
 
-			Collections.sort(attributesList);
+			final Collator collator = Collator.getInstance(Locale.getDefault());
+			Collections.sort(attributesList, collator);
 
 			nodeAttributesComboBox = new JComboBox<>(attributesList.toArray(new String[attributesList.size()]));
 			nodeAttributesComboBox.setAlignmentX(JComponent.LEFT_ALIGNMENT);
