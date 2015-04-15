@@ -86,7 +86,7 @@
                 <version>1.7</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <phase>install</phase>
                         <configuration>
                             <target>
                                 <!-- Will run build.xml in same folder -->
