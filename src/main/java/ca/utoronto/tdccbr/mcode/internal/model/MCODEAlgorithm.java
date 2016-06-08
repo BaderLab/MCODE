@@ -883,7 +883,7 @@ public class MCODEAlgorithm {
 					outputNodes.add(n);
 				}
 				
-				outputGraph = mcodeUtil.createGraph(outputGraph.getSubNetwork(), outputNodes, params.isIncludeLoops());
+				outputGraph = mcodeUtil.createGraph(outputGraph.getParentNetwork(), outputNodes, params.isIncludeLoops());
 				
 				if (outputGraph.getNodeCount() == 0)
 					return null;
