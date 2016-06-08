@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
@@ -70,6 +74,8 @@ public class MCODEAlgorithm {
 	//data structure for storing information required for each node
 	private static class NodeInfo {
 
+		private final CyNode node;
+		
 		double density; //neighborhood density
 		int numNodeNeighbors; //number of node neighbors
 		Long[] nodeNeighbors; //stores node indices of all neighbors
@@ -77,11 +83,16 @@ public class MCODEAlgorithm {
 		double coreDensity; //density of the core neighborhood
 		double score; //node score
 
-		public NodeInfo() {
+		public NodeInfo(final CyNode node) {
+			this.node = node;
 			this.density = 0.0;
 			this.numNodeNeighbors = 0;
 			this.coreLevel = 0;
 			this.coreDensity = 0.0;
+		}
+		
+		public CyNode getNode() {
+			return node;
 		}
 	}
 
@@ -105,6 +116,7 @@ public class MCODEAlgorithm {
 	//stats
 	private long lastScoreTime;
 	private long lastFindTime;
+	private int count;
 
 	private final MCODEUtil mcodeUtil;
 
@@ -232,42 +244,74 @@ public class MCODEAlgorithm {
 
 		// Iterate over all nodes and calculate MCODE score
 		List<Long> al = null;
-		int i = 0;
 		final List<CyNode> nodes = inputNetwork.getNodeList();
 		
+		final int cores = Runtime.getRuntime().availableProcessors();
+		final ExecutorService exec = Executors.newFixedThreadPool(cores);
+		final List<Callable<NodeInfo>> tasks = new ArrayList<>();
+		
 		for (final CyNode n : nodes) {
-			final NodeInfo nodeInfo = calcNodeInfo(inputNetwork, n.getSUID());
-			nodeInfoHashMap.put(n.getSUID(), nodeInfo);
-			double nodeScore = scoreNode(nodeInfo);
-			System.out.println(n + " - SCORE: " + nodeScore);
-			
-			// Save score for later use in TreeMap
-			// Add a list of nodes to each score in case nodes have the same score
-			if (nodeScoreSortedMap.containsKey(nodeScore)) {
-				// Already have a node with this score, add it to the list
-				al = nodeScoreSortedMap.get(nodeScore);
-				al.add(n.getSUID());
-			} else {
-				al = new ArrayList<>();
-				al.add(n.getSUID());
-				nodeScoreSortedMap.put(nodeScore, al);
-			}
-
-			if (taskMonitor != null)
-				taskMonitor.setProgress(++i / (double) nodes.size());
-			
+			final Callable<NodeInfo> c = new Callable<NodeInfo>() {
+		        @Override
+		        public NodeInfo call() throws Exception {
+		        	if (cancelled)
+		        		return null;
+		        	
+		        	final NodeInfo nodeInfo = calcNodeInfo(inputNetwork, n);
+		        	
+		        	if (taskMonitor != null)
+						taskMonitor.setProgress(++count / (double) nodes.size());
+		        	
+					return nodeInfo;
+		        }
+		    };
+		    tasks.add(c);
+		    
 			if (cancelled)
 				break;
 		}
 		
-		nodeScoreResultsMap.put(resultId, nodeScoreSortedMap);
-		nodeInfoResultsMap.put(resultId, nodeInfoHashMap);
+		if (cancelled)
+			return;
+		
+		try {
+			final List<Future<NodeInfo>> results = exec.invokeAll(tasks);
+			
+			for (final Future<NodeInfo> future : results) {
+				if (cancelled)
+					break;
+				
+				final NodeInfo nodeInfo = future.get();
+				final CyNode node = nodeInfo.getNode();
+				
+				nodeInfoHashMap.put(node.getSUID(), nodeInfo);
+				double nodeScore = scoreNode(nodeInfo);
+				
+				// Save score for later use in TreeMap
+				// Add a list of nodes to each score in case nodes have the same score
+				if (nodeScoreSortedMap.containsKey(nodeScore)) {
+					// Already have a node with this score, add it to the list
+					al = nodeScoreSortedMap.get(nodeScore);
+					al.add(node.getSUID());
+				} else {
+					al = new ArrayList<>();
+					al.add(node.getSUID());
+					nodeScoreSortedMap.put(nodeScore, al);
+				}
+			}
+			
+			nodeScoreResultsMap.put(resultId, nodeScoreSortedMap);
+			nodeInfoResultsMap.put(resultId, nodeInfoHashMap);
 
-		currentNodeScoreSortedMap = nodeScoreSortedMap;
-		currentNodeInfoHashMap = nodeInfoHashMap;
-
-		long msTimeAfter = System.currentTimeMillis();
-		lastScoreTime = msTimeAfter - msTimeBefore;
+			currentNodeScoreSortedMap = nodeScoreSortedMap;
+			currentNodeInfoHashMap = nodeInfoHashMap;
+		} catch (Exception e) {
+			logger.error("Error calculating nodes info.", e);
+		} finally {
+            exec.shutdown();
+        }
+		
+		lastScoreTime = System.currentTimeMillis() - start;
 	}
 
 	/**
@@ -528,7 +572,8 @@ public class MCODEAlgorithm {
 	 * @param nodeId    The SUID of the node in the input network to score
 	 * @return A NodeInfo object containing node information required for the algorithm
 	 */
-	private NodeInfo calcNodeInfo(final CyNetwork inputNetwork, final Long nodeId) {
+	private NodeInfo calcNodeInfo(final CyNetwork inputNetwork, final CyNode node) {
+		final Long nodeId = node.getSUID();
 		final Long[] neighborhood;
 		final String callerID = "MCODEAlgorithm.calcNodeInfo";
 
@@ -543,7 +588,7 @@ public class MCODEAlgorithm {
 		
 		if (neighbors.size() < 2) {
 			// If there are no neighbors or just one neighbor, nodeInfo calculation is trivial
-			NodeInfo nodeInfo = new NodeInfo();
+			NodeInfo nodeInfo = new NodeInfo(node);
 
 			if (neighbors.size() == 1) {
 				nodeInfo.coreLevel = 1;
@@ -580,7 +625,7 @@ public class MCODEAlgorithm {
 		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors, params.isIncludeLoops());
 
 		// Calculate the node information for each node
-		final NodeInfo nodeInfo = new NodeInfo();
+		final NodeInfo nodeInfo = new NodeInfo(node);
 
 		// Density
 		if (neighborhoodGraph != null)
