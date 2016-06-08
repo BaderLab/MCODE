@@ -2,6 +2,7 @@ package ca.utoronto.tdccbr.mcode.internal.view;
 
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
+import static org.cytoscape.util.swing.LookAndFeelUtil.createTitledBorder;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -33,13 +34,13 @@ import javax.swing.SwingConstants;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.util.swing.BasicCollapsiblePanel;
 
 import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.util.UIUtil;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -86,7 +87,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private final MCODEUtil mcodeUtil;
 
 	private JPanel scopePnl;
-	private MCODECollapsiblePanel advancedOptionsPnl;
+	private BasicCollapsiblePanel advancedOptionsPnl;
 	private JPanel networkScoringPnl;
 	private JPanel clusterFindingPnl;
 	private JLabel densityCutoffLabel;
@@ -180,7 +181,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getScopePnl() {
 		if (scopePnl == null) {
 			scopePnl = new JPanel();
-			scopePnl.setBorder(UIUtil.createTitledBorder(""));
+			scopePnl.setBorder(createTitledBorder(""));
 
 			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
 					currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK));
@@ -228,9 +229,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		return scopePnl;
 	}
 
-	private MCODECollapsiblePanel getAdvancedOptionsPnl() {
+	private BasicCollapsiblePanel getAdvancedOptionsPnl() {
 		if (advancedOptionsPnl == null) {
-			advancedOptionsPnl = new MCODECollapsiblePanel("Advanced Options");
+			advancedOptionsPnl = new BasicCollapsiblePanel("Advanced Options");
 			
 			advancedOptionsPnl.getContentPane().add(getNetworkScoringPnl());
 			advancedOptionsPnl.getContentPane().add(getClusterFindingPnl());
@@ -247,7 +248,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getNetworkScoringPnl() {
 		if (networkScoringPnl == null) {
 			networkScoringPnl = new JPanel();
-			networkScoringPnl.setBorder(UIUtil.createTitledBorder("Network Scoring"));
+			networkScoringPnl.setBorder(createTitledBorder("Network Scoring"));
 			networkScoringPnl.setMaximumSize(
 					new Dimension(Short.MAX_VALUE, networkScoringPnl.getPreferredSize().height));
 
@@ -288,7 +289,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getClusterFindingPnl() {
 		if (clusterFindingPnl == null) {
 			clusterFindingPnl = new JPanel();
-			clusterFindingPnl.setBorder(UIUtil.createTitledBorder("Cluster Finding"));
+			clusterFindingPnl.setBorder(createTitledBorder("Cluster Finding"));
 			clusterFindingPnl.setMaximumSize(
 					new Dimension(Short.MAX_VALUE, clusterFindingPnl.getPreferredSize().height));
 
