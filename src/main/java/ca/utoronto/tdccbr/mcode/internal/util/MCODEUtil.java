@@ -229,7 +229,7 @@ public class MCODEUtil {
 	
 	public synchronized void disposeUnusedNetworks() {
 		// Create an index of cluster networks
-		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<CySubNetwork, Boolean>();
+		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<>();
 		
 		for (List<MCODECluster> clusters : allClusters.values()) {
 			for (MCODECluster c : clusters)
@@ -268,41 +268,41 @@ public class MCODEUtil {
 		return currentParameters;
 	}
 
-	public boolean containsNetworkAlgorithm(final long suid) {
+	public boolean containsNetworkAlgorithm(final Long suid) {
 		return networkAlgorithms.containsKey(suid);
 	}
 
-	public MCODEAlgorithm getNetworkAlgorithm(final long suid) {
+	public MCODEAlgorithm getNetworkAlgorithm(final Long suid) {
 		return networkAlgorithms.get(suid);
 	}
 
-	public void addNetworkAlgorithm(final long suid, final MCODEAlgorithm alg) {
+	public void addNetworkAlgorithm(final Long suid, final MCODEAlgorithm alg) {
 		networkAlgorithms.put(suid, alg);
 	}
 	
-	public void removeNetworkAlgorithm(final long suid) {
+	public void removeNetworkAlgorithm(final Long suid) {
 		networkAlgorithms.remove(suid);
 	}
 
-	public boolean containsNetworkResult(final long suid) {
+	public boolean containsNetworkResult(final Long suid) {
 		return networkResults.containsKey(suid);
 	}
 
-	public Set<Integer> getNetworkResults(final long suid) {
+	public Set<Integer> getNetworkResults(final Long suid) {
 		Set<Integer> ids = networkResults.get(suid);
 
-		return ids != null ? ids : new HashSet<Integer>();
+		return ids != null ? ids : new HashSet<>();
 	}
 
 	/**
 	 * @param suid Target CyNetwork SUID
 	 * @param clusters Clusters created as result of the analysis.
 	 */
-	public void addResult(final long suid, final List<MCODECluster> clusters) {
+	public void addResult(final Long suid, final List<MCODECluster> clusters) {
 		Set<Integer> ids = networkResults.get(suid);
 
 		if (ids == null) {
-			ids = new HashSet<Integer>();
+			ids = new HashSet<>();
 			networkResults.put(suid, ids);
 		}
 
@@ -518,10 +518,10 @@ public class MCODEUtil {
 	}
 
 	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes, final boolean includeLoops) {
-		final Set<CyEdge> edges = new HashSet<CyEdge>();
+		final Set<CyEdge> edges = new HashSet<>();
 
 		for (final CyNode n : nodes) {
-			final Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+			final Set<CyEdge> adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
 			for (final CyEdge e : adjacentEdges) {
@@ -552,10 +552,10 @@ public class MCODEUtil {
 	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes,
 			final boolean includeLoops, SavePolicy policy) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
-		final Set<CyEdge> edges = new HashSet<CyEdge>();
+		final Set<CyEdge> edges = new HashSet<>();
 
 		for (CyNode n : nodes) {
-			Set<CyEdge> adjacentEdges = new HashSet<CyEdge>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+			Set<CyEdge> adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
 			for (CyEdge e : adjacentEdges) {
@@ -589,6 +589,7 @@ public class MCODEUtil {
 	public void displayNetworkView(final CyNetworkView view) {
 		networkMgr.addNetwork(view.getModel());
 		networkViewMgr.addNetworkView(view);
+		applicationMgr.setCurrentNetworkView(view);
 
 		view.fitContent();
 		view.updateView();
@@ -687,7 +688,7 @@ public class MCODEUtil {
 	}
 
 	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network) {
-		final Collection<CyIdentifiable> allElements = new ArrayList<CyIdentifiable>(network.getNodeList());
+		final Collection<CyIdentifiable> allElements = new ArrayList<>(network.getNodeList());
 		allElements.addAll(network.getEdgeList());
 
 		for (final CyIdentifiable nodeOrEdge : allElements) {
@@ -813,7 +814,7 @@ public class MCODEUtil {
 
 		try {
 			// Call save method in MCODE get the file name
-			Collection<FileChooserFilter> filters = new ArrayList<FileChooserFilter>();
+			Collection<FileChooserFilter> filters = new ArrayList<>();
 			filters.add(new FileChooserFilter("Text format", "txt"));
 			File file = fileUtil.getFile(swingApplication.getJFrame(),
 										 "Export Graph as Interactions",
@@ -900,7 +901,7 @@ public class MCODEUtil {
 	 * @return The result panels of the app if it is opened, or an empty collection otherwise
 	 */
 	public Collection<MCODEResultsPanel> getResultPanels() {
-		Collection<MCODEResultsPanel> panels = new ArrayList<MCODEResultsPanel>();
+		Collection<MCODEResultsPanel> panels = new ArrayList<>();
 		CytoPanel cytoPanel = getResultsCytoPanel();
 		int count = cytoPanel.getCytoPanelComponentCount();
 

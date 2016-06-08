@@ -97,9 +97,9 @@ public class MCODEAlgorithm {
 	//haven't changed for example) the clustering method must save the current node scores under the new result
 	//title for later reference
 	//key is result id, value is nodeScoreSortedMap
-	private Map<Integer, SortedMap<Double, List<Long>>> nodeScoreResultsMap = new HashMap<Integer, SortedMap<Double, List<Long>>>();
+	private Map<Integer, SortedMap<Double, List<Long>>> nodeScoreResultsMap = new HashMap<>();
 	//key is result id, value is nodeInfroHashMap
-	private Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<Integer, Map<Long, NodeInfo>>();
+	private Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<>();
 
 	private MCODEParameterSet params; //the parameters used for this instance of the algorithm
 	//stats
@@ -216,12 +216,11 @@ public class MCODEAlgorithm {
 		}
 
 		// Initialize
-		long msTimeBefore = System.currentTimeMillis();
-		final Map<Long, NodeInfo> nodeInfoHashMap = new HashMap<Long, NodeInfo>(inputNetwork.getNodeCount());
+		final long start = System.currentTimeMillis();
+		final Map<Long, NodeInfo> nodeInfoHashMap = new HashMap<>(inputNetwork.getNodeCount());
 
 		// Sort Doubles in descending order
 		Comparator<Double> scoreComparator = new Comparator<Double>() {
-
 			@Override
 			public int compare(Double d1, Double d2) {
 				return d2.compareTo(d1);
@@ -229,7 +228,7 @@ public class MCODEAlgorithm {
 		};
 		
 		// Will store Doubles (score) as the key, Lists of node indexes as values
-		SortedMap<Double, List<Long>> nodeScoreSortedMap = new TreeMap<Double, List<Long>>(scoreComparator);
+		SortedMap<Double, List<Long>> nodeScoreSortedMap = new TreeMap<>(scoreComparator);
 
 		// Iterate over all nodes and calculate MCODE score
 		List<Long> al = null;
@@ -240,6 +239,7 @@ public class MCODEAlgorithm {
 			final NodeInfo nodeInfo = calcNodeInfo(inputNetwork, n.getSUID());
 			nodeInfoHashMap.put(n.getSUID(), nodeInfo);
 			double nodeScore = scoreNode(nodeInfo);
+			System.out.println(n + " - SCORE: " + nodeScore);
 			
 			// Save score for later use in TreeMap
 			// Add a list of nodes to each score in case nodes have the same score
@@ -248,7 +248,7 @@ public class MCODEAlgorithm {
 				al = nodeScoreSortedMap.get(nodeScore);
 				al.add(n.getSUID());
 			} else {
-				al = new ArrayList<Long>();
+				al = new ArrayList<>();
 				al.add(n.getSUID());
 				nodeScoreSortedMap.put(nodeScore, al);
 			}
@@ -312,7 +312,7 @@ public class MCODEAlgorithm {
 
 		// Initialization
 		long msTimeBefore = System.currentTimeMillis();
-		HashMap<Long, Boolean> nodeSeenHashMap = new HashMap<Long, Boolean>(); //key is node SUID
+		HashMap<Long, Boolean> nodeSeenHashMap = new HashMap<>(); //key is node SUID
 		Long currentNode = null;
 		double findingProgress = 0;
 		double findingTotal = 0;
@@ -325,7 +325,7 @@ public class MCODEAlgorithm {
 		}
 
 		// Stores the list of clusters as ArrayLists of node indices in the input Network
-		List<MCODECluster> alClusters = new ArrayList<MCODECluster>();
+		List<MCODECluster> alClusters = new ArrayList<>();
 
 		// Iterate over node ids sorted descending by their score
 		for (List<Long> alNodesWithSameScore : values) {
@@ -335,7 +335,7 @@ public class MCODEAlgorithm {
 
 				if (!nodeSeenHashMap.containsKey(currentNode)) {
 					// Store the list of all the nodes that have already been seen and incorporated in other clusters
-					Map<Long, Boolean> nodeSeenHashMapSnapShot = new HashMap<Long, Boolean>(nodeSeenHashMap);
+					Map<Long, Boolean> nodeSeenHashMapSnapShot = new HashMap<>(nodeSeenHashMap);
 
 					// Here we use the original node score cutoff
 					List<Long> alCluster = getClusterCore(currentNode,
@@ -345,9 +345,8 @@ public class MCODEAlgorithm {
 														  nodeInfoHashMap);
 					if (alCluster.size() > 0) {
 						// Make sure seed node is part of cluster, if not already in there
-						if (!alCluster.contains(currentNode)) {
+						if (!alCluster.contains(currentNode))
 							alCluster.add(currentNode);
-						}
 
 						// Create an input graph for the filter and haircut methods
 						MCODEGraph clusterGraph = createClusterGraph(alCluster, inputNetwork);
@@ -380,20 +379,19 @@ public class MCODEAlgorithm {
 					}
 				}
 
-				if (cancelled) {
+				if (cancelled)
 					break;
-				}
 			}
 		}
 
 		// Once the clusters have been found we either return them or in the case of selection scope, we select only
 		// the ones that contain the selected node(s) and return those
-		List<MCODECluster> selectedALClusters = new ArrayList<MCODECluster>();
+		List<MCODECluster> selectedALClusters = new ArrayList<>();
 
 		if (MCODEParameterSet.SELECTION.equals(params.getScope())) {
 			for (MCODECluster cluster : alClusters) {
 				List<Long> alCluster = cluster.getALCluster();
-				List<Long> alSelectedNodes = new ArrayList<Long>();
+				List<Long> alSelectedNodes = new ArrayList<>();
 
 				for (int i = 0; i < params.getSelectedNodes().length; i++) {
 					alSelectedNodes.add(params.getSelectedNodes()[i]);
@@ -440,9 +438,9 @@ public class MCODEAlgorithm {
 		// with higher scoring seeds have priority, however when the slider moves higher than the node score cutoff
 		// we allow the cluster to accrue nodes from all around without the priority restriction
 		if (nodeScoreCutoff <= params.getNodeScoreCutoff())
-			nodeSeenHashMap = new HashMap<Long, Boolean>(cluster.getNodeSeenHashMap());
+			nodeSeenHashMap = new HashMap<>(cluster.getNodeSeenHashMap());
 		else
-			nodeSeenHashMap = new HashMap<Long, Boolean>();
+			nodeSeenHashMap = new HashMap<>();
 
 		final Long seedNode = cluster.getSeedNode();
 
@@ -473,7 +471,7 @@ public class MCODEAlgorithm {
 	}
 
 	private MCODEGraph createClusterGraph(final List<Long> alCluster, final CyNetwork inputNet) {
-		final Set<CyNode> nodes = new HashSet<CyNode>();
+		final Set<CyNode> nodes = new HashSet<>();
 
 		for (final Long id : alCluster) {
 			CyNode n = inputNet.getNode(id);
@@ -575,14 +573,11 @@ public class MCODEAlgorithm {
 			neighborhood = neighborIndexes;
 		}
 		
+		if (cancelled)
+			return null;
+		
 		// extract neighborhood subgraph
 		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors, params.isIncludeLoops());
-		
-		if (neighborhoodGraph == null) {
-			// this shouldn't happen
-			logger.error("In " + callerID + ": neighborhoodGraph was null.");
-			return null;
-		}
 
 		// Calculate the node information for each node
 		final NodeInfo nodeInfo = new NodeInfo();
@@ -627,7 +622,7 @@ public class MCODEAlgorithm {
 									  double nodeScoreCutoff,
 									  int maxDepthFromStart,
 									  Map<Long, NodeInfo> nodeInfoHashMap) {
-		List<Long> cluster = new ArrayList<Long>(); //stores node indexes
+		List<Long> cluster = new ArrayList<>(); //stores node indexes
 		getClusterCoreInternal(startNode,
 							   nodeSeenHashMap,
 							   ((NodeInfo) nodeInfoHashMap.get(startNode)).score,
@@ -718,12 +713,12 @@ public class MCODEAlgorithm {
 										 Map<Long, NodeInfo> nodeInfoHashMap) {
 		Long currentNode = null, nodeNeighbor = null;
 		// Create a temp list of nodes to add to avoid concurrently modifying 'cluster'
-		List<Long> nodesToAdd = new ArrayList<Long>();
+		List<Long> nodesToAdd = new ArrayList<>();
 
 		// Keep a separate internal nodeSeenHashMap because nodes seen during a fluffing
 		// should not be marked as permanently seen,
 		// they can be included in another cluster's fluffing step.
-		Map<Long, Boolean> nodeSeenHashMapInternal = new HashMap<Long, Boolean>();
+		Map<Long, Boolean> nodeSeenHashMapInternal = new HashMap<>();
 
 		// add all current neighbour's neighbours into cluster (if they have high enough clustering coefficients) and mark them all as seen
 		for (int i = 0; i < cluster.size(); i++) {
@@ -825,17 +820,17 @@ public class MCODEAlgorithm {
 		return getMergedEdgeCount(edgeList, includeLoops);
 	}
 	
-	private int getMergedEdgeCount(final List<CyEdge> edgeList, final boolean includeLoops) {
-		Set<String> suidPairs = new HashSet<String>();
+	private int getMergedEdgeCount(final Collection<CyEdge> edgeList, final boolean includeLoops) {
+		final Set<String> suidPairs = new HashSet<>();
 		
 		for (CyEdge e : edgeList) {
-			Long id1 = e.getSource().getSUID();
-			Long id2 = e.getTarget().getSUID();
+			final Long id1 = e.getSource().getSUID();
+			final Long id2 = e.getTarget().getSUID();
 			
 			if (!includeLoops && id1 == id2)
 				continue;
 			
-			String pair = id1 < id2 ? id1+"_"+id2 : id2+"_"+id1;
+			final String pair = id1 < id2 ? id1+"_"+id2 : id2+"_"+id1;
 			suidPairs.add(pair);
 		}
 		
@@ -863,25 +858,24 @@ public class MCODEAlgorithm {
 
 		while (true && !cancelled) {
 			int numDeleted = 0;
-			final List<Long> alCoreNodeIndices = new ArrayList<Long>(outputGraph.getNodeCount());
-			final List<CyNode> nodes = outputGraph.getNodeList();
+			final Set<CyNode> outputNodes = new HashSet<>(outputGraph.getNodeCount());
+			final Collection<CyNode> nodes = outputGraph.getNodeList();
 
 			for (CyNode n : nodes) {
+				if (cancelled)
+					return null;
+				
 				int degree = getDegree(outputGraph, n, params.isIncludeLoops());
 
 				if (degree >= k)
-					alCoreNodeIndices.add(n.getSUID()); //contains all nodes with degree >= k
+					outputNodes.add(n); //contains all nodes with degree >= k
 				else
 					numDeleted++;
 			}
 
 			if (numDeleted > 0 || firstLoop) {
-				Set<CyNode> outputNodes = new HashSet<CyNode>();
-
-				for (Long index : alCoreNodeIndices) {
-					CyNode n = outputGraph.getNode(index);
-					outputNodes.add(n);
-				}
+				if (outputNodes.isEmpty())
+					return null;
 				
 				outputGraph = mcodeUtil.createGraph(outputGraph.getParentNetwork(), outputNodes, params.isIncludeLoops());
 				
@@ -889,9 +883,7 @@ public class MCODEAlgorithm {
 					return null;
 
 				// Iterate again, but with a new k-core input graph...
-				
-				if (firstLoop)
-					firstLoop = false;
+				firstLoop = false;
 			} else {
 				// stop the loop
 				break;
@@ -923,6 +915,9 @@ public class MCODEAlgorithm {
 		while ((curGraph = getKCore(curGraph, i)) != null) {
 			prevGraph = curGraph;
 			i++;
+			
+			if (cancelled)
+				break;
 		}
 		
 		Integer k = i - 1;

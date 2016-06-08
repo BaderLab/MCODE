@@ -2,12 +2,9 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyEdge.Type;
@@ -21,8 +18,6 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 public class MCODEGraph {
 
 	private final CyNetwork parentNetwork;
-	private final Set<CyNode> nodes;
-	private final Set<CyEdge> edges;
 	private final Map<Long, CyNode> nodeMap;
 	private final Map<Long, CyEdge> edgeMap;
 	private CySubNetwork subNetwork;
@@ -42,10 +37,8 @@ public class MCODEGraph {
 
 		this.mcodeUtil = mcodeUtil;
 		this.parentNetwork = parentNetwork;
-		this.nodes = Collections.synchronizedSet(new HashSet<CyNode>(nodes.size()));
-		this.edges = Collections.synchronizedSet(new HashSet<CyEdge>(edges.size()));
-		this.nodeMap = Collections.synchronizedMap(new HashMap<Long, CyNode>(nodes.size()));
-		this.edgeMap = Collections.synchronizedMap(new HashMap<Long, CyEdge>(edges.size()));
+		this.nodeMap = new HashMap<>(nodes.size());
+		this.edgeMap = new HashMap<>(edges.size());
 
 		for (CyNode n : nodes)
 			addNode(n);
@@ -57,73 +50,59 @@ public class MCODEGraph {
 		if (disposed)
 			throw new IllegalStateException("This cluster has been disposed.");
 		
-		if (nodes.contains(node))
-			return false;
-		
-		node = parentNetwork.getNode(node.getSUID());
-
-		if (nodes.add(node)) {
-			nodeMap.put(node.getSUID(), node);
-			return true;
-		}
-
-		return false;
+		nodeMap.put(node.getSUID(), node);
+			
+		return true;
 	}
 
 	public boolean addEdge(CyEdge edge) {
 		if (disposed)
 			throw new IllegalStateException("This cluster has been disposed.");
 		
-		if (edges.contains(edge))
-			return false;
-
-		if (nodes.contains(edge.getSource()) && nodes.contains(edge.getTarget())) {
-			edge = parentNetwork.getEdge(edge.getSUID());
-
-			if (edges.add(edge)) {
-				edgeMap.put(edge.getSUID(), edge);
-				return true;
-			}
+		if (containsNode(edge.getSource()) && containsNode(edge.getTarget())) {
+			edgeMap.put(edge.getSUID(), edge);
+			
+			return true;
 		}
 
 		return false;
 	}
 
 	public int getNodeCount() {
-		return nodes.size();
+		return nodeMap.size();
 	}
 
 	public int getEdgeCount() {
-		return edges.size();
+		return edgeMap.size();
 	}
 
-	public List<CyNode> getNodeList() {
-		return new ArrayList<CyNode>(nodes);
+	public Collection<CyNode> getNodeList() {
+		return nodeMap.values();
 	}
 
-	public List<CyEdge> getEdgeList() {
-		return new ArrayList<CyEdge>(edges);
+	public Collection<CyEdge> getEdgeList() {
+		return edgeMap.values();
 	}
 
 	public boolean containsNode(final CyNode node) {
-		return nodes.contains(node);
+		return nodeMap.containsKey(node.getSUID());
 	}
 
 	public boolean containsEdge(final CyEdge edge) {
-		return edges.contains(edge);
+		return edgeMap.containsKey(edge.getSUID());
 	}
 
-	public CyNode getNode(final long index) {
-		return nodeMap.get(index);
+	public CyNode getNode(final Long suid) {
+		return nodeMap.get(suid);
 	}
 
-	public CyEdge getEdge(final long index) {
-		return edgeMap.get(index);
+	public CyEdge getEdge(final Long suid) {
+		return edgeMap.get(suid);
 	}
 
 	public List<CyEdge> getAdjacentEdgeList(final CyNode node, final Type edgeType) {
 		List<CyEdge> rootList = parentNetwork.getAdjacentEdgeList(node, edgeType);
-		List<CyEdge> list = new ArrayList<CyEdge>(rootList.size());
+		List<CyEdge> list = new ArrayList<>(rootList.size());
 
 		for (CyEdge e : rootList) {
 			if (containsEdge(e))
@@ -135,7 +114,7 @@ public class MCODEGraph {
 
 	public List<CyEdge> getConnectingEdgeList(final CyNode source, final CyNode target, final Type edgeType) {
 		List<CyEdge> rootList = parentNetwork.getConnectingEdgeList(source, target, edgeType);
-		List<CyEdge> list = new ArrayList<CyEdge>(rootList.size());
+		List<CyEdge> list = new ArrayList<>(rootList.size());
 
 		for (CyEdge e : rootList) {
 			if (containsEdge(e))
@@ -151,7 +130,7 @@ public class MCODEGraph {
 
 	public synchronized CySubNetwork getSubNetwork() {
 		if (!disposed && subNetwork == null)
-			subNetwork = mcodeUtil.createSubNetwork(parentNetwork, nodes, edges, SavePolicy.DO_NOT_SAVE);
+			subNetwork = mcodeUtil.createSubNetwork(parentNetwork, getNodeList(), getEdgeList(), SavePolicy.DO_NOT_SAVE);
 
 		return subNetwork;
 	}
@@ -168,8 +147,6 @@ public class MCODEGraph {
 			subNetwork = null;
 		}
 		
-		nodes.clear();
-		edges.clear();
 		nodeMap.clear();
 		edgeMap.clear();
 		

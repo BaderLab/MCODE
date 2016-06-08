@@ -113,7 +113,8 @@ public class MCODEAnalyzeTask implements Task {
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
 				alg.scoreGraph(network, resultId);
 
-				if (interrupted) return;
+				if (interrupted)
+					return;
 
 				logger.info("Network was scored in " + alg.getLastScoreTime() + " ms.");
 			}
@@ -123,7 +124,8 @@ public class MCODEAnalyzeTask implements Task {
 
 			clusters = alg.findClusters(network, resultId);
 
-			if (interrupted) return;
+			if (interrupted)
+				return;
 
 			taskMonitor.setProgress(0.001);
 			taskMonitor.setStatusMessage("Drawing Results (Step 3 of 3)");
@@ -134,7 +136,8 @@ public class MCODEAnalyzeTask implements Task {
 			int count = 0;
 
 			for (final MCODECluster c : clusters) {
-				if (interrupted) return;
+				if (interrupted)
+					return;
 				
 				final Image img = mcodeUtil.createClusterImage(c, imageSize, imageSize, null, true, null);
 				c.setImage(img);
@@ -152,7 +155,7 @@ public class MCODEAnalyzeTask implements Task {
 
 	@Override
 	public void cancel() {
-		this.interrupted = true;
+		interrupted = true;
 		alg.setCancelled(true);
 		mcodeUtil.removeResult(resultId);
 		mcodeUtil.removeNetworkAlgorithm(network.getSUID());
