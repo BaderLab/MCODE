@@ -56,6 +56,7 @@ import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.NetworkViewRenderer;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -615,12 +616,20 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
 
-			VisualLexicon lexicon = applicationMgr.getCurrentRenderingEngine().getVisualLexicon();
+			NetworkViewRenderer viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
+			
+			if (viewRenderer == null)
+				viewRenderer = applicationMgr.getDefaultNetworkViewRenderer();
+			
+			VisualLexicon lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
+					.getVisualLexicon();
 			VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
 
 			if (vp != null) {
 				Object arrowValue = vp.parseSerializableString("ARROW");
-				if (arrowValue != null) clusterStyle.setDefaultValue(vp, arrowValue);
+				
+				if (arrowValue != null)
+					clusterStyle.setDefaultValue(vp, arrowValue);
 			}
 		}
 
