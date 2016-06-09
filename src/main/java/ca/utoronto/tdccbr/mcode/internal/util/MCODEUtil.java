@@ -937,6 +937,36 @@ public class MCODEUtil {
 		return getMainPanel() != null;
 	}
 	
+	/**
+	 * Utility method that invokes the code in Runnable.run on the AWT Event Dispatch Thread.
+	 * @param runnable
+	 */
+	public static void invokeOnEDT(final Runnable runnable) {
+		if (SwingUtilities.isEventDispatchThread())
+			runnable.run();
+		else
+			SwingUtilities.invokeLater(runnable);
+	}
+	
+	public static void invokeOnEDTAndWait(final Runnable runnable) {
+		invokeOnEDTAndWait(runnable, null);
+	}
+	
+	public static void invokeOnEDTAndWait(final Runnable runnable, final Logger logger) {
+		if (SwingUtilities.isEventDispatchThread()) {
+			runnable.run();
+		} else {
+			try {
+				SwingUtilities.invokeAndWait(runnable);
+			} catch (Exception e) {
+				if (logger != null)
+					logger.error("Unexpected error", e);
+				else
+					e.printStackTrace();
+			}
+		}
+	}
+	
 	private static Properties loadProperties(String name) {
 		Properties props = new Properties();
 

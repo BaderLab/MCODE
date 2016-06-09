@@ -1,5 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
@@ -58,7 +59,6 @@ import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
@@ -266,18 +266,15 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	public void discard(final boolean requestUserConfirmation) {
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				boolean oldRequestUserConfirmation = Boolean.valueOf(discardResultAction
-						.getValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND).toString());
+		invokeOnEDT(() -> {
+			boolean oldRequestUserConfirmation = Boolean.valueOf(discardResultAction
+					.getValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND).toString());
 
-				discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
-											 requestUserConfirmation);
-				getCloseBtn().doClick();
-				discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
-											 oldRequestUserConfirmation);
-			}
+			discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
+										 requestUserConfirmation);
+			getCloseBtn().doClick();
+			discardResultAction.putValue(MCODEDiscardResultAction.REQUEST_USER_CONFIRMATION_COMMAND,
+										 oldRequestUserConfirmation);
 		});
 	}
 

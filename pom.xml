@@ -9,7 +9,6 @@
 		<bundle.namespace>ca.utoronto.tdccbr.mcode.internal</bundle.namespace>
 		<cytoscape.api.version>3.3.0</cytoscape.api.version>
 		<cytoscape.impl.version>3.3.0</cytoscape.impl.version>
-		<maven-bundle-plugin.version>2.3.4</maven-bundle-plugin.version>
 		<maven.build.timestamp.format>MMMM yyyy</maven.build.timestamp.format>
 		<buildDate>${maven.build.timestamp}</buildDate>
 	</properties>
@@ -43,7 +42,10 @@
 				<inherited>true</inherited>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
 				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
 					<optimize>true</optimize>
 					<showWarnings>true</showWarnings>
 					<showDeprecation>true</showDeprecation>
@@ -71,7 +73,7 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>2.3.4</version>
+				<version>3.0.0</version>
 				<configuration>
 					<instructions>
 						<Bundle-SymbolicName>${bundle.symbolicName}</Bundle-SymbolicName>
@@ -103,15 +105,6 @@
 		
 		<pluginManagement>
 			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.0</version>
-					<configuration>
-						<source>1.8</source>
-						<target>1.8</target>
-					</configuration>
-				</plugin>
 				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
@@ -225,11 +218,6 @@
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>layout-api</artifactId>
-			<version>${cytoscape.api.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.cytoscape</groupId>
-			<artifactId>swing-util-api</artifactId>
 			<version>${cytoscape.api.version}</version>
 		</dependency>
 

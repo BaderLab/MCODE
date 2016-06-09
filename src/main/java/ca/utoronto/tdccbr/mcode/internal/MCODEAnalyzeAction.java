@@ -1,5 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDTAndWait;
+
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,7 +11,6 @@ import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkEvent;
@@ -114,7 +116,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		this.registrar = registrar;
 		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;
-		dirtyNetworks = new HashMap<Long, Boolean>();
+		dirtyNetworks = new HashMap<>();
 	}
 
 	/**
@@ -222,57 +224,44 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 				@Override
 				public void handleEvent(final AnalysisCompletedEvent e) {
-					MCODEResultsPanel resultsPanel = null;
-					boolean resultFound = false;
 					setDirty(network, false);
 
 					// Display clusters in a new modal dialog box
 					if (e.isSuccessful()) {
 						if (e.getClusters() != null && !e.getClusters().isEmpty()) {
-							resultFound = true;
 							mcodeUtil.addResult(network.getSUID(), e.getClusters());
 
-							MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
-																										"Discard Result",
-																										resultId,
-																										applicationManager,
-																										swingApplication,
-																										netViewManager,
-																										registrar,
-																										mcodeUtil);
+							invokeOnEDTAndWait(() -> {
+								MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
+										"Discard Result", resultId, applicationManager, swingApplication,
+										netViewManager, registrar, mcodeUtil);
 
-							resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil, network, networkView,
-																 resultId, discardResultAction);
+								MCODEResultsPanel resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil,
+										network, networkView, resultId, discardResultAction);
+								
+								registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+								
+								// Focus the result panel
+								CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
+								int index = cytoPanel.indexOfComponent(resultsPanel);
+								cytoPanel.setSelectedIndex(index);
 
-							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+								if (cytoPanel.getState() == CytoPanelState.HIDE)
+									cytoPanel.setState(CytoPanelState.DOCK);
+							}, logger);
 						} else {
-							SwingUtilities.invokeLater(new Runnable() {
-								@Override
-								public void run() {
-									JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-																  "No clusters were found.\n"
-																		  + "You can try changing the MCODE parameters or\n"
-																		  + "modifying your node selection if you are using\n"
-																		  + "a selection-specific scope.",
-																  "No Results",
-																  JOptionPane.WARNING_MESSAGE);
-								}
+							invokeOnEDT(() -> {
+								JOptionPane.showMessageDialog(swingApplication.getJFrame(),
+															  "No clusters were found.\n"
+																	  + "You can try changing the MCODE parameters or\n"
+																	  + "modifying your node selection if you are using\n"
+																	  + "a selection-specific scope.",
+															  "No Results",
+															  JOptionPane.WARNING_MESSAGE);
 							});
 						}
 					}
 
-					CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-
-					// This if statement ensures that the east cytopanel is not loaded if there are no results in it
-					if (resultFound || (analyze == INTERRUPTION && cytoPanel.indexOfComponent(resultsPanel) >= 0)) {
-						// Focus the result panel
-						int index = cytoPanel.indexOfComponent(resultsPanel);
-						cytoPanel.setSelectedIndex(index);
-
-						if (cytoPanel.getState() == CytoPanelState.HIDE)
-							cytoPanel.setState(CytoPanelState.DOCK);
-					}
-					
 					mcodeUtil.disposeUnusedNetworks();
 				}
 			};
