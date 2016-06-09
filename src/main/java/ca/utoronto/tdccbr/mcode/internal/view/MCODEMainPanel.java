@@ -3,6 +3,7 @@ package ca.utoronto.tdccbr.mcode.internal.view;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.createTitledBorder;
+import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -112,6 +113,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 						  final MCODEUtil mcodeUtil) {
 		this.swingApplication = swingApplication;
 		this.mcodeUtil = mcodeUtil;
+		
+		if (isAquaLAF())
+			setOpaque(false);
 
 		setMinimumSize(new Dimension(340, 400));
 		setPreferredSize(new Dimension(380, 400));
@@ -175,13 +179,15 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	/**
-	 * Creates a JPanel containing scope radio buttons
 	 * @return panel containing the scope option buttons
 	 */
 	private JPanel getScopePnl() {
 		if (scopePnl == null) {
 			scopePnl = new JPanel();
 			scopePnl.setBorder(createTitledBorder(""));
+			
+			if (isAquaLAF())
+				scopePnl.setOpaque(false);
 
 			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
 					currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK));
@@ -233,6 +239,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		if (advancedOptionsPnl == null) {
 			advancedOptionsPnl = new BasicCollapsiblePanel("Advanced Options");
 			
+			if (isAquaLAF())
+				advancedOptionsPnl.setOpaque(false);
+			
 			advancedOptionsPnl.getContentPane().add(getNetworkScoringPnl());
 			advancedOptionsPnl.getContentPane().add(getClusterFindingPnl());
 			advancedOptionsPnl.getContentPane().add(Box.createVerticalGlue());
@@ -248,6 +257,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getNetworkScoringPnl() {
 		if (networkScoringPnl == null) {
 			networkScoringPnl = new JPanel();
+			
+			if (isAquaLAF())
+				networkScoringPnl.setOpaque(false);
+			
 			networkScoringPnl.setBorder(createTitledBorder("Network Scoring"));
 			networkScoringPnl.setMaximumSize(
 					new Dimension(Short.MAX_VALUE, networkScoringPnl.getPreferredSize().height));
@@ -289,6 +302,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel getClusterFindingPnl() {
 		if (clusterFindingPnl == null) {
 			clusterFindingPnl = new JPanel();
+			
+			if (isAquaLAF())
+				clusterFindingPnl.setOpaque(false);
+			
 			clusterFindingPnl.setBorder(createTitledBorder("Cluster Finding"));
 			clusterFindingPnl.setMaximumSize(
 					new Dimension(Short.MAX_VALUE, clusterFindingPnl.getPreferredSize().height));

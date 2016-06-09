@@ -2,6 +2,8 @@ package ca.utoronto.tdccbr.mcode.internal.view;
 
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
+import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
+import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_X_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_Y_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
@@ -76,7 +78,6 @@ import org.cytoscape.model.CyTable;
 import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
-import org.cytoscape.util.swing.LookAndFeelUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
 import org.cytoscape.view.vizmap.VisualStyle;
@@ -181,6 +182,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							 final CyNetworkView networkView,
 							 final int resultId,
 							 final MCODEDiscardResultAction discardResultAction) {
+		if (isAquaLAF())
+			setOpaque(false);
+		
 		setLayout(new BorderLayout());
 		
 		this.alg = alg;
@@ -287,11 +291,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		if (bottomPnl == null) {
 			bottomPnl = new JPanel();
 			
+			if (isAquaLAF())
+				bottomPnl.setOpaque(false);
+			
 			final JButton exportButton = new JButton("Export");
 			exportButton.addActionListener(new ExportAction());
 			exportButton.setToolTipText("Export result set to a text file");
 			
-			if (LookAndFeelUtil.isAquaLAF()) {
+			if (isAquaLAF()) {
 				getCreateSubNetButton().putClientProperty("JComponent.sizeVariant", "small");
 				exportButton.putClientProperty("JComponent.sizeVariant", "small");
 				getCloseBtn().putClientProperty("JComponent.sizeVariant", "small");
@@ -300,7 +307,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final GroupLayout layout = new GroupLayout(bottomPnl);
 			bottomPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(false);
-			layout.setAutoCreateGaps(!LookAndFeelUtil.isAquaLAF());
+			layout.setAutoCreateGaps(!isAquaLAF());
 			
 			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
 					.addComponent(getExplorePnl(), Alignment.CENTER, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
@@ -330,6 +337,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			explorePnl = new BasicCollapsiblePanel("Explore");
 			explorePnl.setCollapsed(false);
 			explorePnl.setVisible(false);
+			
+			if (isAquaLAF())
+				explorePnl.setOpaque(false);
 		}
 		
 		return explorePnl;
@@ -519,6 +529,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private final JTable table;
 		
 		public ClusterBrowserPanel() {
+			if (isAquaLAF())
+				setOpaque(false);
+			
 			setLayout(new BorderLayout());
 
 			// main data table
@@ -581,8 +594,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private JComboBox<String> nodeAttributesComboBox;
 		
 		ExploreContentPanel(final int selectedRow) {
+			if (isAquaLAF())
+				setOpaque(false);
+			
 			// Create a slider to manipulate node score cutoff
-			final JLabel sizeThreshouldLbl = new JLabel("Size Threshold:");
+			final String SIZE_THRESHOLD_TOOL_TIP = "Node Attribute Enumerator";
+			final JLabel sizeThresholdLbl = new JLabel("Size Threshold:");
+			sizeThresholdLbl.setToolTipText(SIZE_THRESHOLD_TOOL_TIP);
 			
 			// (goes to 1000 so that we get a more precise double variable out of it)
 			final JSlider sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000,
@@ -602,13 +620,15 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			sizeSlider.setLabelTable(labelTable);
 			sizeSlider.setFont(
 					sizeSlider.getFont() != null ? 
-					sizeSlider.getFont().deriveFont(LookAndFeelUtil.getSmallFontSize()) : 
-					new Font("Arial", Font.PLAIN, (int) LookAndFeelUtil.getSmallFontSize())
+					sizeSlider.getFont().deriveFont(getSmallFontSize()) : 
+					new Font("Arial", Font.PLAIN, (int) getSmallFontSize())
 			);
-			sizeSlider.setToolTipText("<html>Move the slider to include or<br>exclude nodes from the cluster</html>");
+			sizeSlider.setToolTipText(SIZE_THRESHOLD_TOOL_TIP);
 
 			// Node attributes enumerator
-			final JLabel attrEnumLbl = new JLabel("Node Attribute Enumerator:");
+			final JLabel attrEnumLbl = new JLabel("Node Attribute:");
+			final String ATTR_ENUM_TOOL_TIP = "Node Attribute Enumerator";
+			attrEnumLbl.setToolTipText(ATTR_ENUM_TOOL_TIP);
 
 			final CyNetwork net = clusters.get(selectedRow).getNetwork();
 			
@@ -626,6 +646,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			Collections.sort(attributesList, collator);
 
 			nodeAttributesComboBox = new JComboBox<>(attributesList.toArray(new String[attributesList.size()]));
+			nodeAttributesComboBox.setToolTipText(ATTR_ENUM_TOOL_TIP);
 			nodeAttributesComboBox.setRenderer(new DefaultListCellRenderer() {
 				@Override
 				public Component getListCellRendererComponent(JList<?> list, Object value, int index,
@@ -648,7 +669,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, graphPicSize));
 			enumerationsTable.setGridColor(new JSeparator().getForeground());
 			enumerationsTable.setFont(new Font(enumerationsTable.getFont().getFontName(), Font.PLAIN,
-					(int) LookAndFeelUtil.getSmallFontSize()));
+					(int) getSmallFontSize()));
 			enumerationsTable.setFocusable(false);
 			enumerationsTable.getColumnModel().getColumn(0).setPreferredWidth(180);
 
@@ -656,8 +677,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeAttributesComboBox.addActionListener(new EnumerateAction(modelEnumerator, selectedRow));
 			nodeAttributesComboBox.setSelectedItem(null);
 
-			if (LookAndFeelUtil.isAquaLAF()) {
-				sizeThreshouldLbl.putClientProperty("JComponent.sizeVariant", "small");
+			if (isAquaLAF()) {
+				sizeThresholdLbl.putClientProperty("JComponent.sizeVariant", "small");
 				sizeSlider.putClientProperty("JComponent.sizeVariant", "mini");
 				attrEnumLbl.putClientProperty("JComponent.sizeVariant", "small");
 				nodeAttributesComboBox.putClientProperty("JComponent.sizeVariant", "small");
@@ -667,28 +688,32 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final GroupLayout layout = new GroupLayout(this);
 			this.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
-			layout.setAutoCreateGaps(!LookAndFeelUtil.isAquaLAF());
+			layout.setAutoCreateGaps(!isAquaLAF());
 			
 			final JSeparator sep = new JSeparator();
 			
 			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.LEADING, true)
 					.addGroup(layout.createSequentialGroup()
-							.addComponent(sizeThreshouldLbl)
+							.addComponent(sizeThresholdLbl)
 							.addComponent(sizeSlider, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 					)
 					.addComponent(sep)
-					.addComponent(attrEnumLbl)
-					.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(attrEnumLbl)
+							.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+					)
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 			);
 			layout.setVerticalGroup(layout.createSequentialGroup()
 					.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
-							.addComponent(sizeThreshouldLbl)
+							.addComponent(sizeThresholdLbl)
 							.addComponent(sizeSlider)
 					)
 					.addComponent(sep, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-					.addComponent(attrEnumLbl)
-					.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
+							.addComponent(attrEnumLbl)
+							.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					)
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 			);
 		}
@@ -1054,7 +1079,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private static class ClusterDetailsRenderer extends JPanel implements TableCellRenderer {
 
 		private final Font FONT = new Font(this.getFont().getFontName(), Font.PLAIN,
-				(int) LookAndFeelUtil.getSmallFontSize());
+				(int) getSmallFontSize());
 		private final GroupLayout layout = new GroupLayout(this);
 		private final JLabel labels[][] = new JLabel[][]{
 				{ new JLabel("Score:"), new JLabel("Nodes:"), new JLabel("Edges:") },
@@ -1062,8 +1087,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		};
 		
 		public ClusterDetailsRenderer() {
-			this.setMinimumSize(new Dimension());
-			this.setLayout(layout);
+			setMinimumSize(new Dimension());
+			setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			
 			int i = 0, j = 0;
@@ -1075,7 +1100,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					final JLabel lbl = labels[i][j];
 					lbl.setHorizontalAlignment(JLabel.RIGHT);
 					
-					if (LookAndFeelUtil.isAquaLAF())
+					if (isAquaLAF())
 						lbl.putClientProperty("JComponent.sizeVariant", "small");
 					else
 						lbl.setFont(FONT);
