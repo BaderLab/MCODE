@@ -105,6 +105,8 @@ public class MCODEAnalyzeTask implements Task {
 		if (taskMonitor == null)
 			throw new IllegalStateException("Task Monitor is not set.");
 
+		taskMonitor.setTitle("MCODE Analysis");
+		
 		boolean success = false;
 		List<MCODECluster> clusters = null;
 		mcodeUtil.resetLoading();
@@ -116,7 +118,6 @@ public class MCODEAnalyzeTask implements Task {
 			// Only (re)score the graph if the scoring parameters have been changed
 			if (analyze == MCODEAnalyzeAction.RESCORE) {
 				taskMonitor.setProgress(0.001);
-				taskMonitor.setTitle("MCODE Analysis");
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
 				
 				alg.scoreGraph(network, resultId);
