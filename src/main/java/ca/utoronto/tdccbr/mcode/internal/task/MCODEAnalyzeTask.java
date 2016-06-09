@@ -1,7 +1,12 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
 import java.awt.Image;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.work.Task;
@@ -66,6 +71,8 @@ public class MCODEAnalyzeTask implements Task {
 	private boolean interrupted;
 	private CyNetwork network;
 	
+	private int count;
+	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
 
 	/**
@@ -111,6 +118,7 @@ public class MCODEAnalyzeTask implements Task {
 				taskMonitor.setProgress(0.001);
 				taskMonitor.setTitle("MCODE Analysis");
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
+				
 				alg.scoreGraph(network, resultId);
 
 				if (interrupted)
@@ -132,19 +140,49 @@ public class MCODEAnalyzeTask implements Task {
 
 			// Also create all the images here for the clusters, since it can be a time consuming operation
 			mcodeUtil.sortClusters(clusters);
-			int imageSize = mcodeUtil.getCurrentParameters().getResultParams(resultId).getDefaultRowHeight();
-			int count = 0;
+			final int imageSize = mcodeUtil.getCurrentParameters().getResultParams(resultId).getDefaultRowHeight();
+			count = 0;
+			final double total = clusters.size();
+			
+			final int cores = Runtime.getRuntime().availableProcessors();
+			final ExecutorService exec = Executors.newFixedThreadPool(cores);
+			final List<Callable<MCODECluster>> tasks = new ArrayList<>();
 
 			for (final MCODECluster c : clusters) {
-				if (interrupted)
-					return;
-				
-				final Image img = mcodeUtil.createClusterImage(c, imageSize, imageSize, null, true, null);
-				c.setImage(img);
-				taskMonitor.setProgress((++count) / (double) clusters.size());
+				final Callable<MCODECluster> callable = new Callable<MCODECluster>() {
+			        @Override
+			        public MCODECluster call() throws Exception {
+			        	if (interrupted)
+			        		return null;
+			        	
+						final Image img = mcodeUtil.createClusterImage(c, imageSize, imageSize, null, true, null);
+						c.setImage(img);
+						taskMonitor.setProgress((++count) / total);
+			        	
+						return c;
+			        }
+			    };
+				tasks.add(callable);
 			}
-
-			success = true;
+			
+			if (interrupted)
+				return;
+			
+			try {
+				final List<Future<MCODECluster>> results = exec.invokeAll(tasks);
+				
+				for (final Future<MCODECluster> future : results) {
+					if (interrupted)
+						break;
+					
+					future.get();
+				}
+			} finally {
+	            exec.shutdown();
+	        }
+			
+			if (!interrupted)
+				success = true;
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		} finally {
