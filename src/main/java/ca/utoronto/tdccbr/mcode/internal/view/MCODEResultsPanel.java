@@ -25,7 +25,6 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -87,7 +86,7 @@ import org.slf4j.LoggerFactory;
 import ca.utoronto.tdccbr.mcode.internal.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -145,7 +144,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private final MCODEAlgorithm alg;
 	private final List<MCODECluster> clusters;
 	private ExploreContentPanel[] exploreContent;
-	private MCODEParameterSet currentParamsCopy;
+	private MCODEParameters currentParamsCopy;
 	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
 	private int enumerationSelection;
 	
@@ -162,7 +161,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JButton createSubNetButton;
 	private JButton closeBtn;
 
-	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEResultsPanel.class);
 
 	/**
@@ -175,19 +173,20 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @param clusterImages A list of images of the found clusters
 	 * @param resultId Title of this result as determined by MCODESCoreAndFindAction
 	 */
-	public MCODEResultsPanel(final List<MCODECluster> clusters,
-							 final MCODEAlgorithm alg,
-							 final MCODEUtil mcodeUtil,
-							 final CyNetwork network,
-							 final CyNetworkView networkView,
-							 final int resultId,
-							 final MCODEDiscardResultAction discardResultAction) {
+	public MCODEResultsPanel(
+			final List<MCODECluster> clusters,
+			final MCODEUtil mcodeUtil,
+			final CyNetwork network,
+			final CyNetworkView networkView,
+			final int resultId,
+			final MCODEDiscardResultAction discardResultAction
+	) {
 		if (isAquaLAF())
 			setOpaque(false);
 		
 		setLayout(new BorderLayout());
 		
-		this.alg = alg;
+		this.alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 		this.mcodeUtil = mcodeUtil;
 		this.resultId = resultId;
 		this.clusters = Collections.synchronizedList(clusters);
@@ -195,7 +194,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
 		this.discardResultAction = discardResultAction;
-		this.currentParamsCopy = mcodeUtil.getCurrentParameters().getResultParams(resultId);
+		this.currentParamsCopy = mcodeUtil.getParameterManager().getResultParams(resultId);
 		
 		this.clusterBrowserPnl = new ClusterBrowserPanel();
 		
@@ -868,11 +867,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		final List<Map.Entry<Object, Integer>> outputList = new ArrayList<>(map.entrySet());
 
 		// Sort the entries with own comparator for the values:
-		Collections.sort(outputList, new Comparator<Map.Entry<Object, Integer>>() {
-			@Override
-			public int compare(Map.Entry<Object, Integer> o1, Map.Entry<Object, Integer> o2) {
-				return o1.getValue().compareTo(o2.getValue());
-			}
+		Collections.sort(outputList, (o1, o2) -> {
+			return o1.getValue().compareTo(o2.getValue());
 		});
 
 		return outputList;

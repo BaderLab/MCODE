@@ -4,15 +4,12 @@ import java.awt.event.ActionEvent;
 
 import javax.swing.JOptionPane;
 
-import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.view.model.CyNetworkViewManager;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
@@ -24,20 +21,14 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 	public static final String REQUEST_USER_CONFIRMATION_COMMAND = "requestUserConfirmation";
 
 	private final int resultId;
-	private final CyServiceRegistrar registrar;
 	private final MCODEUtil mcodeUtil;
+	private final CyServiceRegistrar registrar;
 
-	public MCODEDiscardResultAction(final String name,
-									final int resultId,
-									final CyApplicationManager applicationManager,
-									final CySwingApplication swingApplication,
-									final CyNetworkViewManager netViewManager,
-									final CyServiceRegistrar registrar,
-									final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
+	public MCODEDiscardResultAction(String name, int resultId, MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
+		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, registrar);
 		this.resultId = resultId;
-		this.registrar = registrar;
 		this.mcodeUtil = mcodeUtil;
+		this.registrar = registrar;
 	}
 
 	@Override

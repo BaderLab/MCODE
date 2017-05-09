@@ -12,7 +12,6 @@ import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
-import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
@@ -28,9 +27,9 @@ import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.work.TaskFactory;
-import org.cytoscape.work.TaskManager;
 import org.osgi.framework.BundleContext;
 
+import ca.utoronto.tdccbr.mcode.internal.rest.MCODEAnalysisResource;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODECloseTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -39,7 +38,7 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 public class CyActivator extends AbstractCyActivator {
 
-	private CyServiceRegistrar serviceRegistrar;
+	private CyServiceRegistrar registrar;
 	private MCODEUtil mcodeUtil;
 	
 	public CyActivator() {
@@ -49,12 +48,11 @@ public class CyActivator extends AbstractCyActivator {
 	@Override
 	@SuppressWarnings("unchecked")
 	public void start(BundleContext bc) {
-		serviceRegistrar = getService(bc, CyServiceRegistrar.class);
+		registrar = getService(bc, CyServiceRegistrar.class);
 		
 		CyApplicationManager appMgr = getService(bc, CyApplicationManager.class);
 		CyNetworkViewManager netViewMgr = getService(bc, CyNetworkViewManager.class);
 		CyNetworkManager netMgr = getService(bc, CyNetworkManager.class);
-		TaskManager<?, ?> taskMgr = getService(bc, TaskManager.class);
 		
 		CyNetworkViewFactory netViewFactory = getService(bc, CyNetworkViewFactory.class);
 		CyRootNetworkManager rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
@@ -69,19 +67,18 @@ public class CyActivator extends AbstractCyActivator {
 		
 		FileUtil fileUtil = getService(bc, FileUtil.class);
 		OpenBrowser openBrowser = getService(bc, OpenBrowser.class);
-		CyEventHelper eventHelper = getService(bc, CyEventHelper.class);
 		
 		mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
 								  appMgr, netMgr, netViewMgr, visualStyleFactory,
-								  visualMappingMgr, swingApp, eventHelper, discreteMappingFactory,
+								  visualMappingMgr, swingApp, discreteMappingFactory,
 								  continuousMappingFactory, fileUtil);
 		
 		closeMCODEPanels();
 		
-		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze Current Network", appMgr, swingApp, netViewMgr, serviceRegistrar, taskMgr, mcodeUtil);
-		MCODEHelpAction helpAction = new MCODEHelpAction("Help", appMgr, swingApp, netViewMgr, openBrowser);
-		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", appMgr, swingApp, netViewMgr, visualMappingMgr, mcodeUtil);
-		MCODEAboutAction aboutAction = new MCODEAboutAction("About", appMgr, swingApp, netViewMgr, openBrowser, mcodeUtil);
+		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze Current Network", registrar, mcodeUtil);
+		MCODEHelpAction helpAction = new MCODEHelpAction("Help", openBrowser, registrar);
+		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", registrar, mcodeUtil);
+		MCODEAboutAction aboutAction = new MCODEAboutAction("About", registrar, mcodeUtil);
 		
 		registerService(bc, helpAction, CyAction.class, new Properties());
 		registerService(bc, aboutAction, CyAction.class, new Properties());
@@ -89,7 +86,7 @@ public class CyActivator extends AbstractCyActivator {
 		registerService(bc, visualStyleAction, CyAction.class, new Properties());
 		registerService(bc, visualStyleAction, CytoPanelComponentSelectedListener.class, new Properties());
 		
-		MCODEOpenTaskFactory openTaskFactory = new MCODEOpenTaskFactory(swingApp, serviceRegistrar, mcodeUtil, analyzeAction);
+		MCODEOpenTaskFactory openTaskFactory = new MCODEOpenTaskFactory(swingApp, registrar, mcodeUtil, analyzeAction);
 		Properties openTaskFactoryProps = new Properties();
 		openTaskFactoryProps.setProperty(PREFERRED_MENU, "Apps.MCODE");
 		openTaskFactoryProps.setProperty(TITLE, "Open MCODE");
@@ -97,7 +94,7 @@ public class CyActivator extends AbstractCyActivator {
 		
 		registerService(bc, openTaskFactory, TaskFactory.class, openTaskFactoryProps);
 		
-		MCODECloseTaskFactory closeTaskFactory = new MCODECloseTaskFactory(swingApp, serviceRegistrar, mcodeUtil);
+		MCODECloseTaskFactory closeTaskFactory = new MCODECloseTaskFactory(swingApp, registrar, mcodeUtil);
 		Properties closeTaskFactoryProps = new Properties();
 		closeTaskFactoryProps.setProperty(PREFERRED_MENU, "Apps.MCODE");
 		closeTaskFactoryProps.setProperty(TITLE, "Close MCODE");
@@ -105,6 +102,9 @@ public class CyActivator extends AbstractCyActivator {
 		
 		registerService(bc, closeTaskFactory, TaskFactory.class, closeTaskFactoryProps);
 		registerService(bc, closeTaskFactory, NetworkAboutToBeDestroyedListener.class, new Properties());
+		
+		MCODEAnalysisResource analysisResource = new MCODEAnalysisResource(analyzeAction, mcodeUtil, registrar);
+		registerService(bc, analysisResource, MCODEAnalysisResource.class);
 	}
 	
 	@Override
@@ -126,7 +126,7 @@ public class CyActivator extends AbstractCyActivator {
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
 					if (comp.getClass().getName().equals(MCODEResultsPanel.class.getName()))
-						serviceRegistrar.unregisterAllServices(comp);
+						registrar.unregisterAllServices(comp);
 				}
 			} catch (Exception e) {
 			}
@@ -144,7 +144,7 @@ public class CyActivator extends AbstractCyActivator {
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
 					if (comp.getClass().getName().equals(MCODEMainPanel.class.getName()))
-						serviceRegistrar.unregisterAllServices(comp);
+						registrar.unregisterAllServices(comp);
 				} catch (Exception e) {
 				}
 			}

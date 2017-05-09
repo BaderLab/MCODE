@@ -2,11 +2,9 @@ package ca.utoronto.tdccbr.mcode.internal;
 
 import java.awt.event.ActionEvent;
 
-import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.OpenBrowser;
-import org.cytoscape.view.model.CyNetworkViewManager;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEAboutDialog;
@@ -54,18 +52,11 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 
 	private static final long serialVersionUID = -8445425993916988045L;
 
-	private final OpenBrowser openBrowser;
 	private final MCODEUtil mcodeUtil;
 	private MCODEAboutDialog aboutDialog;
 
-	public MCODEAboutAction(final String name,
-							final CyApplicationManager applicationManager,
-							final CySwingApplication swingApplication,
-							final CyNetworkViewManager netViewManager,
-							final OpenBrowser openBrowser,
-							final MCODEUtil mcodeUtil) {
-		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
-		this.openBrowser = openBrowser;
+	public MCODEAboutAction(String name, CyServiceRegistrar serviceRegistrar, MCODEUtil mcodeUtil) {
+		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, serviceRegistrar);
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");
 	}
@@ -74,10 +65,10 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 	public void actionPerformed(ActionEvent e) {
 		//display about box
 		synchronized (this) {
-			if (aboutDialog == null) {
-				aboutDialog = new MCODEAboutDialog(swingApplication, openBrowser, mcodeUtil);
-			}
-			
+			if (aboutDialog == null)
+				aboutDialog = new MCODEAboutDialog(swingApplication, serviceRegistrar.getService(OpenBrowser.class),
+						mcodeUtil);
+
 			if (!aboutDialog.isVisible()) {
 				aboutDialog.setLocationRelativeTo(null);
 				aboutDialog.setVisible(true);

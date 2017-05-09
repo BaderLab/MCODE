@@ -8,6 +8,7 @@ import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkViewManager;
 
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
@@ -20,18 +21,18 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	protected final CySwingApplication swingApplication;
 	protected final CyApplicationManager applicationManager;
 	protected final CyNetworkViewManager netViewManager;
+	protected final CyServiceRegistrar serviceRegistrar;
 
-	public AbstractMCODEAction(final String name,
-							   final CyApplicationManager applicationManager,
-							   final CySwingApplication swingApplication,
-							   final CyNetworkViewManager netViewManager,
-							   final String enableFor) {
-		super(name, applicationManager, enableFor, netViewManager);
-		this.applicationManager = applicationManager;
-		this.swingApplication = swingApplication;
-		this.netViewManager = netViewManager;
+	public AbstractMCODEAction(String name, String enableFor, CyServiceRegistrar serviceRegistrar) {
+		super(name, serviceRegistrar.getService(CyApplicationManager.class), enableFor,
+				serviceRegistrar.getService(CyNetworkViewManager.class));
+		
+		this.applicationManager = serviceRegistrar.getService(CyApplicationManager.class);
+		this.swingApplication = serviceRegistrar.getService(CySwingApplication.class);
+		this.netViewManager = serviceRegistrar.getService(CyNetworkViewManager.class);
+		this.serviceRegistrar = serviceRegistrar;
 	}
-
+	
 	/**
 	 * @return Cytoscape's control panel
 	 */
@@ -65,7 +66,7 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	 * @return The result panels of the app if it is opened, or an empty collection otherwise
 	 */
 	protected Collection<MCODEResultsPanel> getResultPanels() {
-		Collection<MCODEResultsPanel> panels = new ArrayList<MCODEResultsPanel>();
+		Collection<MCODEResultsPanel> panels = new ArrayList<>();
 		CytoPanel cytoPanel = getResultsCytoPanel();
 		int count = cytoPanel.getCytoPanelComponentCount();
 

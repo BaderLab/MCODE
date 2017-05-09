@@ -191,7 +191,7 @@ public class NodeDistances implements MonitorableTask {
 			integers[index] = index;
 		}
 
-		LinkedList<Integer> queue = new LinkedList<Integer>();
+		LinkedList<Integer> queue = new LinkedList<>();
 		boolean[] completed_nodes = new boolean[nodes.length];
 		Collection<CyNode> neighbors;
 		CyNode to_node;
@@ -325,7 +325,7 @@ public class NodeDistances implements MonitorableTask {
 	}
 
 	private Collection<CyNode> getNeighbors(CyNode node) {
-		final Set<CyNode> result = new HashSet<CyNode>();
+		final Set<CyNode> result = new HashSet<>();
 		final Collection<CyEdge> edges = network.getAdjacentEdgeList(node, CyEdge.Type.ANY);
 
 		if (edges == null || edges.size() == 0) return result;

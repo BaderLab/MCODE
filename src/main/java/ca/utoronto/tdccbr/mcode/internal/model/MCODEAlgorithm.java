@@ -112,7 +112,7 @@ public class MCODEAlgorithm {
 	//key is result id, value is nodeInfroHashMap
 	private Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<>();
 
-	private MCODEParameterSet params; //the parameters used for this instance of the algorithm
+	private MCODEParameters params; //the parameters used for this instance of the algorithm
 	//stats
 	private long lastScoreTime;
 	private long lastFindTime;
@@ -127,7 +127,7 @@ public class MCODEAlgorithm {
 	 */
 	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
 		this.mcodeUtil = mcodeUtil;
-		this.params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
+		this.params = mcodeUtil.getParameterManager().getParamsCopy(networkID);
 	}
 
 	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
@@ -136,7 +136,7 @@ public class MCODEAlgorithm {
 	}
 
 	public void setTaskMonitor(TaskMonitor taskMonitor, Long networkID) {
-		this.params = mcodeUtil.getCurrentParameters().getParamsCopy(networkID);
+		this.params = mcodeUtil.getParameterManager().getParamsCopy(networkID);
 		this.taskMonitor = taskMonitor;
 	}
 
@@ -163,7 +163,7 @@ public class MCODEAlgorithm {
 	 *
 	 * @return The parameter set used
 	 */
-	public MCODEParameterSet getParams() {
+	public MCODEParameters getParams() {
 		return params;
 	}
 
@@ -232,11 +232,8 @@ public class MCODEAlgorithm {
 		final Map<Long, NodeInfo> nodeInfoHashMap = new HashMap<>(inputNetwork.getNodeCount());
 
 		// Sort Doubles in descending order
-		Comparator<Double> scoreComparator = new Comparator<Double>() {
-			@Override
-			public int compare(Double d1, Double d2) {
-				return d2.compareTo(d1);
-			}
+		Comparator<Double> scoreComparator = (d1, d2) -> {
+			return d2.compareTo(d1);
 		};
 		
 		// Will store Doubles (score) as the key, Lists of node indexes as values
@@ -251,19 +248,16 @@ public class MCODEAlgorithm {
 		final List<Callable<NodeInfo>> tasks = new ArrayList<>();
 		
 		for (final CyNode n : nodes) {
-			final Callable<NodeInfo> c = new Callable<NodeInfo>() {
-		        @Override
-		        public NodeInfo call() throws Exception {
-		        	if (cancelled)
-		        		return null;
-		        	
-		        	final NodeInfo nodeInfo = calcNodeInfo(inputNetwork, n);
-		        	
-		        	if (taskMonitor != null)
-						taskMonitor.setProgress(++count / (double) nodes.size());
-		        	
-					return nodeInfo;
-		        }
+			final Callable<NodeInfo> c = () -> {
+	        	if (cancelled)
+	        		return null;
+	        	
+	        	final NodeInfo nodeInfo = calcNodeInfo(inputNetwork, n);
+	        	
+	        	if (taskMonitor != null)
+					taskMonitor.setProgress(++count / (double) nodes.size());
+	        	
+				return nodeInfo;
 		    };
 		    tasks.add(c);
 		    
@@ -432,7 +426,7 @@ public class MCODEAlgorithm {
 		// the ones that contain the selected node(s) and return those
 		List<MCODECluster> selectedALClusters = new ArrayList<>();
 
-		if (MCODEParameterSet.SELECTION.equals(params.getScope())) {
+		if (MCODEAnalysisScope.SELECTION == params.getScope()) {
 			for (MCODECluster cluster : alClusters) {
 				List<Long> alCluster = cluster.getALCluster();
 				List<Long> alSelectedNodes = new ArrayList<>();
@@ -475,7 +469,7 @@ public class MCODEAlgorithm {
 		// This method is similar to the finding method with the exception of the filtering so that the decrease of the cluster size
 		// can produce a single node, also the use of the node seen hash map is differentially applied...
 		final Map<Long, NodeInfo> nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
-		final MCODEParameterSet params = mcodeUtil.getCurrentParameters().getResultParams(cluster.getResultId());
+		final MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(cluster.getResultId());
 		final Map<Long, Boolean> nodeSeenHashMap;
 
 		// If the size slider is below the set node score cutoff we use the node seen hash map so that clusters

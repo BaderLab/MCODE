@@ -5,13 +5,10 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
 import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
-import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.vizmap.VisualStyle;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
@@ -62,17 +59,10 @@ public class MCODEVisualStyleAction extends AbstractMCODEAction implements CytoP
 
 	private static final long serialVersionUID = -6884537645922099638L;
 
-	private final VisualMappingManager visualMappingMgr;
 	private final MCODEUtil mcodeUtil;
 
-	public MCODEVisualStyleAction(final String title,
-								  final CyApplicationManager applicationManager,
-								  final CySwingApplication swingApplication,
-								  final CyNetworkViewManager netViewManager,
-								  final VisualMappingManager visualMappingMgr,
-								  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_NETWORK);
-		this.visualMappingMgr = visualMappingMgr;
+	public MCODEVisualStyleAction(String title, CyServiceRegistrar registrar, MCODEUtil mcodeUtil) {
+		super(title, ActionEnableSupport.ENABLE_FOR_NETWORK, registrar);
 		this.mcodeUtil = mcodeUtil;
 	}
 

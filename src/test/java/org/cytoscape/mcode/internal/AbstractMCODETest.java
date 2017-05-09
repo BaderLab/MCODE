@@ -10,7 +10,7 @@ import org.cytoscape.model.CyNode;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 public abstract class AbstractMCODETest {
@@ -24,13 +24,13 @@ public abstract class AbstractMCODETest {
 	}
 
 	protected List<MCODECluster> findClusters(final CyNetwork net) {
-		return findClusters(net, new MCODEParameterSet());
+		return findClusters(net, new MCODEParameters());
 	}
 
-	protected List<MCODECluster> findClusters(CyNetwork net, MCODEParameterSet params) {
+	protected List<MCODECluster> findClusters(CyNetwork net, MCODEParameters params) {
 		final int resultId = mcodeUtil.getNextResultId();
 		
-		mcodeUtil.getCurrentParameters().setParams(params, resultId, net.getSUID());
+		mcodeUtil.getParameterManager().setParams(params, resultId, net.getSUID());
 		alg = new MCODEAlgorithm(net.getSUID(), mcodeUtil);
 		alg.scoreGraph(net, resultId);
 		List<MCODECluster> clusters = alg.findClusters(net, resultId);

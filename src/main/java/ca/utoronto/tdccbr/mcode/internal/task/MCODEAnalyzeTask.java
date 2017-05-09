@@ -9,14 +9,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.cytoscape.model.CyNetwork;
-import org.cytoscape.work.Task;
+import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
-import ca.utoronto.tdccbr.mcode.internal.event.AnalysisCompletedEvent;
-import ca.utoronto.tdccbr.mcode.internal.event.AnalysisCompletedListener;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -60,18 +58,21 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * MCODE Score network and find cluster task.
  */
-public class MCODEAnalyzeTask implements Task {
+public class MCODEAnalyzeTask implements ObservableTask {
 
+	private static final int IMAGE_SIZE = 80;
+	
 	private final MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
 	private final int analyze;
 	private final int resultId;
-	private final AnalysisCompletedListener listener;
 
 	private boolean interrupted;
 	private CyNetwork network;
 	
 	private int count;
+
+	private List<MCODECluster> clusters;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
 
@@ -83,18 +84,18 @@ public class MCODEAnalyzeTask implements Task {
 	 * @param resultId Identifier of the current result set
 	 * @param alg reference to the algorithm for this network
 	 */
-	public MCODEAnalyzeTask(final CyNetwork network,
-							final int analyze,
-							final int resultId,
-							final MCODEAlgorithm alg,
-							final MCODEUtil mcodeUtil,
-							final AnalysisCompletedListener listener) {
+	public MCODEAnalyzeTask(
+			final CyNetwork network,
+			final int analyze,
+			final int resultId,
+			final MCODEAlgorithm alg,
+			final MCODEUtil mcodeUtil
+	) {
 		this.network = network;
 		this.analyze = analyze;
 		this.resultId = resultId;
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
-		this.listener = listener;
 	}
 
 	/**
@@ -107,8 +108,6 @@ public class MCODEAnalyzeTask implements Task {
 
 		taskMonitor.setTitle("MCODE Analysis");
 		
-		boolean success = false;
-		List<MCODECluster> clusters = null;
 		mcodeUtil.resetLoading();
 
 		try {
@@ -141,7 +140,6 @@ public class MCODEAnalyzeTask implements Task {
 
 			// Also create all the images here for the clusters, since it can be a time consuming operation
 			mcodeUtil.sortClusters(clusters);
-			final int imageSize = mcodeUtil.getCurrentParameters().getResultParams(resultId).getDefaultRowHeight();
 			count = 0;
 			final double total = clusters.size();
 			
@@ -150,18 +148,15 @@ public class MCODEAnalyzeTask implements Task {
 			final List<Callable<MCODECluster>> tasks = new ArrayList<>();
 
 			for (final MCODECluster c : clusters) {
-				final Callable<MCODECluster> callable = new Callable<MCODECluster>() {
-			        @Override
-			        public MCODECluster call() throws Exception {
-			        	if (interrupted)
-			        		return null;
-			        	
-						final Image img = mcodeUtil.createClusterImage(c, imageSize, imageSize, null, true, null);
-						c.setImage(img);
-						taskMonitor.setProgress((++count) / total);
-			        	
-						return c;
-			        }
+				final Callable<MCODECluster> callable = () -> {
+		        	if (interrupted)
+		        		return null;
+		        	
+					final Image img = mcodeUtil.createClusterImage(c, IMAGE_SIZE, IMAGE_SIZE, null, true, null);
+					c.setImage(img);
+					taskMonitor.setProgress((++count) / total);
+		        	
+					return c;
 			    };
 				tasks.add(callable);
 			}
@@ -181,14 +176,8 @@ public class MCODEAnalyzeTask implements Task {
 			} finally {
 	            exec.shutdown();
 	        }
-			
-			if (!interrupted)
-				success = true;
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
-		} finally {
-			if (listener != null)
-				listener.handleEvent(new AnalysisCompletedEvent(success, clusters));
 		}
 	}
 
@@ -200,12 +189,9 @@ public class MCODEAnalyzeTask implements Task {
 		mcodeUtil.removeNetworkAlgorithm(network.getSUID());
 	}
 
-	/**
-	 * Gets the Task Title.
-	 *
-	 * @return human readable task title.
-	 */
-	public String getTitle() {
-		return "MCODE Network Cluster Detection";
+	@Override
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public Object getResults(Class type) {
+		return clusters;
 	}
 }

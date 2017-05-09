@@ -2,11 +2,9 @@ package ca.utoronto.tdccbr.mcode.internal;
 
 import java.awt.event.ActionEvent;
 
-import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.OpenBrowser;
-import org.cytoscape.view.model.CyNetworkViewManager;
 
 /**
  * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -54,12 +52,8 @@ public class MCODEHelpAction extends AbstractMCODEAction {
 
 	private final OpenBrowser openBrowser;
 
-	public MCODEHelpAction(final String name,
-						   final CyApplicationManager applicationManager,
-						   final CySwingApplication swingApplication,
-						   final CyNetworkViewManager netViewManager,
-						   final OpenBrowser openBrowser) {
-		super(name, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_ALWAYS);
+	public MCODEHelpAction(String name, OpenBrowser openBrowser, CyServiceRegistrar registrar) {
+		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, registrar);
 		this.openBrowser = openBrowser;
 		setPreferredMenu("Apps.MCODE");
 	}

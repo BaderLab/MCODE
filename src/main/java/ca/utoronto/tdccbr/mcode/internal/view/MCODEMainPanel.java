@@ -38,7 +38,8 @@ import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
 
 import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -101,7 +102,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JFormattedTextField densityCutoffTxt;
 	private JFormattedTextField maxDepthTxt;
 
-	private MCODEParameterSet currentParamsCopy; // stores current parameters - populates panel fields
+	private MCODEParameters currentParamsCopy; // stores current parameters - populates panel fields
 	private DecimalFormat decFormat; // used in the formatted text fields
 
 	/**
@@ -121,7 +122,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		setPreferredSize(new Dimension(380, 400));
 		
 		// get the current parameters
-		currentParamsCopy = this.mcodeUtil.getCurrentParameters().getParamsCopy(null);
+		currentParamsCopy = mcodeUtil.getParameterManager().getParamsCopy(null);
 		currentParamsCopy.setDefaultParams();
 
 		decFormat = new DecimalFormat();
@@ -174,7 +175,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		return "";
 	}
 
-	public MCODEParameterSet getCurrentParamsCopy() {
+	public MCODEParameters getCurrentParamsCopy() {
 		return currentParamsCopy;
 	}
 
@@ -190,12 +191,12 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				scopePnl.setOpaque(false);
 
 			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
-					currentParamsCopy.getScope().equals(MCODEParameterSet.NETWORK));
+					currentParamsCopy.getScope() == MCODEAnalysisScope.NETWORK);
 			final JRadioButton selScopeBtn = new JRadioButton("from selection",
-					currentParamsCopy.getScope().equals(MCODEParameterSet.SELECTION));
+					currentParamsCopy.getScope() == MCODEAnalysisScope.SELECTION);
 			
-			netScopeBtn.setActionCommand(MCODEParameterSet.NETWORK);
-			selScopeBtn.setActionCommand(MCODEParameterSet.SELECTION);
+			netScopeBtn.setActionCommand(MCODEAnalysisScope.NETWORK.toString());
+			selScopeBtn.setActionCommand(MCODEAnalysisScope.SELECTION.toString());
 
 			netScopeBtn.addActionListener(new ScopeAction());
 			selScopeBtn.addActionListener(new ScopeAction());
@@ -522,7 +523,11 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			String scope = e.getActionCommand();
-			currentParamsCopy.setScope(scope);
+			
+			if (MCODEAnalysisScope.SELECTION.toString().equalsIgnoreCase(scope))
+				currentParamsCopy.setScope(MCODEAnalysisScope.SELECTION);
+			else
+				currentParamsCopy.setScope(MCODEAnalysisScope.NETWORK);
 		}
 		// }
 	}

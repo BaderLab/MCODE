@@ -8,7 +8,6 @@ import java.util.List;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.ding.NetworkViewTestSupport;
-import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.AbstractMCODETest;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
@@ -28,7 +27,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -83,7 +82,6 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Mock VisualStyleFactory styleFactory;
 	@Mock VisualMappingFunctionFactory vmfFactory;
 	@Mock CySwingApplication swingApp;
-	@Mock CyEventHelper evtHelper;
 	@Mock FileUtil fileUtil;
 	
 	NetworkViewTestSupport netViewTestSupport;
@@ -98,7 +96,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		netViewFactory = netViewTestSupport.getNetworkViewFactory();
 		
 		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
-				styleFactory, vmMgr, swingApp, evtHelper, vmfFactory, vmfFactory, fileUtil);
+				styleFactory, vmMgr, swingApp, vmfFactory, vmfFactory, fileUtil);
 //		networkSmall = Cytoscape.createNetworkFromFile("testData" + File.separator + "smallTest.sif");
 	}
 
@@ -145,7 +143,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	public void testCompleteGraphIncludingLoops() {
 		CyNetwork net = createCompleteGraph(16);
 		int resultId = mcodeUtil.getNextResultId();
-		MCODEParameterSet params = new MCODEParameterSet();
+		MCODEParameters params = new MCODEParameters();
 		params.setIncludeLoops(true);
 		
 		List<MCODECluster> clusters = findClusters(net, params);

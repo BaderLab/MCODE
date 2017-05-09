@@ -1,5 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.model;
 
+import static ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope.NETWORK;
+
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
@@ -37,24 +39,21 @@ package ca.utoronto.tdccbr.mcode.internal.model;
  **/
 
 /**
- * Stores an MCODE parameter set
+ * Contains the MCODE analysis parameters.
  */
-public class MCODEParameterSet {
+public class MCODEParameters {
 
-	//parameters
-
-	//scope
-	public static String NETWORK = "network";
-	public static String SELECTION = "selection";
-	private String scope;
+	// scope
+	private Long networkSUID;
+	private MCODEAnalysisScope scope;
 	private Long[] selectedNodes;
 
-	//used in scoring stage
+	// used in scoring stage
 	private boolean includeLoops;
 	private int degreeCutoff;
 	private int kCore;
 
-	//used in cluster finding stage
+	// used in cluster finding stage
 	private boolean optimize;
 	private int maxDepthFromStart;
 	private double nodeScoreCutoff;
@@ -62,11 +61,9 @@ public class MCODEParameterSet {
 	private boolean haircut;
 	private double fluffNodeDensityCutoff;
 
-	//result viewing parameters (only used for dialog box of results)
-	private int defaultRowHeight;
-
 	/**
 	 * Constructor for the parameter set object. Default parameters are:
+	 * networkViewSUID = null, ('use the current view')
 	 * scope = NETWORK,
 	 * selectedNodes = new Integer[0],
 	 * loops = false,
@@ -77,14 +74,9 @@ public class MCODEParameterSet {
 	 * fluff = false,
 	 * haircut = true,
 	 * fluff node density cutoff = 0.1,
-	 * row height for results table = 80 pixels.
 	 */
-	public MCODEParameterSet() {
-		//default parameters
+	public MCODEParameters() {
 		setDefaultParams();
-
-		//results dialog box
-		defaultRowHeight = 80;
 	}
 
 	/**
@@ -92,6 +84,7 @@ public class MCODEParameterSet {
 	 * Once an alalysis is conducted, new parameters must be saved so that they can be retrieved in the result panel
 	 * for exploration and export purposes.
 	 *
+	 * @param networkSUID CyNetwork to be analyzed
 	 * @param scope scope of the search (equal to one of the two fields NETWORK or SELECTION)
 	 * @param selectedNodes Node selection for selection-based scope
 	 * @param includeLoops include loops
@@ -104,44 +97,35 @@ public class MCODEParameterSet {
 	 * @param haircut haircut
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
-	public MCODEParameterSet(String scope,
-							 Long[] selectedNodes,
-							 boolean includeLoops,
-							 int degreeCutoff,
-							 int kCore,
-							 boolean optimize,
-							 int maxDepthFromStart,
-							 double nodeScoreCutoff,
-							 boolean fluff,
-							 boolean haircut,
-							 double fluffNodeDensityCutoff) {
-
-		setAllAlgorithmParams(scope,
-							  selectedNodes,
-							  includeLoops,
-							  degreeCutoff,
-							  kCore,
-							  optimize,
-							  maxDepthFromStart,
-							  nodeScoreCutoff,
-							  fluff,
-							  haircut,
-							  fluffNodeDensityCutoff);
-
-		//results dialog box
-		defaultRowHeight = 80;
+	public MCODEParameters(
+			Long networkSUID,
+			MCODEAnalysisScope scope,
+			Long[] selectedNodes,
+			boolean includeLoops,
+			int degreeCutoff,
+			int kCore,
+			boolean optimize,
+			int maxDepthFromStart,
+			double nodeScoreCutoff,
+			boolean fluff,
+			boolean haircut,
+			double fluffNodeDensityCutoff
+	) {
+		setAllAlgorithmParams(networkSUID, scope, selectedNodes, includeLoops, degreeCutoff, kCore, optimize,
+				maxDepthFromStart, nodeScoreCutoff, fluff, haircut, fluffNodeDensityCutoff);
 	}
 
 	/**
 	 * Method for setting all parameters to their default values
 	 */
 	public void setDefaultParams() {
-		setAllAlgorithmParams(NETWORK, new Long[0], false, 2, 2, false, 100, 0.2, false, true, 0.1);
+		setAllAlgorithmParams(null, NETWORK, new Long[0], false, 2, 2, false, 100, 0.2, false, true, 0.1);
 	}
 
 	/**
 	 * Convenience method to set all the main algorithm parameters
 	 *
+	 * @param networkSUID CyNetwork to be analyzed
 	 * @param scope scope
 	 * @param selectedNodes Node selection for selection-based scopes
 	 * @param includeLoops include loops
@@ -154,18 +138,21 @@ public class MCODEParameterSet {
 	 * @param haircut haircut
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
-	public void setAllAlgorithmParams(String scope,
-									  Long[] selectedNodes,
-									  boolean includeLoops,
-									  int degreeCutoff,
-									  int kCore,
-									  boolean optimize,
-									  int maxDepthFromStart,
-									  double nodeScoreCutoff,
-									  boolean fluff,
-									  boolean haircut,
-									  double fluffNodeDensityCutoff) {
-
+	public void setAllAlgorithmParams(
+			Long networkSUID,
+			MCODEAnalysisScope scope,
+			Long[] selectedNodes,
+			boolean includeLoops,
+			int degreeCutoff,
+			int kCore,
+			boolean optimize,
+			int maxDepthFromStart,
+			double nodeScoreCutoff,
+			boolean fluff,
+			boolean haircut,
+			double fluffNodeDensityCutoff
+	) {
+		this.networkSUID = networkSUID;
 		this.scope = scope;
 		this.selectedNodes = selectedNodes;
 		this.includeLoops = includeLoops;
@@ -184,30 +171,37 @@ public class MCODEParameterSet {
 	 *
 	 * @return A copy of the parameter set
 	 */
-	public MCODEParameterSet copy() {
-		MCODEParameterSet newParam = new MCODEParameterSet();
-		newParam.setScope(this.scope);
-		newParam.setSelectedNodes(this.selectedNodes);
-		newParam.setIncludeLoops(this.includeLoops);
-		newParam.setDegreeCutoff(this.degreeCutoff);
-		newParam.setKCore(this.kCore);
-		newParam.setOptimize(this.optimize);
-		newParam.setMaxDepthFromStart(this.maxDepthFromStart);
-		newParam.setNodeScoreCutoff(this.nodeScoreCutoff);
-		newParam.setFluff(this.fluff);
-		newParam.setHaircut(this.haircut);
-		newParam.setFluffNodeDensityCutoff(this.fluffNodeDensityCutoff);
-		//results dialog box
-		newParam.setDefaultRowHeight(this.defaultRowHeight);
+	public MCODEParameters copy() {
+		MCODEParameters newParam = new MCODEParameters();
+		newParam.setNetworkSUID(networkSUID);
+		newParam.setScope(scope);
+		newParam.setSelectedNodes(selectedNodes);
+		newParam.setIncludeLoops(includeLoops);
+		newParam.setDegreeCutoff(degreeCutoff);
+		newParam.setKCore(kCore);
+		newParam.setOptimize(optimize);
+		newParam.setMaxDepthFromStart(maxDepthFromStart);
+		newParam.setNodeScoreCutoff(nodeScoreCutoff);
+		newParam.setFluff(fluff);
+		newParam.setHaircut(haircut);
+		newParam.setFluffNodeDensityCutoff(fluffNodeDensityCutoff);
+		
 		return newParam;
 	}
+	
+	public Long getNetworkSUID() {
+		return networkSUID;
+	}
+	
+	public void setNetworkSUID(Long networkSUID) {
+		this.networkSUID = networkSUID;
+	}
 
-	//parameter getting and setting
-	public String getScope() {
+	public MCODEAnalysisScope getScope() {
 		return scope;
 	}
 
-	public void setScope(String scope) {
+	public void setScope(MCODEAnalysisScope scope) {
 		this.scope = scope;
 	}
 
@@ -291,20 +285,13 @@ public class MCODEParameterSet {
 		this.fluffNodeDensityCutoff = fluffNodeDensityCutoff;
 	}
 
-	public int getDefaultRowHeight() {
-		return defaultRowHeight;
-	}
-
-	public void setDefaultRowHeight(int defaultRowHeight) {
-		this.defaultRowHeight = defaultRowHeight;
-	}
-
 	/**
 	 * Generates a summary of the parameters. Only parameters that are necessary are included.
 	 * For example, if fluff is not turned on, the fluff density cutoff will not be included.
 	 * 
 	 * @return Buffered string summarizing the parameters
 	 */
+	@Override
 	public String toString() {
 		String lineSep = System.getProperty("line.separator");
 		StringBuffer sb = new StringBuffer();

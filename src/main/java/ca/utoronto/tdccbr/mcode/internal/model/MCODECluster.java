@@ -48,24 +48,30 @@ import org.cytoscape.view.model.CyNetworkView;
  */
 public class MCODECluster {
 
-	private int resultId;
-	private Long seedNode;
-	private MCODEGraph graph;
-	private List<Long> alCluster;
-	private CyNetworkView view; // keeps track of layout so that layout process doesn't have to be repeated unnecessarily
-	private Map<Long, Boolean> nodeSeenHashMap; // stores the nodes that have already been included in higher ranking clusters
-	private double score;
-	private String name; // pretty much unused so far, but could store name by user's input
+	private transient int resultId;
+	
 	private int rank;
-	private Image image;
-	private boolean disposed;
+	private String name; // pretty much unused so far, but could store name by user's input
+	private double score;
+	private Long seedNode;
+	private List<Long> alCluster;
+	
+	/** keeps track of layout so that layout process doesn't have to be repeated unnecessarily */
+	private transient CyNetworkView view;
+	/** stores the nodes that have already been included in higher ranking clusters */
+	private transient Map<Long, Boolean> nodeSeenHashMap;
+	private transient MCODEGraph graph;
+	private transient Image image;
+	private transient boolean disposed;
 
-	public MCODECluster(final int resultId,
-						final Long seedNode,
-						final MCODEGraph graph,
-						final double score,
-						final List<Long> alCluster,
-						final Map<Long, Boolean> nodeSeenHashMap) {
+	public MCODECluster(
+			int resultId,
+			Long seedNode,
+			MCODEGraph graph,
+			double score,
+			List<Long> alCluster,
+			Map<Long, Boolean> nodeSeenHashMap
+	) {
 		assert seedNode != null;
 		assert graph != null;
 		assert alCluster != null;

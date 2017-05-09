@@ -12,11 +12,9 @@ import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
-import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkEvent;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -33,15 +31,17 @@ import org.cytoscape.model.events.RemovedNodesEvent;
 import org.cytoscape.model.events.RemovedNodesListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
-import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.work.FinishStatus;
+import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskManager;
+import org.cytoscape.work.TaskObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ca.utoronto.tdccbr.mcode.internal.event.AnalysisCompletedEvent;
-import ca.utoronto.tdccbr.mcode.internal.event.AnalysisCompletedListener;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterSet;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
@@ -96,7 +96,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	public final static int INTERRUPTION = 3;
 
 	private final CyServiceRegistrar registrar;
-	private final TaskManager<?, ?> taskManager;
 	private final MCODEUtil mcodeUtil;
 
 	int analyze = FIRST_TIME;
@@ -105,16 +104,9 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeAction.class);
 
-	public MCODEAnalyzeAction(final String title,
-							  final CyApplicationManager applicationManager,
-							  final CySwingApplication swingApplication,
-							  final CyNetworkViewManager netViewManager,
-							  final CyServiceRegistrar registrar,
-							  final TaskManager<?, ?> taskManager,
-							  final MCODEUtil mcodeUtil) {
-		super(title, applicationManager, swingApplication, netViewManager, ActionEnableSupport.ENABLE_FOR_NETWORK);
+	public MCODEAnalyzeAction(String title, CyServiceRegistrar registrar, MCODEUtil mcodeUtil) {
+		super(title, ActionEnableSupport.ENABLE_FOR_NETWORK, registrar);
 		this.registrar = registrar;
-		this.taskManager = taskManager;
 		this.mcodeUtil = mcodeUtil;
 		dirtyNetworks = new HashMap<>();
 	}
@@ -126,10 +118,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	 */
 	@Override
 	public void actionPerformed(final ActionEvent event) {
-		String interruptedMessage = "";
 		// Get the selected network
 		final CyNetwork network = applicationManager.getCurrentNetwork();
-		final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
 
 		// This should never happen, because the action should be disabled,
 		// but let's keep this extra check anyway 
@@ -146,131 +136,68 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 										  JOptionPane.WARNING_MESSAGE);
 			return;
 		}
-
-		List<CyNode> nodes = network.getNodeList();
-		List<Long> selectedNodes = new ArrayList<Long>();
-
-		for (CyNode n : nodes) {
-			if (network.getRow(n).get(CyNetwork.SELECTED, Boolean.class)) {
-				selectedNodes.add(n.getSUID());
-			}
-		}
-
-		Long[] selectedNodesRGI = selectedNodes.toArray(new Long[selectedNodes.size()]);
-
-		MCODEParameterSet currentParamsCopy = getMainPanel().getCurrentParamsCopy();
-		currentParamsCopy.setSelectedNodes(selectedNodesRGI);
-
-		final MCODEAlgorithm alg;
-		final MCODEParameterSet savedParamsCopy;
-
-		// Here we determine if we have already run mcode on this network before
-		// if we have then we use the stored alg class and the last saved parameters
-		// of that network (so as to determine if rescoring/refinding is required for
-		// this network without interference by parameters of other networks)
-		// otherwise we construct a new alg class
-		if (mcodeUtil.containsNetworkAlgorithm(network.getSUID())) {
-			alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
-			// Get a copy of the last saved parameters for comparison with the current ones
-			savedParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(network.getSUID());
-		} else {
-			alg = new MCODEAlgorithm(null, mcodeUtil);
-			savedParamsCopy = mcodeUtil.getCurrentParameters().getParamsCopy(null);
-			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
-			analyze = FIRST_TIME;
-		}
-
-		final int resultId = mcodeUtil.getNextResultId();
 		
-		// These statements determine which portion of the algorithm needs to be conducted by
-		// testing which parameters have been modified compared to the last saved parameters.
-		// Here we ensure that only relevant parameters are looked at.  For example, fluff density
-		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
-		// the clustering parameters are relevant if the optimization is used
-		if (analyze == FIRST_TIME || isDirty(network)
-				|| currentParamsCopy.isIncludeLoops() != savedParamsCopy.isIncludeLoops()
-				|| currentParamsCopy.getDegreeCutoff() != savedParamsCopy.getDegreeCutoff()) {
-			analyze = RESCORE;
-			logger.debug("Analysis: score network, find clusters");
-			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
-		} else if (parametersChanged(savedParamsCopy, currentParamsCopy)) {
-			analyze = REFIND;
-			logger.debug("Analysis: find clusters");
-			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
-		} else {
-			analyze = INTERRUPTION;
-			interruptedMessage = "The parameters you specified have not changed.";
-			mcodeUtil.getCurrentParameters().setParams(currentParamsCopy, resultId, network.getSUID());
-		}
+		final int resultId = mcodeUtil.getNextResultId();
+		final MCODEParameters params =
+				getMainPanel() != null ? getMainPanel().getCurrentParamsCopy() : new MCODEParameters();
 
-		// Finally we save the current parameters
-		//MCODECurrentParameters.getInstance().setParams(currentParamsCopy, resultId, network.getIdentifier());
+		TaskObserver taskObserver = new TaskObserver() {
+			
+			private List<MCODECluster> clusters;
+			
+			@Override
+			@SuppressWarnings("unchecked")
+			public void taskFinished(ObservableTask task) {
+				clusters = task.getResults(List.class);
+			}
+			
+			@Override
+			public void allFinished(FinishStatus finishStatus) {
+				// Callbak that should be executed after the analysis is done...
+				setDirty(network, false);
 
-		// In case the user selected selection scope we must make sure that they selected at least 1 node
-		if (currentParamsCopy.getScope().equals(MCODEParameterSet.SELECTION) &&
-			currentParamsCopy.getSelectedNodes().length < 1) {
-			analyze = INTERRUPTION;
-			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
-		}
+				// Display clusters in a new modal dialog box
+				if (finishStatus == FinishStatus.getSucceeded()) {
+					if (clusters != null && !clusters.isEmpty()) {
+						mcodeUtil.addResult(network.getSUID(), clusters);
 
-		if (analyze == INTERRUPTION) {
-			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-										  interruptedMessage,
-										  "Analysis Interrupted",
-										  JOptionPane.WARNING_MESSAGE);
-		} else {
-			// A callbak that should be executed after the analysis is done:
-			AnalysisCompletedListener listener = new AnalysisCompletedListener() {
+						invokeOnEDTAndWait(() -> {
+							MCODEDiscardResultAction discardResultAction =
+									new MCODEDiscardResultAction("Discard Result", resultId, mcodeUtil, registrar);
 
-				@Override
-				public void handleEvent(final AnalysisCompletedEvent e) {
-					setDirty(network, false);
+							final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
+							
+							MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network,
+									networkView, resultId, discardResultAction);
+							
+							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+							
+							// Focus the result panel
+							CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
+							int index = cytoPanel.indexOfComponent(resultsPanel);
+							cytoPanel.setSelectedIndex(index);
 
-					// Display clusters in a new modal dialog box
-					if (e.isSuccessful()) {
-						if (e.getClusters() != null && !e.getClusters().isEmpty()) {
-							mcodeUtil.addResult(network.getSUID(), e.getClusters());
-
-							invokeOnEDTAndWait(() -> {
-								MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction(
-										"Discard Result", resultId, applicationManager, swingApplication,
-										netViewManager, registrar, mcodeUtil);
-
-								MCODEResultsPanel resultsPanel = new MCODEResultsPanel(e.getClusters(), alg, mcodeUtil,
-										network, networkView, resultId, discardResultAction);
-								
-								registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-								
-								// Focus the result panel
-								CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-								int index = cytoPanel.indexOfComponent(resultsPanel);
-								cytoPanel.setSelectedIndex(index);
-
-								if (cytoPanel.getState() == CytoPanelState.HIDE)
-									cytoPanel.setState(CytoPanelState.DOCK);
-							}, logger);
-						} else {
-							invokeOnEDT(() -> {
-								JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-															  "No clusters were found.\n"
-																	  + "You can try changing the MCODE parameters or\n"
-																	  + "modifying your node selection if you are using\n"
-																	  + "a selection-specific scope.",
-															  "No Results",
-															  JOptionPane.WARNING_MESSAGE);
-							});
-						}
+							if (cytoPanel.getState() == CytoPanelState.HIDE)
+								cytoPanel.setState(CytoPanelState.DOCK);
+						}, logger);
+					} else {
+						invokeOnEDT(() -> {
+							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
+														  "No clusters were found.\n"
+																  + "You can try changing the MCODE parameters or\n"
+																  + "modifying your node selection if you are using\n"
+																  + "a selection-specific scope.",
+														  "No Results",
+														  JOptionPane.WARNING_MESSAGE);
+						});
 					}
-
-					mcodeUtil.disposeUnusedNetworks();
 				}
-			};
 
-			// Run MCODE
-			MCODEAnalyzeTaskFactory analyzeTaskFactory = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg,
-																					 mcodeUtil, listener);
-			taskManager.execute(analyzeTaskFactory.createTaskIterator());
-		}
+				mcodeUtil.disposeUnusedNetworks();
+			}
+		};
+		
+		execute(network, resultId, params, taskObserver);
 	}
 
 	@Override
@@ -297,15 +224,88 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	public void handleEvent(AddedNodesEvent e) {
 		setDirty(e.getSource(), true);
 	}
+	
+	public void execute(CyNetwork network, int resultId, MCODEParameters currentParams, TaskObserver taskObserver) {
+		List<CyNode> nodes = network.getNodeList();
+		List<Long> selectedNodes = new ArrayList<>();
+
+		for (CyNode n : nodes) {
+			if (network.getRow(n).get(CyNetwork.SELECTED, Boolean.class))
+				selectedNodes.add(n.getSUID());
+		}
+
+		Long[] selectedNodesRGI = selectedNodes.toArray(new Long[selectedNodes.size()]);
+		currentParams.setSelectedNodes(selectedNodesRGI);
+
+		final MCODEAlgorithm alg;
+		final MCODEParameters savedParams;
+
+		// Here we determine if we have already run mcode on this network before
+		// if we have then we use the stored alg class and the last saved parameters
+		// of that network (so as to determine if rescoring/refinding is required for
+		// this network without interference by parameters of other networks)
+		// otherwise we construct a new alg class
+		if (mcodeUtil.containsNetworkAlgorithm(network.getSUID())) {
+			alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+			// Get a copy of the last saved parameters for comparison with the current ones
+			savedParams = mcodeUtil.getParameterManager().getParamsCopy(network.getSUID());
+		} else {
+			alg = new MCODEAlgorithm(null, mcodeUtil);
+			savedParams = mcodeUtil.getParameterManager().getParamsCopy(null);
+			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
+			analyze = FIRST_TIME;
+		}
+
+		String interruptedMessage = "";
+		
+		// These statements determine which portion of the algorithm needs to be conducted by
+		// testing which parameters have been modified compared to the last saved parameters.
+		// Here we ensure that only relevant parameters are looked at.  For example, fluff density
+		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
+		// the clustering parameters are relevant if the optimization is used
+		if (analyze == FIRST_TIME || isDirty(network)
+				|| currentParams.isIncludeLoops() != savedParams.isIncludeLoops()
+				|| currentParams.getDegreeCutoff() != savedParams.getDegreeCutoff()) {
+			analyze = RESCORE;
+			logger.debug("Analysis: score network, find clusters");
+			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
+		} else if (parametersChanged(savedParams, currentParams)) {
+			analyze = REFIND;
+			logger.debug("Analysis: find clusters");
+			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
+		} else {
+			analyze = INTERRUPTION;
+			interruptedMessage = "The parameters you specified have not changed.";
+			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
+		}
+
+		// In case the user selected selection scope we must make sure that they selected at least 1 node
+		if (currentParams.getScope() == MCODEAnalysisScope.SELECTION &&
+			currentParams.getSelectedNodes().length < 1) {
+			analyze = INTERRUPTION;
+			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
+		}
+
+		if (analyze == INTERRUPTION) {
+			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
+										  interruptedMessage,
+										  "Analysis Interrupted",
+										  JOptionPane.WARNING_MESSAGE);
+		} else {
+			// Run MCODE
+			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg, mcodeUtil);
+			registrar.getService(TaskManager.class).execute(tf.createTaskIterator(), taskObserver);
+		}
+	}
 
 	/**
 	 * @param p1 previous parameters set
 	 * @param p2 current parameters set
 	 * @return
 	 */
-	private boolean parametersChanged(final MCODEParameterSet p1, final MCODEParameterSet p2) {
+	private boolean parametersChanged(final MCODEParameters p1, final MCODEParameters p2) {
 		boolean b = !p2.getScope().equals(p1.getScope());
-		b = b || (!p2.getScope().equals(MCODEParameterSet.NETWORK) && p2.getSelectedNodes() != p1.getSelectedNodes());
+		b = b || (p2.getScope() != MCODEAnalysisScope.NETWORK && p2.getSelectedNodes() != p1.getSelectedNodes());
 		b = b || (p2.isOptimize() != p1.isOptimize());
 		b = b || (!p2.isOptimize() && (p2.getKCore() != p1.getKCore() ||
 										p2.getMaxDepthFromStart() != p1.getMaxDepthFromStart() ||
@@ -316,7 +316,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		return b;
 	}
 	
-	private void setDirty(final CyNetwork net, final boolean dirty) {
+	public void setDirty(final CyNetwork net, final boolean dirty) {
 		if (mcodeUtil.containsNetworkAlgorithm(net.getSUID())) {
 			if (dirty)
 				dirtyNetworks.put(net.getSUID(), dirty);

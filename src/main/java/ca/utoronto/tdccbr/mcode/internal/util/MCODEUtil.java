@@ -39,7 +39,6 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,7 +59,6 @@ import org.cytoscape.application.NetworkViewRenderer;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
@@ -98,8 +96,8 @@ import org.slf4j.LoggerFactory;
 import ca.utoronto.tdccbr.mcode.internal.CyActivator;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODECurrentParameters;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEGraph;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterManager;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODELoader;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
@@ -156,7 +154,6 @@ public class MCODEUtil {
 	private final VisualStyleFactory visualStyleFactory;
 	private final VisualMappingManager visualMappingMgr;
 	private final CySwingApplication swingApplication;
-	private final CyEventHelper eventHelper;
 	private final VisualMappingFunctionFactory discreteMappingFactory;
 	private final VisualMappingFunctionFactory continuousMappingFactory;
 	private final FileUtil fileUtil;
@@ -166,7 +163,7 @@ public class MCODEUtil {
 	private Image placeHolderImage;
 	private VisualStyle clusterStyle;
 	private VisualStyle appStyle;
-	private MCODECurrentParameters currentParameters;
+	private MCODEParameterManager paramMgr;
 	// Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkAlgorithms;
 	// Keeps track of analyzed networks (network SUID is key) and their respective results (list of result ids)
@@ -189,7 +186,6 @@ public class MCODEUtil {
 					 final VisualStyleFactory visualStyleFactory,
 					 final VisualMappingManager visualMappingMgr,
 					 final CySwingApplication swingApplication,
-					 final CyEventHelper eventHelper,
 					 final VisualMappingFunctionFactory discreteMappingFactory,
 					 final VisualMappingFunctionFactory continuousMappingFactory,
 					 final FileUtil fileUtil) {
@@ -202,7 +198,6 @@ public class MCODEUtil {
 		this.visualStyleFactory = visualStyleFactory;
 		this.visualMappingMgr = visualMappingMgr;
 		this.swingApplication = swingApplication;
-		this.eventHelper = eventHelper;
 		this.discreteMappingFactory = discreteMappingFactory;
 		this.continuousMappingFactory = continuousMappingFactory;
 		this.fileUtil = fileUtil;
@@ -221,7 +216,7 @@ public class MCODEUtil {
 
 	public void reset() {
 		nextResultId = 1;
-		currentParameters = new MCODECurrentParameters();
+		paramMgr = new MCODEParameterManager();
 		networkAlgorithms = new HashMap<>();
 		networkResults = new HashMap<>();
 		allClusters = new HashMap<>();
@@ -265,8 +260,8 @@ public class MCODEUtil {
 		}
 	}
 	
-	public MCODECurrentParameters getCurrentParameters() {
-		return currentParameters;
+	public MCODEParameterManager getParameterManager() {
+		return paramMgr;
 	}
 
 	public boolean containsNetworkAlgorithm(final Long suid) {
@@ -315,7 +310,7 @@ public class MCODEUtil {
 
 	public boolean removeResult(final int resultId) {
 		boolean removed = false;
-		getCurrentParameters().removeResultParams(resultId);
+		getParameterManager().removeResultParams(resultId);
 		
 		Long networkId = null;
 
@@ -674,11 +669,11 @@ public class MCODEUtil {
 
 		// First we state that everything below or equaling 0 (min) will be white, and everything above that will
 		// start from black and fade into the next boundary color
-		nodeColorCm.addPoint(0.0, new BoundaryRangeValues<Paint>(Color.WHITE, Color.WHITE, MIN_COLOR));
+		nodeColorCm.addPoint(0.0, new BoundaryRangeValues<>(Color.WHITE, Color.WHITE, MIN_COLOR));
 		// Now we state that anything anything below the max score will fade into red from the lower boundary color
 		// and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
 		// The max value is set by MCODEVisualStyleAction based on the current result set's max score
-		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<Paint>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
+		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
 
 		appStyle.addVisualMappingFunction(nodeColorCm);
 
@@ -763,17 +758,14 @@ public class MCODEUtil {
 	 * @param clusters   List of MCODE generated clusters
 	 */
 	public void sortClusters(final List<MCODECluster> clusters) {
-		Collections.sort(clusters, new Comparator<MCODECluster>() {
-			@Override
-			public int compare(MCODECluster c1, MCODECluster c2) {
-				//sorting clusters by decreasing score
-				double d1 = c1.getScore();
-				double d2 = c2.getScore();
-				
-				if (d1 == d2)     return 0;
-				else if (d1 < d2) return 1;
-				return -1;
-			}
+		Collections.sort(clusters, (c1, c2) -> {
+			//sorting clusters by decreasing score
+			double d1 = c1.getScore();
+			double d2 = c2.getScore();
+			
+			if (d1 == d2)     return 0;
+			else if (d1 < d2) return 1;
+			return -1;
 		});
 	}
 

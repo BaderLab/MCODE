@@ -24,10 +24,8 @@ public class MCODEGraph {
 	private MCODEUtil mcodeUtil;
 	private boolean disposed;
 
-	public MCODEGraph(final CyNetwork parentNetwork,
-					  final Collection<CyNode> nodes,
-					  final Collection<CyEdge> edges,
-					  final MCODEUtil mcodeUtil) {
+	public MCODEGraph(CyNetwork parentNetwork, Collection<CyNode> nodes, Collection<CyEdge> edges,
+			MCODEUtil mcodeUtil) {
 		if (parentNetwork == null)
 			throw new NullPointerException("parentNetwork is null!");
 		if (nodes == null)

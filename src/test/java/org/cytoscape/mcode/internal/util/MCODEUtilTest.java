@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.event.CyEventHelper;
 import org.cytoscape.mcode.internal.AbstractMCODETest;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
@@ -78,7 +77,6 @@ public class MCODEUtilTest extends AbstractMCODETest {
 	@Mock VisualStyleFactory styleFactory;
 	@Mock VisualMappingFunctionFactory vmfFactory;
 	@Mock CySwingApplication swingApp;
-	@Mock CyEventHelper evtHelper;
 	@Mock FileUtil fileUtil;
 	
 	CyNetworkViewFactory netViewFactory;
@@ -90,7 +88,7 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		netViewFactory = netViewTestSupport.getNetworkViewFactory();
 		
 		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
-				styleFactory, vmMgr, swingApp, evtHelper, vmfFactory, vmfFactory, fileUtil);
+				styleFactory, vmMgr, swingApp, vmfFactory, vmfFactory, fileUtil);
 	}
 	
 	@Test

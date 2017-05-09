@@ -44,10 +44,10 @@ import java.util.Map;
  * stored in a hash map for the particular network being analyzed by the MCODEAnalyzeAction
  * if the analysis produced a result.
  */
-public class MCODECurrentParameters {
+public class MCODEParameterManager {
 
-	private Map<Long, MCODEParameterSet> currentParams = new HashMap<Long, MCODEParameterSet>();
-	private Map<Integer, MCODEParameterSet> resultParams = new HashMap<Integer, MCODEParameterSet>();
+	private Map<Long, MCODEParameters> currentParams = new HashMap<>();
+	private Map<Integer, MCODEParameters> resultParams = new HashMap<>();
 
 	/**
 	 * Get a copy of the current parameters for a particular network. Only a copy of the current param object is
@@ -61,11 +61,11 @@ public class MCODECurrentParameters {
 	 * @param networkID Id of the network
 	 * @return A copy of the parameters
 	 */
-	public MCODEParameterSet getParamsCopy(Long networkID) {
+	public MCODEParameters getParamsCopy(Long networkID) {
 		if (networkID != null) {
 			return currentParams.get(networkID).copy();
 		} else {
-			MCODEParameterSet newParams = new MCODEParameterSet();
+			MCODEParameters newParams = new MCODEParameters();
 			return newParams.copy();
 		}
 	}
@@ -79,34 +79,44 @@ public class MCODECurrentParameters {
 	 * @param resultId Id of the result set
 	 * @param networkID Id of the network
 	 */
-	public void setParams(MCODEParameterSet newParams, int resultId, Long networkID) {
+	public void setParams(MCODEParameters newParams, int resultId, Long networkID) {
 		//cannot simply equate the params and newParams classes since that creates a permanent reference
 		//and prevents us from keeping 2 sets of the class such that the saved version is not altered
 		//until this method is called
-		MCODEParameterSet currentParamSet = new MCODEParameterSet(newParams.getScope(), newParams.getSelectedNodes(),
-																  newParams.isIncludeLoops(), newParams
-																		  .getDegreeCutoff(), newParams.getKCore(),
-																  newParams.isOptimize(), newParams
-																		  .getMaxDepthFromStart(), newParams
-																		  .getNodeScoreCutoff(), newParams.isFluff(),
-																  newParams.isHaircut(), newParams
-																		  .getFluffNodeDensityCutoff());
+		MCODEParameters currentParamSet = new MCODEParameters(
+				newParams.getNetworkSUID(),
+				newParams.getScope(),
+				newParams.getSelectedNodes(),
+				newParams.isIncludeLoops(),
+				newParams.getDegreeCutoff(),
+				newParams.getKCore(),
+				newParams.isOptimize(),
+				newParams.getMaxDepthFromStart(),
+				newParams.getNodeScoreCutoff(),
+				newParams.isFluff(),
+				newParams.isHaircut(),
+				newParams.getFluffNodeDensityCutoff());
 
 		currentParams.put(networkID, currentParamSet);
 
-		MCODEParameterSet resultParamSet = new MCODEParameterSet(newParams.getScope(), newParams.getSelectedNodes(),
-																 newParams.isIncludeLoops(), newParams
-																		 .getDegreeCutoff(), newParams.getKCore(),
-																 newParams.isOptimize(), newParams
-																		 .getMaxDepthFromStart(), newParams
-																		 .getNodeScoreCutoff(), newParams.isFluff(),
-																 newParams.isHaircut(), newParams
-																		 .getFluffNodeDensityCutoff());
+		MCODEParameters resultParamSet = new MCODEParameters(
+				newParams.getNetworkSUID(),
+				newParams.getScope(),
+				newParams.getSelectedNodes(),
+				newParams.isIncludeLoops(),
+				newParams.getDegreeCutoff(),
+				newParams.getKCore(),
+				newParams.isOptimize(),
+				newParams.getMaxDepthFromStart(),
+				newParams.getNodeScoreCutoff(),
+				newParams.isFluff(),
+				newParams.isHaircut(),
+				newParams.getFluffNodeDensityCutoff());
 
 		resultParams.put(resultId, resultParamSet);
 	}
 
-	public MCODEParameterSet getResultParams(int resultId) {
+	public MCODEParameters getResultParams(int resultId) {
 		return resultParams.get(resultId).copy();
 	}
 
