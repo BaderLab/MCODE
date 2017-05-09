@@ -64,7 +64,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	
 	private final MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
-	private final int analyze;
+	private final int mode;
 	private final int resultId;
 
 	private boolean interrupted;
@@ -80,19 +80,19 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	 * Scores and finds clusters in a given network
 	 *
 	 * @param network The network to cluster
-	 * @param analyze Tells the task if we need to rescore and/or refind
+	 * @param mode Tells the task if we need to rescore and/or refind
 	 * @param resultId Identifier of the current result set
 	 * @param alg reference to the algorithm for this network
 	 */
 	public MCODEAnalyzeTask(
 			final CyNetwork network,
-			final int analyze,
+			final int mode,
 			final int resultId,
 			final MCODEAlgorithm alg,
 			final MCODEUtil mcodeUtil
 	) {
 		this.network = network;
-		this.analyze = analyze;
+		this.mode = mode;
 		this.resultId = resultId;
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
@@ -115,7 +115,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			alg.setTaskMonitor(taskMonitor, network.getSUID());
 
 			// Only (re)score the graph if the scoring parameters have been changed
-			if (analyze == MCODEAnalyzeAction.RESCORE) {
+			if (mode == MCODEAnalyzeAction.RESCORE) {
 				taskMonitor.setProgress(0.001);
 				taskMonitor.setStatusMessage("Scoring Network (Step 1 of 3)");
 				

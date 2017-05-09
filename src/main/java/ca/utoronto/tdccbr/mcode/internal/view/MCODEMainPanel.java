@@ -86,7 +86,6 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private static final long serialVersionUID = -4442491309881609088L;
 	
 	private final CySwingApplication swingApplication;
-	private final MCODEUtil mcodeUtil;
 
 	private JPanel scopePnl;
 	private BasicCollapsiblePanel advancedOptionsPnl;
@@ -109,11 +108,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	 * The actual parameter change panel that builds the UI
 	 * @param analyzeAction 
 	 */
-	public MCODEMainPanel(final CySwingApplication swingApplication,
-						  final MCODEAnalyzeAction analyzeAction,
-						  final MCODEUtil mcodeUtil) {
+	public MCODEMainPanel(CySwingApplication swingApplication, MCODEAnalyzeAction analyzeAction, MCODEUtil mcodeUtil) {
 		this.swingApplication = swingApplication;
-		this.mcodeUtil = mcodeUtil;
 		
 		if (isAquaLAF())
 			setOpaque(false);

@@ -98,7 +98,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	private final CyServiceRegistrar registrar;
 	private final MCODEUtil mcodeUtil;
 
-	int analyze = FIRST_TIME;
+	private int mode = FIRST_TIME;
 	
 	private Map<Long/*network_suid*/, Boolean> dirtyNetworks;
 	
@@ -225,7 +225,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		setDirty(e.getSource(), true);
 	}
 	
-	public void execute(CyNetwork network, int resultId, MCODEParameters currentParams, TaskObserver taskObserver) {
+	private void execute(CyNetwork network, int resultId, MCODEParameters currentParams, TaskObserver taskObserver) {
 		List<CyNode> nodes = network.getNodeList();
 		List<Long> selectedNodes = new ArrayList<>();
 
@@ -253,7 +253,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 			alg = new MCODEAlgorithm(null, mcodeUtil);
 			savedParams = mcodeUtil.getParameterManager().getParamsCopy(null);
 			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
-			analyze = FIRST_TIME;
+			mode = FIRST_TIME;
 		}
 
 		String interruptedMessage = "";
@@ -263,18 +263,18 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		// Here we ensure that only relevant parameters are looked at.  For example, fluff density
 		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
 		// the clustering parameters are relevant if the optimization is used
-		if (analyze == FIRST_TIME || isDirty(network)
+		if (mode == FIRST_TIME || isDirty(network)
 				|| currentParams.isIncludeLoops() != savedParams.isIncludeLoops()
 				|| currentParams.getDegreeCutoff() != savedParams.getDegreeCutoff()) {
-			analyze = RESCORE;
+			mode = RESCORE;
 			logger.debug("Analysis: score network, find clusters");
 			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
 		} else if (parametersChanged(savedParams, currentParams)) {
-			analyze = REFIND;
+			mode = REFIND;
 			logger.debug("Analysis: find clusters");
 			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
 		} else {
-			analyze = INTERRUPTION;
+			mode = INTERRUPTION;
 			interruptedMessage = "The parameters you specified have not changed.";
 			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
 		}
@@ -282,18 +282,18 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		// In case the user selected selection scope we must make sure that they selected at least 1 node
 		if (currentParams.getScope() == MCODEAnalysisScope.SELECTION &&
 			currentParams.getSelectedNodes().length < 1) {
-			analyze = INTERRUPTION;
+			mode = INTERRUPTION;
 			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
 		}
 
-		if (analyze == INTERRUPTION) {
+		if (mode == INTERRUPTION) {
 			JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 										  interruptedMessage,
 										  "Analysis Interrupted",
 										  JOptionPane.WARNING_MESSAGE);
 		} else {
 			// Run MCODE
-			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, analyze, resultId, alg, mcodeUtil);
+			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, mcodeUtil);
 			registrar.getService(TaskManager.class).execute(tf.createTaskIterator(), taskObserver);
 		}
 	}
