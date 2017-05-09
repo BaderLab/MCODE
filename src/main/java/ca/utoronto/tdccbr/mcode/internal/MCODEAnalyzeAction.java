@@ -160,26 +160,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 				if (finishStatus == FinishStatus.getSucceeded()) {
 					if (clusters != null && !clusters.isEmpty()) {
 						mcodeUtil.addResult(network.getSUID(), clusters);
-
-						invokeOnEDTAndWait(() -> {
-							MCODEDiscardResultAction discardResultAction =
-									new MCODEDiscardResultAction("Discard Result", resultId, mcodeUtil, registrar);
-
-							final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
-							
-							MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network,
-									networkView, resultId, discardResultAction);
-							
-							registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-							
-							// Focus the result panel
-							CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-							int index = cytoPanel.indexOfComponent(resultsPanel);
-							cytoPanel.setSelectedIndex(index);
-
-							if (cytoPanel.getState() == CytoPanelState.HIDE)
-								cytoPanel.setState(CytoPanelState.DOCK);
-						}, logger);
+						showResultsPanel(network, resultId, clusters);
 					} else {
 						invokeOnEDT(() -> {
 							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
@@ -276,7 +257,6 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		} else {
 			mode = INTERRUPTION;
 			interruptedMessage = "The parameters you specified have not changed.";
-			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
 		}
 
 		// In case the user selected selection scope we must make sure that they selected at least 1 node
@@ -325,11 +305,41 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		}
 	}
 	
+	public int getMode() {
+		return mode;
+	}
+	
+	public void setMode(int mode) {
+		this.mode = mode;
+	}
+	
 	/**
 	 * @param net
 	 * @return true if the network has been modified after the last analysis.
 	 */
-	private boolean isDirty(final CyNetwork net) {
+	public boolean isDirty(final CyNetwork net) {
 		return Boolean.TRUE.equals(dirtyNetworks.get(net.getSUID()));
+	}
+	
+	public void showResultsPanel(final CyNetwork network, final int resultId, List<MCODECluster> clusters) {
+		invokeOnEDTAndWait(() -> {
+			MCODEDiscardResultAction discardResultAction =
+					new MCODEDiscardResultAction("Discard Result", resultId, mcodeUtil, registrar);
+
+			final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
+			
+			MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network,
+					networkView, resultId, discardResultAction);
+			
+			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+			
+			// Focus the result panel
+			CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
+			int index = cytoPanel.indexOfComponent(resultsPanel);
+			cytoPanel.setSelectedIndex(index);
+
+			if (cytoPanel.getState() == CytoPanelState.HIDE)
+				cytoPanel.setState(CytoPanelState.DOCK);
+		}, logger);
 	}
 }
