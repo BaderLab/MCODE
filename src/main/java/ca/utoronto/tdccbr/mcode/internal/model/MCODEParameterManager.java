@@ -62,12 +62,10 @@ public class MCODEParameterManager {
 	 * @return A copy of the parameters
 	 */
 	public MCODEParameters getParamsCopy(Long networkID) {
-		if (networkID != null) {
+		if (networkID != null && currentParams.get(networkID) != null)
 			return currentParams.get(networkID).copy();
-		} else {
-			MCODEParameters newParams = new MCODEParameters();
-			return newParams.copy();
-		}
+			
+		return new MCODEParameters();
 	}
 
 	/**
