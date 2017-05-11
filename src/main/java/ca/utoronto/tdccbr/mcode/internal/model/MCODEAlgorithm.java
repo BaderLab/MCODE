@@ -363,46 +363,46 @@ public class MCODEAlgorithm {
 		}
 
 		// Stores the list of clusters as ArrayLists of node indices in the input Network
-		List<MCODECluster> alClusters = new ArrayList<>();
+		List<MCODECluster> clusters = new ArrayList<>();
 
 		// Iterate over node ids sorted descending by their score
-		for (List<Long> alNodesWithSameScore : values) {
+		for (List<Long> nodesWithSameScore : values) {
 			// Each score may be associated with multiple nodes, iterate over these lists
-			for (int j = 0; j < alNodesWithSameScore.size(); j++) {
-				currentNode = alNodesWithSameScore.get(j);
+			for (int j = 0; j < nodesWithSameScore.size(); j++) {
+				currentNode = nodesWithSameScore.get(j);
 
 				if (!nodeSeenHashMap.containsKey(currentNode)) {
 					// Store the list of all the nodes that have already been seen and incorporated in other clusters
 					Map<Long, Boolean> nodeSeenHashMapSnapShot = new HashMap<>(nodeSeenHashMap);
 
 					// Here we use the original node score cutoff
-					List<Long> alCluster = getClusterCore(currentNode,
-														  nodeSeenHashMap,
-														  params.getNodeScoreCutoff(),
-														  params.getMaxDepthFromStart(),
-														  nodeInfoHashMap);
-					if (alCluster.size() > 0) {
+					List<Long> clusterCore = getClusterCore(currentNode,
+															nodeSeenHashMap,
+															params.getNodeScoreCutoff(),
+															params.getMaxDepthFromStart(),
+															nodeInfoHashMap);
+					if (clusterCore.size() > 0) {
 						// Make sure seed node is part of cluster, if not already in there
-						if (!alCluster.contains(currentNode))
-							alCluster.add(currentNode);
+						if (!clusterCore.contains(currentNode))
+							clusterCore.add(currentNode);
 
 						// Create an input graph for the filter and haircut methods
-						MCODEGraph clusterGraph = createClusterGraph(alCluster, inputNetwork);
+						MCODEGraph clusterGraph = createClusterGraph(clusterCore, inputNetwork);
 
 						if (!filterCluster(clusterGraph)) {
 							if (params.isHaircut())
-								haircutCluster(clusterGraph, alCluster);
+								haircutCluster(clusterGraph, clusterCore);
 
 							if (params.isFluff())
-								fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
+								fluffClusterBoundary(clusterCore, nodeSeenHashMap, nodeInfoHashMap);
 
-							clusterGraph = createClusterGraph(alCluster, inputNetwork);
+							clusterGraph = createClusterGraph(clusterCore, inputNetwork);
 							final double score = scoreCluster(clusterGraph);
 							
 							MCODECluster currentCluster = new MCODECluster(resultId, currentNode, clusterGraph, score,
-									alCluster, nodeSeenHashMapSnapShot);
+									clusterCore, nodeSeenHashMapSnapShot);
 							
-							alClusters.add(currentCluster);
+							clusters.add(currentCluster);
 						}
 					}
 				}
@@ -424,33 +424,33 @@ public class MCODEAlgorithm {
 
 		// Once the clusters have been found we either return them or in the case of selection scope, we select only
 		// the ones that contain the selected node(s) and return those
-		List<MCODECluster> selectedALClusters = new ArrayList<>();
+		List<MCODECluster> selectedClusters = new ArrayList<>();
 
 		if (MCODEAnalysisScope.SELECTION == params.getScope()) {
-			for (MCODECluster cluster : alClusters) {
-				List<Long> alCluster = cluster.getALCluster();
-				List<Long> alSelectedNodes = new ArrayList<>();
+			for (MCODECluster cluster : clusters) {
+				List<Long> nodes = cluster.getNodes();
+				List<Long> selectedNodes = new ArrayList<>();
 
 				for (int i = 0; i < params.getSelectedNodes().length; i++) {
-					alSelectedNodes.add(params.getSelectedNodes()[i]);
+					selectedNodes.add(params.getSelectedNodes()[i]);
 				}
 
 				// Method for returning all clusters that contain any of the selected nodes
-				for (Long nodeIndex : alSelectedNodes) {
-					if (alCluster.contains(nodeIndex)) {
-						selectedALClusters.add(cluster);
+				for (Long nodeId: selectedNodes) {
+					if (nodes.contains(nodeId)) {
+						selectedClusters.add(cluster);
 						break;
 					}
 				}
 			}
 
-			alClusters = selectedALClusters;
+			clusters = selectedClusters;
 		}
 
 		long msTimeAfter = System.currentTimeMillis();
 		lastFindTime = msTimeAfter - msTimeBefore;
 
-		return alClusters;
+		return clusters;
 	}
 
 	/**
@@ -482,36 +482,36 @@ public class MCODEAlgorithm {
 
 		final Long seedNode = cluster.getSeedNode();
 
-		final List<Long> alCluster = getClusterCore(seedNode, nodeSeenHashMap, nodeScoreCutoff, params
+		final List<Long> clusterCore = getClusterCore(seedNode, nodeSeenHashMap, nodeScoreCutoff, params
 				.getMaxDepthFromStart(), nodeInfoHashMap);
 
 		// Make sure seed node is part of cluster, if not already in there
-		if (!alCluster.contains(seedNode))
-			alCluster.add(seedNode);
+		if (!clusterCore.contains(seedNode))
+			clusterCore.add(seedNode);
 
 		// Create an input graph for the filter and haircut methods
-		MCODEGraph clusterGraph = createClusterGraph(alCluster, inputNet);
+		MCODEGraph clusterGraph = createClusterGraph(clusterCore, inputNet);
 
 		if (params.isHaircut())
-			haircutCluster(clusterGraph, alCluster);
+			haircutCluster(clusterGraph, clusterCore);
 
 		if (params.isFluff())
-			fluffClusterBoundary(alCluster, nodeSeenHashMap, nodeInfoHashMap);
+			fluffClusterBoundary(clusterCore, nodeSeenHashMap, nodeInfoHashMap);
 
-		clusterGraph = createClusterGraph(alCluster, inputNet);
+		clusterGraph = createClusterGraph(clusterCore, inputNet);
 		final double score = scoreCluster(clusterGraph);
 		
-		final MCODECluster newCluster = new MCODECluster(resultId, seedNode, clusterGraph, score, alCluster,
+		final MCODECluster newCluster = new MCODECluster(resultId, seedNode, clusterGraph, score, clusterCore,
 				nodeSeenHashMap);
 		newCluster.setRank(cluster.getRank());
 		
 		return newCluster;
 	}
 
-	private MCODEGraph createClusterGraph(final List<Long> alCluster, final CyNetwork inputNet) {
+	private MCODEGraph createClusterGraph(final List<Long> clusterCore, final CyNetwork inputNet) {
 		final Set<CyNode> nodes = new HashSet<>();
 
-		for (final Long id : alCluster) {
+		for (final Long id : clusterCore) {
 			CyNode n = inputNet.getNode(id);
 			nodes.add(n);
 		}
@@ -530,11 +530,10 @@ public class MCODEAlgorithm {
 	 * @return The score of this node.
 	 */
 	private double scoreNode(NodeInfo nodeInfo) {
-		if (nodeInfo.numNodeNeighbors > params.getDegreeCutoff()) {
+		if (nodeInfo.numNodeNeighbors > params.getDegreeCutoff())
 			nodeInfo.score = nodeInfo.coreDensity * (double) nodeInfo.coreLevel;
-		} else {
+		else
 			nodeInfo.score = 0.0;
-		}
 
 		return nodeInfo.score;
 	}

@@ -54,7 +54,7 @@ public class MCODECluster {
 	private String name; // pretty much unused so far, but could store name by user's input
 	private double score;
 	private Long seedNode;
-	private List<Long> alCluster;
+	private List<Long> nodes;
 	
 	/** keeps track of layout so that layout process doesn't have to be repeated unnecessarily */
 	private transient CyNetworkView view;
@@ -69,19 +69,19 @@ public class MCODECluster {
 			Long seedNode,
 			MCODEGraph graph,
 			double score,
-			List<Long> alCluster,
+			List<Long> nodes,
 			Map<Long, Boolean> nodeSeenHashMap
 	) {
 		assert seedNode != null;
 		assert graph != null;
-		assert alCluster != null;
+		assert nodes != null;
 		assert nodeSeenHashMap != null;
 		
 		this.resultId = resultId;
 		this.seedNode = seedNode;
 		this.graph = graph;
 		this.score = score;
-		this.alCluster = alCluster;
+		this.nodes = nodes;
 		this.nodeSeenHashMap = nodeSeenHashMap;
 	}
 
@@ -123,8 +123,8 @@ public class MCODECluster {
 		return score;
 	}
 
-	public List<Long> getALCluster() {
-		return alCluster;
+	public List<Long> getNodes() {
+		return nodes;
 	}
 
 	public Long getSeedNode() {
@@ -141,7 +141,7 @@ public class MCODECluster {
 
 	public void setRank(int rank) {
 		this.rank = rank;
-		this.name = "Cluster " + (rank + 1);
+		this.name = "Cluster " + rank;
 	}
 	
 	public synchronized Image getImage() {

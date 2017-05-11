@@ -386,7 +386,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	public double setNodeAttributesAndGetMaxScore() {
 		for (CyNode n : network.getNodeList()) {
-			Long rgi = n.getSUID();
+			Long nId = n.getSUID();
 			CyTable netNodeTbl = network.getDefaultNodeTable();
 			
 			if (netNodeTbl.getColumn(CLUSTER_ATTR) == null)
@@ -401,7 +401,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
 
 			for (final MCODECluster cluster : clusters) {
-				if (cluster.getALCluster().contains(rgi)) {
+				if (cluster.getNodes().contains(nId)) {
 					Set<String> clusterNameSet = new LinkedHashSet<>();
 
 					if (nodeRow.isSet(CLUSTER_ATTR))
@@ -410,7 +410,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					clusterNameSet.add(cluster.getName());
 					nodeRow.set(CLUSTER_ATTR, new ArrayList<>(clusterNameSet));
 
-					if (cluster.getSeedNode() == rgi)
+					if (cluster.getSeedNode() == nId)
 						nodeRow.set(NODE_STATUS_ATTR, "Seed");
 					else
 						nodeRow.set(NODE_STATUS_ATTR, "Clustered");
@@ -734,7 +734,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			for (int i = 0; i < clusters.size(); i++) {
 				final MCODECluster c = clusters.get(i);
-				c.setRank(i);
+				c.setRank(i + 1);
 				final Image image = c.getImage();
 
 				data[i][0] = i + 1;
@@ -1209,20 +1209,20 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final Runnable command = new Runnable() {
 	            @Override
 	        	public void run() {
-	            	final List<Long> oldALCluster = oldCluster.getALCluster();
+	            	final List<Long> oldNodes = oldCluster.getNodes();
 					// Find the new cluster given the node score cutoff
 					final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
 					
 					// We only want to do the following work if the newly found cluster is actually different
 					// So we get the new cluster content
-					List<Long> newALCluster = newCluster.getALCluster();
+					List<Long> newNodes = newCluster.getNodes();
 					
 					// If the new cluster is too large to draw within a reasonable time
 					// and won't look understandable in the table cell, then we draw a place holder
-					drawPlaceHolder = newALCluster.size() > 300;
+					drawPlaceHolder = newNodes.size() > 300;
 					
 					// And compare the old and new
-					if (!newALCluster.equals(oldALCluster)) {
+					if (!newNodes.equals(oldNodes)) {
 						// If the cluster has changed, then we conduct all non-rate-limiting steps:
 						// Update the cluster array
 						clusters.set(clusterRow, newCluster);
@@ -1235,7 +1235,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						// When expanding, new nodes need random position and thus must go through the layout.
 						// When retracting, we simply use the layout that was generated and stored.
 						// This speeds up the drawing process greatly.
-						boolean layoutNecessary = newALCluster.size() > oldALCluster.size();
+						boolean layoutNecessary = newNodes.size() > oldNodes.size();
 						// Draw Graph and select the cluster in the view in a separate thread so that it can be
 						// interrupted by the slider movement
 						if (!newCluster.isDisposed()) {
@@ -1331,7 +1331,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 							clusterSelected = true;
 							cluster.setImage(image);
 							// Update the table
-							clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank());
+							clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
 							drawGraph = false;
 						}
 
@@ -1342,7 +1342,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
 						cluster.setImage(image);
 						// Update the table
-						clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank());
+						clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
 						// select the cluster
 						selectCluster(cluster.getNetwork());
 						drawGraph = false;
