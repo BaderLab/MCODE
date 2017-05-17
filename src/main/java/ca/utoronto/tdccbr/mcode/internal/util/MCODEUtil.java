@@ -338,6 +338,19 @@ public class MCODEUtil {
 		
 		return removed;
 	}
+	
+	public MCODECluster getCluster(final int resultId, final int clusterRank) {
+		List<MCODECluster> clusters = allClusters.get(resultId);
+		
+		if (clusters != null) {
+			for (MCODECluster c : clusters) {
+				if (clusterRank == c.getRank())
+					return c;
+			}
+		}
+		
+		return null;
+	}
 
 	/**
 	 * Convert a network to an image.  This is used by the MCODEResultsPanel.
@@ -470,40 +483,36 @@ public class MCODEUtil {
 		final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = (Graphics2D) image.getGraphics();
 
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					final Dimension size = new Dimension(width, height);
+		SwingUtilities.invokeLater(() -> {
+			try {
+				final Dimension size = new Dimension(width, height);
 
-					JPanel panel = new JPanel();
-					panel.setPreferredSize(size);
-					panel.setSize(size);
-					panel.setMinimumSize(size);
-					panel.setMaximumSize(size);
-					panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
+				JPanel panel = new JPanel();
+				panel.setPreferredSize(size);
+				panel.setSize(size);
+				panel.setMinimumSize(size);
+				panel.setMaximumSize(size);
+				panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
 
-					JWindow window = new JWindow();
-					window.getContentPane().add(panel, BorderLayout.CENTER);
+				JWindow window = new JWindow();
+				window.getContentPane().add(panel, BorderLayout.CENTER);
 
-					RenderingEngine<CyNetwork> re = renderingEngineFactory.createRenderingEngine(panel, clusterView);
+				RenderingEngine<CyNetwork> re = renderingEngineFactory.createRenderingEngine(panel, clusterView);
 
-					vs.apply(clusterView);
-					clusterView.fitContent();
-					clusterView.updateView();
-					window.pack();
-					window.repaint();
+				vs.apply(clusterView);
+				clusterView.fitContent();
+				clusterView.updateView();
+				window.pack();
+				window.repaint();
 
-					re.createImage(width, height);
-					re.printCanvas(g);
-					g.dispose();
+				re.createImage(width, height);
+				re.printCanvas(g);
+				g.dispose();
 
-					if (clusterView.getNodeViews().size() > 0) {
-						cluster.setView(clusterView);
-					}
-				} catch (Exception ex) {
-					throw new RuntimeException(ex);
-				}
+				if (!clusterView.getNodeViews().isEmpty())
+					cluster.setView(clusterView);
+			} catch (Exception ex) {
+				throw new RuntimeException(ex);
 			}
 		});
 

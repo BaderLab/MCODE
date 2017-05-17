@@ -53,6 +53,7 @@ public class MCODECluster {
 	private int rank;
 	private String name; // pretty much unused so far, but could store name by user's input
 	private double score;
+	/** Used by cyREST */
 	private Long seedNode;
 	private List<Long> nodes;
 	
@@ -97,7 +98,7 @@ public class MCODECluster {
 		throwExceptionIfDisposed();
 		this.name = name;
 	}
-
+	
 	public MCODEGraph getGraph() {
 		return graph;
 	}
@@ -118,7 +119,7 @@ public class MCODECluster {
 	public synchronized CySubNetwork getNetwork() {
 		return graph.getSubNetwork();
 	}
-
+	
 	public double getScore() {
 		return score;
 	}

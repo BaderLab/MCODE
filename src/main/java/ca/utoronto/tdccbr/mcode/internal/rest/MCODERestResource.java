@@ -12,6 +12,7 @@ import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
@@ -22,9 +23,11 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.FinishStatus;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.SynchronousTaskManager;
+import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskObserver;
 
 import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
@@ -32,8 +35,10 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkTask;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiParam;
 
@@ -42,13 +47,13 @@ import io.swagger.annotations.ApiParam;
  */
 @Api
 @Path("/mcode/v1")
-public class MCODEAnalysisResource {
+public class MCODERestResource {
 	
 	private final MCODEAnalyzeAction action;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar serviceRegistrar;
 	
-	public MCODEAnalysisResource(MCODEAnalyzeAction action, MCODEUtil mcodeUtil, CyServiceRegistrar serviceRegistrar) {
+	public MCODERestResource(MCODEAnalyzeAction action, MCODEUtil mcodeUtil, CyServiceRegistrar serviceRegistrar) {
 		this.action = action;
 		this.mcodeUtil = mcodeUtil;
 		this.serviceRegistrar = serviceRegistrar;
@@ -62,7 +67,6 @@ public class MCODEAnalysisResource {
     		@ApiParam(name = "params", value = "Input parameters", required = false)
     		MCODEParameters params
     ) {
-		System.out.println("\n" + params);
 		CIResponse<MCODEResults> response = new CIResponse<>();
 		String errorMsg = null;
 		int errorStatus = -1;
@@ -127,6 +131,7 @@ public class MCODEAnalysisResource {
 				}
 			} else {
 				resultId = mcodeUtil.getNextResultId();
+				params.setNetworkSUID(network.getSUID());
 				
 				if (mode == FIRST_TIME || action.isDirty(network)
 					|| params.isIncludeLoops() != savedParams.isIncludeLoops()
@@ -150,7 +155,7 @@ public class MCODEAnalysisResource {
 			response.errors = Collections.singletonList(error);
 		} else {
 			// Run MCODE
-			RestTaskObserver observer = new RestTaskObserver(network, resultId);
+			AnalysisTaskObserver observer = new AnalysisTaskObserver(network, resultId);
 			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, mcodeUtil);
 			serviceRegistrar.getService(SynchronousTaskManager.class).execute(tf.createTaskIterator(), observer);
 			
@@ -160,14 +165,77 @@ public class MCODEAnalysisResource {
 		return response;
 	}
 	
-	private class RestTaskObserver implements TaskObserver {
+	@Path("networks/{resultId}/{clusterRank}")
+	@POST
+    @Produces(MediaType.APPLICATION_JSON)
+    public CIResponse<NetworkAndViewVO> createClusterNetwork(
+    		@ApiParam(value = "The ID of the analysis result which contain the cluster.", required = true)
+    		@PathParam("resultId")
+    		Integer resultId,
+    		
+    		@ApiParam(value = "The rank of the requested cluster.", required = true)
+    		@PathParam("clusterRank")
+    		Integer clusterRank
+    ) {
+		CIResponse<NetworkAndViewVO> response = new CIResponse<>();
+		String errorMsg = null;
+		int errorStatus = -1;
+		
+		MCODECluster cluster = mcodeUtil.getCluster(resultId, clusterRank);
+		MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(resultId);
+		MCODEResultsPanel resultsPanel = mcodeUtil.getResultPanel(resultId);
+		MCODEAlgorithm alg = null;
+		CyNetworkView netView = null;
+		
+		if (cluster == null || params == null || resultsPanel == null) {
+			errorStatus = 4;
+			errorMsg = "Cannot find cluster with resultId " + resultId + " and clusterRank " + clusterRank;
+		} else {
+			alg = mcodeUtil.getNetworkAlgorithm(params.getNetworkSUID());
+			netView = resultsPanel.getNetworkView();
+		}
+		
+		if (errorStatus != -1) {
+			CIError error = new CIError();
+			error.status = errorStatus; // TODO
+			error.message = errorMsg;
+			response.errors = Collections.singletonList(error);
+			
+			return response;
+		}
+		
+		// Run the task that creates the cluster view
+		CreateClusterNetworkTask task = new CreateClusterNetworkTask(cluster, netView, resultId, alg, mcodeUtil);
+
+		serviceRegistrar.getService(SynchronousTaskManager.class).execute(new TaskIterator(task), new TaskObserver() {
+			@Override
+			public void taskFinished(ObservableTask task) {
+			}
+			@Override
+			public void allFinished(FinishStatus finishStatus) {
+				if (finishStatus == FinishStatus.getSucceeded()) {
+					CyNetworkView view = (CyNetworkView) task.getResults(CyNetworkView.class);
+					response.data = new NetworkAndViewVO(view.getSUID(), view.getModel().getSUID());
+				} else {
+					CIError error = new CIError();
+					error.status = 1001; // TODO
+					error.message =
+							finishStatus.getException() != null ? finishStatus.getException().getMessage() : null;
+					response.errors = Collections.singletonList(error);
+				}
+			}
+		});
+		
+		return response;
+	}
+	
+	private class AnalysisTaskObserver implements TaskObserver {
 		
 		private final int resultId;
 		private final CyNetwork network;
 		private List<MCODECluster> clusters;
-		public boolean finished;
 		
-		public RestTaskObserver(CyNetwork network, int resultId) {
+		public AnalysisTaskObserver(CyNetwork network, int resultId) {
 			this.resultId = resultId;
 			this.network = network;
 		}
@@ -189,15 +257,9 @@ public class MCODEAnalysisResource {
 					mcodeUtil.addResult(network.getSUID(), clusters);
 					action.showResultsPanel(network, resultId, clusters);
 				}
-				
-				finished = true;
 			}
 
 			mcodeUtil.disposeUnusedNetworks();
-		}
-		
-		public boolean isFinished() {
-			return finished;
 		}
 		
 		public List<MCODECluster> getClusters() {

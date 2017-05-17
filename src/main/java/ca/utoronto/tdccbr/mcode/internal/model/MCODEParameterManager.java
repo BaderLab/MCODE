@@ -82,7 +82,7 @@ public class MCODEParameterManager {
 		//and prevents us from keeping 2 sets of the class such that the saved version is not altered
 		//until this method is called
 		MCODEParameters currentParamSet = new MCODEParameters(
-				newParams.getNetworkSUID(),
+				networkID,
 				newParams.getScope(),
 				newParams.getSelectedNodes(),
 				newParams.isIncludeLoops(),
@@ -98,7 +98,7 @@ public class MCODEParameterManager {
 		currentParams.put(networkID, currentParamSet);
 
 		MCODEParameters resultParamSet = new MCODEParameters(
-				newParams.getNetworkSUID(),
+				networkID,
 				newParams.getScope(),
 				newParams.getSelectedNodes(),
 				newParams.isIncludeLoops(),

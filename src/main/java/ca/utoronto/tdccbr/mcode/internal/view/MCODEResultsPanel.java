@@ -5,12 +5,6 @@ import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_X_LOCATION;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_CENTER_Y_LOCATION;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -58,7 +52,6 @@ import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -74,12 +67,11 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
-import org.cytoscape.model.SavePolicy;
-import org.cytoscape.model.subnetwork.CySubNetwork;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
 import org.cytoscape.view.model.CyNetworkView;
-import org.cytoscape.view.model.View;
-import org.cytoscape.view.vizmap.VisualStyle;
+import org.cytoscape.work.TaskIterator;
+import org.cytoscape.work.swing.DialogTaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +79,7 @@ import ca.utoronto.tdccbr.mcode.internal.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkTask;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -160,6 +153,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JPanel bottomPnl;
 	private JButton createSubNetButton;
 	private JButton closeBtn;
+	
+	private final CyServiceRegistrar registrar;
 
 	private static final Logger logger = LoggerFactory.getLogger(MCODEResultsPanel.class);
 
@@ -179,8 +174,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final CyNetwork network,
 			final CyNetworkView networkView,
 			final int resultId,
-			final MCODEDiscardResultAction discardResultAction
+			final MCODEDiscardResultAction discardResultAction,
+			final CyServiceRegistrar registrar
 	) {
+		this.registrar = registrar;
+		
 		if (isAquaLAF())
 			setOpaque(false);
 		
@@ -440,78 +438,12 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			if (lsm.isSelectionEmpty())
 				return;
 			
-			final NumberFormat nf = NumberFormat.getInstance();
-			nf.setMaximumFractionDigits(3);
-			
 			final int selectedRow = lsm.getMinSelectionIndex();
 			final MCODECluster cluster = clusters.get(selectedRow);
-			final CyNetwork clusterNetwork = cluster.getNetwork();
-			final String title = trigger.getResultId() + ": " + cluster.getName() + " (Score: " +
-								 nf.format(cluster.getScore()) + ")";
 			
-			// Create the child network and view
-			final SwingWorker<CyNetworkView, ?> worker = new SwingWorker<CyNetworkView, Object>() {
-
-				@Override
-				protected CyNetworkView doInBackground() throws Exception {
-					CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
-							alg.getParams().isIncludeLoops(), SavePolicy.SESSION_FILE);
-					newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
-					
-					VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
-					CyNetworkView newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
-
-					newNetworkView.setVisualProperty(NETWORK_CENTER_X_LOCATION, 0.0);
-					newNetworkView.setVisualProperty(NETWORK_CENTER_Y_LOCATION, 0.0);
-
-					mcodeUtil.displayNetworkView(newNetworkView);
-
-					// Layout new cluster and fit it to window.
-					// Randomize node positions before layout so that they don't all layout in a line
-					// (so they don't fall into a local minimum for the SpringEmbedder)
-					// If the SpringEmbedder implementation changes, this code may need to be removed
-					boolean layoutNecessary = false;
-					CyNetworkView clusterView = cluster.getView();
-					
-					for (View<CyNode> nv : newNetworkView.getNodeViews()) {
-						CyNode node = nv.getModel();
-						View<CyNode> cnv = clusterView != null ? clusterView.getNodeView(node) : null;
-						
-						if (cnv != null) {
-							// If it does, then we take the layout position that was already generated for it
-							double x = cnv.getVisualProperty(NODE_X_LOCATION);
-							double y = cnv.getVisualProperty(NODE_Y_LOCATION);
-							nv.setVisualProperty(NODE_X_LOCATION, x);
-							nv.setVisualProperty(NODE_Y_LOCATION, y);
-						} else {
-							// This will likely never occur.
-							// Otherwise, randomize node positions before layout so that they don't all layout in a line
-							// (so they don't fall into a local minimum for the SpringEmbedder).
-							// If the SpringEmbedder implementation changes, this code may need to be removed.
-							double w = newNetworkView.getVisualProperty(NETWORK_WIDTH);
-							double h = newNetworkView.getVisualProperty(NETWORK_HEIGHT);
-
-							nv.setVisualProperty(NODE_X_LOCATION, w * Math.random());
-							// height is small for many default drawn graphs, thus +100
-							nv.setVisualProperty(NODE_Y_LOCATION, (h + 100) * Math.random());
-
-							layoutNecessary = true;
-						}
-					}
-
-					if (layoutNecessary) {
-						SpringEmbeddedLayouter lay = new SpringEmbeddedLayouter(newNetworkView);
-						lay.doLayout(0, 0, 0, null);
-					}
-
-					newNetworkView.fitContent();
-					newNetworkView.updateView();
-
-					return newNetworkView;
-				}
-			};
-
-			worker.execute();
+			final CreateClusterNetworkTask task =
+					new CreateClusterNetworkTask(cluster, networkView, trigger.getResultId(), alg, mcodeUtil);
+			registrar.getService(DialogTaskManager.class).execute(new TaskIterator(task));
 		}
 	}
 

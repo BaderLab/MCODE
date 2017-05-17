@@ -29,7 +29,7 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.work.TaskFactory;
 import org.osgi.framework.BundleContext;
 
-import ca.utoronto.tdccbr.mcode.internal.rest.MCODEAnalysisResource;
+import ca.utoronto.tdccbr.mcode.internal.rest.MCODERestResource;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODECloseTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -103,8 +103,8 @@ public class CyActivator extends AbstractCyActivator {
 		registerService(bc, closeTaskFactory, TaskFactory.class, closeTaskFactoryProps);
 		registerService(bc, closeTaskFactory, NetworkAboutToBeDestroyedListener.class, new Properties());
 		
-		MCODEAnalysisResource analysisResource = new MCODEAnalysisResource(analyzeAction, mcodeUtil, registrar);
-		registerService(bc, analysisResource, MCODEAnalysisResource.class);
+		MCODERestResource restResource = new MCODERestResource(analyzeAction, mcodeUtil, registrar);
+		registerService(bc, restResource, MCODERestResource.class);
 	}
 	
 	@Override

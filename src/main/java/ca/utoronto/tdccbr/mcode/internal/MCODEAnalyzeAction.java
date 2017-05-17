@@ -33,8 +33,8 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.FinishStatus;
 import org.cytoscape.work.ObservableTask;
-import org.cytoscape.work.TaskManager;
 import org.cytoscape.work.TaskObserver;
+import org.cytoscape.work.swing.DialogTaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,6 +159,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
 					if (clusters != null && !clusters.isEmpty()) {
+						params.setNetworkSUID(network.getSUID());
 						mcodeUtil.addResult(network.getSUID(), clusters);
 						showResultsPanel(network, resultId, clusters);
 					} else {
@@ -274,7 +275,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		} else {
 			// Run MCODE
 			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, mcodeUtil);
-			registrar.getService(TaskManager.class).execute(tf.createTaskIterator(), taskObserver);
+			registrar.getService(DialogTaskManager.class).execute(tf.createTaskIterator(), taskObserver);
 		}
 	}
 
@@ -329,7 +330,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 			final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
 			
 			MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network,
-					networkView, resultId, discardResultAction);
+					networkView, resultId, discardResultAction, registrar);
 			
 			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 			
