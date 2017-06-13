@@ -45,7 +45,7 @@ import io.swagger.annotations.ApiParam;
 /**
  * Allows a cyREST client to run MCODE.  
  */
-@Api
+@Api(tags = {"Apps: MCODE"})
 @Path("/mcode/v1")
 public class MCODERestResource {
 	
