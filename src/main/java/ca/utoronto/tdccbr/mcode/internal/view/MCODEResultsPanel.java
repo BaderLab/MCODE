@@ -77,7 +77,7 @@ import org.cytoscape.work.swing.DialogTaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ca.utoronto.tdccbr.mcode.internal.MCODEDiscardResultAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;

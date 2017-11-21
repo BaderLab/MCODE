@@ -1,4 +1,4 @@
-package ca.utoronto.tdccbr.mcode.internal;
+package ca.utoronto.tdccbr.mcode.internal.action;
 
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
 

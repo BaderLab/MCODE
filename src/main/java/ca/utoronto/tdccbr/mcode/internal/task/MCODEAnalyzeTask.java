@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
-import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;

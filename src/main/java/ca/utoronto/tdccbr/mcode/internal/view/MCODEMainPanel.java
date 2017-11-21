@@ -37,7 +37,7 @@ import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
 
-import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;

@@ -1,4 +1,4 @@
-package ca.utoronto.tdccbr.mcode.internal;
+package ca.utoronto.tdccbr.mcode.internal.action;
 
 import java.awt.event.ActionEvent;
 
@@ -6,8 +6,11 @@ import org.cytoscape.application.swing.ActionEnableSupport;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.OpenBrowser;
 
+import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEAboutDialog;
+
 /**
- * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
+ * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
  * * Code written by: Gary Bader
  * * Authors: Gary Bader, Ethan Cerami, Chris Sander
@@ -36,30 +39,42 @@ import org.cytoscape.util.swing.OpenBrowser;
  * * along with this library; if not, write to the Free Software Foundation,
  * * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
  * *
- * * User: vukpavlovic
- * * Date: Jan 10, 2007
- * * Time: 5:55:40 PM
- * * Description: Opens a browser with the MCODE wiki page.
+ * * User: Gary Bader
+ * * Date: Jun 25, 2004
+ * * Time: 5:38:52 PM
+ * * Description: The action to show the About dialog box
  */
 
 /**
- * Opens a browser with the MCODE wiki page.
+ * The action to show the About dialog box
  */
+public class MCODEAboutAction extends AbstractMCODEAction {
 
-public class MCODEHelpAction extends AbstractMCODEAction {
+	private static final long serialVersionUID = -8445425993916988045L;
 
-	private static final long serialVersionUID = -8129187221346920847L;
+	private final MCODEUtil mcodeUtil;
+	private MCODEAboutDialog aboutDialog;
 
-	private final OpenBrowser openBrowser;
-
-	public MCODEHelpAction(String name, OpenBrowser openBrowser, CyServiceRegistrar registrar) {
-		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, registrar);
-		this.openBrowser = openBrowser;
+	public MCODEAboutAction(String name, CyServiceRegistrar serviceRegistrar, MCODEUtil mcodeUtil) {
+		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, serviceRegistrar);
+		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");
 	}
 
 	@Override
-	public void actionPerformed(ActionEvent actionEvent) {
-		openBrowser.openURL("http://www.baderlab.org/Software/MCODE/");
+	public void actionPerformed(ActionEvent e) {
+		//display about box
+		synchronized (this) {
+			if (aboutDialog == null)
+				aboutDialog = new MCODEAboutDialog(swingApplication, serviceRegistrar.getService(OpenBrowser.class),
+						mcodeUtil);
+
+			if (!aboutDialog.isVisible()) {
+				aboutDialog.setLocationRelativeTo(null);
+				aboutDialog.setVisible(true);
+			}
+		}
+		
+		aboutDialog.toFront();
 	}
 }

@@ -19,7 +19,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
 
-import ca.utoronto.tdccbr.mcode.internal.MCODEDiscardResultAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;

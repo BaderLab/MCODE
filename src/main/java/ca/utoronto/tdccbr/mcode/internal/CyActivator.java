@@ -35,6 +35,10 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.work.TaskFactory;
 import org.osgi.framework.BundleContext;
 
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEAboutAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEHelpAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEVisualStyleAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeCommandTaskFactory;

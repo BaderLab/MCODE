@@ -1,9 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import static ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction.FIRST_TIME;
-import static ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction.INTERRUPTION;
-import static ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction.REFIND;
-import static ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction.RESCORE;
+import static ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction.INTERRUPTION;
+import static ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction.RESCORE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +15,7 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.ContainsTunables;
 import org.cytoscape.work.TaskMonitor;
 
-import ca.utoronto.tdccbr.mcode.internal.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
@@ -87,7 +85,9 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 	
 	@Override
 	public void run(TaskMonitor tm) throws Exception {
-		int mode = action.getMode();
+		// When clustering from Commands or CyRest, we always force it to RESCORE (ignore previous params),
+		// because we don't want to interrupt the client script if it's sending the same param values again.
+		int mode = RESCORE;
 		
 		// Get requested network or the current one
 		CyNetwork network = null;
@@ -111,15 +111,11 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 		MCODEAlgorithm alg = null;
 		
 		if (network != null) {
-			final MCODEParameters savedParams;
-			
 			if (mcodeUtil.containsNetworkAlgorithm(network.getSUID())) {
 				alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
-				savedParams = mcodeUtil.getParameterManager().getParamsCopy(network.getSUID());
 			} else {
 				alg = new MCODEAlgorithm(null, mcodeUtil);
 				mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
-				savedParams = mcodeUtil.getParameterManager().getParamsCopy(null);
 			}
 		
 			// In case the user selected selection scope we must make sure that they selected at least 1 node
@@ -141,16 +137,7 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 			} else {
 				resultId = resultsMgr.getNextResultId();
 				params.setNetwork(network);
-				
-				if (mode == FIRST_TIME || action.isDirty(network)
-					|| params.getIncludeLoops() != savedParams.getIncludeLoops()
-					|| params.getDegreeCutoff() != savedParams.getDegreeCutoff()) {
-					mode = RESCORE;
-					mcodeUtil.getParameterManager().setParams(params, resultId, network);
-				} else {
-					mode = REFIND;
-					mcodeUtil.getParameterManager().setParams(params, resultId, network);
-				}
+				mcodeUtil.getParameterManager().setParams(params, resultId, network);
 			}
 		}
 		

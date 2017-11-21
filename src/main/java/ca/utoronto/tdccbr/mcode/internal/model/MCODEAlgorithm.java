@@ -321,8 +321,8 @@ public class MCODEAlgorithm {
 		if (inputNetwork == null)
 			throw new IllegalArgumentException("The input network was must not be null.");
 		
-		final SortedMap<Double, List<Long>> nodeScoreSortedMap;
-		final Map<Long, NodeInfo> nodeInfoHashMap;
+		SortedMap<Double, List<Long>> nodeScoreSortedMap;
+		Map<Long, NodeInfo> nodeInfoHashMap;
 
 		// First we check if the network has been scored under this result title (i.e. scoring
 		// was required due to a scoring parameter change).  If it hasn't then we want to use the
@@ -688,15 +688,13 @@ public class MCODEAlgorithm {
 										   int maxDepthFromStart,
 										   Map<Long, NodeInfo> nodeInfoHashMap) {
 		// base cases for recursion
-		if (nodeSeenHashMap.containsKey(startNode)) {
+		if (nodeSeenHashMap.containsKey(startNode))
 			return true; //don't recheck a node
-		}
 
 		nodeSeenHashMap.put(startNode, true);
 
-		if (currentDepth > maxDepthFromStart) {
+		if (currentDepth > maxDepthFromStart)
 			return true; //don't exceed given depth from start node
-		}
 
 		// Initialization
 		Long currentNeighbor;
@@ -711,9 +709,8 @@ public class MCODEAlgorithm {
 				(nodeInfoHashMap.get(currentNeighbor).score >= (startNodeScore - startNodeScore * nodeScoreCutoff))) {
 
 				// add current neighbor
-				if (!cluster.contains(currentNeighbor)) {
+				if (!cluster.contains(currentNeighbor))
 					cluster.add(currentNeighbor);
-				}
 
 				// try to extend cluster at this node
 				getClusterCoreInternal(currentNeighbor,

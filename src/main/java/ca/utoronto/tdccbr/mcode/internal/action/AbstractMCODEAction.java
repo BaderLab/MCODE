@@ -1,4 +1,4 @@
-package ca.utoronto.tdccbr.mcode.internal;
+package ca.utoronto.tdccbr.mcode.internal.action;
 
 import java.util.ArrayList;
 import java.util.Collection;
