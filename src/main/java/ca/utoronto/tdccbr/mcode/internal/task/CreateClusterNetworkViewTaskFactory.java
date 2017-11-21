@@ -58,7 +58,7 @@ public class CreateClusterNetworkViewTaskFactory implements TaskFactory {
 
 	@Override
 	public TaskIterator createTaskIterator() {
-		return new TaskIterator(new CreateClusterNetworkViewTask(mcodeUtil, resultsMgr, registrar));
+		return new TaskIterator(new CreateClusterNetworkViewTask(resultsMgr, mcodeUtil, registrar));
 	}
 
 	@Override

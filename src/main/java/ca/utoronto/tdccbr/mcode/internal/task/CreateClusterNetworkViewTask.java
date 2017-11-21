@@ -34,10 +34,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 public class CreateClusterNetworkViewTask implements ObservableTask {
-
+	
 	@Tunable(
 			description = "Result ID",
-			longDescription = "The ID of the MCODE analysis resiult which contains the desired cluster.",
+			longDescription = "The ID of the MCODE analysis result which contains the desired cluster.",
 			required = true,
 			exampleStringValue = "1",
 			context = "nogui"
@@ -53,36 +53,27 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 	)
 	public int rank;
 	
-	private final CyNetworkView networkView;
-	private final MCODECluster cluster;
-	private final MCODEAlgorithm alg;
+	private CyNetworkView networkView;
+	private MCODECluster cluster;
+	private MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
+	private final MCODEResultsManager resultsMgr;
 	private final CyServiceRegistrar registrar;
 	
 	private CyNetworkView newNetworkView;
 	private boolean interrupted;
 	
 	/**
-	 * This constructor requires the tunables fields.
+	 * This constructor requires the tunable fields.
 	 */
 	public CreateClusterNetworkViewTask(
-			MCODEUtil mcodeUtil,
 			MCODEResultsManager resultsMgr,
+			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
 		this.mcodeUtil = mcodeUtil;
+		this.resultsMgr = resultsMgr;
 		this.registrar = registrar;
-		
-		cluster = resultsMgr.getCluster(id, rank);
-		MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
-		MCODEResultsPanel resultsPanel = mcodeUtil.getResultPanel(id);
-		
-		if (cluster == null || params == null || resultsPanel == null) {
-			throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
-		} else {
-			alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
-			networkView = resultsPanel.getNetworkView();
-		}
 	}
 	
 	public CreateClusterNetworkViewTask(
@@ -98,14 +89,29 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		this.id = resultId;
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
+		this.resultsMgr = null;
 		this.registrar = registrar;
 	}
 	
 	@Override
 	public void run(TaskMonitor tm) throws Exception {
-		final CyNetwork clusterNetwork = cluster.getNetwork();
+		if (cluster == null && resultsMgr != null) {
+			// From commands
+			cluster = resultsMgr.getCluster(id, rank);
+			MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
+			MCODEResultsPanel resultsPanel = mcodeUtil.getResultPanel(id);
 		
-		final NumberFormat nf = NumberFormat.getInstance();
+			if (cluster == null || params == null || resultsPanel == null) {
+				throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
+			} else {
+				alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
+				networkView = resultsPanel.getNetworkView();
+			}
+		}
+		
+		CyNetwork clusterNetwork = cluster.getNetwork();
+		
+		NumberFormat nf = NumberFormat.getInstance();
 		nf.setMaximumFractionDigits(3);
 		
 		String title = id + ": " + cluster.getName() + " (Score: " +
