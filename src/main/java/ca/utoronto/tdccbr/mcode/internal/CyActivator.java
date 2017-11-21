@@ -157,7 +157,7 @@ public class CyActivator extends AbstractCyActivator {
 		{
 			MCODEAnalyzeCommandTaskFactory factory = new MCODEAnalyzeCommandTaskFactory(analyzeAction, resultsMgr, mcodeUtil, registrar);
 			Properties props = new Properties();
-			props.setProperty(COMMAND, "analyze");
+			props.setProperty(COMMAND, "cluster");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");
 			props.setProperty(COMMAND_DESCRIPTION, "Finds clusters in a network.");
 			props.setProperty(COMMAND_LONG_DESCRIPTION, "Analyzes the specified network in order to find clusters.");
@@ -169,7 +169,7 @@ public class CyActivator extends AbstractCyActivator {
 		{
 			CreateClusterNetworkViewTaskFactory factory = new CreateClusterNetworkViewTaskFactory(resultsMgr, mcodeUtil, registrar);
 			Properties props = new Properties();
-			props.setProperty(COMMAND, "create view");
+			props.setProperty(COMMAND, "view");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");
 			props.setProperty(COMMAND_DESCRIPTION, "Creates a view from a cluster.");
 			props.setProperty(COMMAND_LONG_DESCRIPTION, "Creates a network and view from the specified MCODE cluster and returns the new view's SUID.");
