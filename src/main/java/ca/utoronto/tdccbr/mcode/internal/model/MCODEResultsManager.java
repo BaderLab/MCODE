@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.cytoscape.model.CyNetwork;
+
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -52,7 +54,7 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 public class MCODEResultsManager {
 
 	/** Keeps track of networks (id is key) and their respective results (list of result ids). */
-	private Map<Integer, List<MCODECluster>> allClusters = new HashMap<>();
+	private Map<Integer, MCODEResult> allResults = new HashMap<>();
 	/** Keeps track of analyzed networks (network SUID is key) and their respective results (list of result ids). */
 	private Map<Long, Set<Integer>> networkResults = new HashMap<>();
 
@@ -70,13 +72,13 @@ public class MCODEResultsManager {
 		return nextResultId;
 	}
 	
-	public boolean containsNetworkResult(final Long suid) {
+	public boolean containsNetworkResult(Long suid) {
 		synchronized (lock) {
 			return networkResults.containsKey(suid);
 		}
 	}
 
-	public Set<Integer> getNetworkResults(final Long suid) {
+	public Set<Integer> getNetworkResults(Long suid) {
 		synchronized (lock) {
 			Set<Integer> ids = networkResults.get(suid);
 			
@@ -84,30 +86,40 @@ public class MCODEResultsManager {
 		}
 	}
 
+	public MCODEResult getResult(int resultId) {
+		synchronized (lock) {
+			return allResults.get(resultId);
+		}
+	}
+	
 	/**
 	 * Fires a {@link PropertyChangeEvent} for property "networkResults", where the new values is the new
 	 * result ID (int).
-	 * @param suid Target CyNetwork SUID
+	 * @param network Target CyNetwork
 	 * @param clusters Clusters created as result of the analysis.
 	 */
-	public void addResult(final Long suid, final List<MCODECluster> clusters) {
+	public MCODEResult addResult(CyNetwork network, List<MCODECluster> clusters) {
+		MCODEResult res = null;
+		
 		synchronized (lock) {
-			Set<Integer> ids = networkResults.get(suid);
+			Set<Integer> ids = networkResults.get(network.getSUID());
 
 			if (ids == null) {
 				ids = new HashSet<>();
-				networkResults.put(suid, ids);
+				networkResults.put(network.getSUID(), ids);
 			}
 
 			ids.add(nextResultId);
-			allClusters.put(nextResultId, clusters);
+			allResults.put(nextResultId, res = new MCODEResult(nextResultId, network, clusters));
 		}
 		
 		pcs.firePropertyChange("networkResults", null, nextResultId);
 		nextResultId++; // Increment next available ID
+		
+		return res;
 	}
-
-	public boolean removeResult(final int resultId) {
+	
+	public boolean removeResult(int resultId) {
 		boolean removed = false;
 		mcodeUtil.getParameterManager().removeResultParams(resultId);
 
@@ -129,10 +141,10 @@ public class MCODEResultsManager {
 			if (networkId != null)
 				networkResults.remove(networkId);
 			
-			final List<MCODECluster> clusters = allClusters.remove(resultId);
+			MCODEResult res = allResults.remove(resultId);
 			
-			if (clusters != null) {
-				for (MCODECluster c : clusters)
+			if (res != null) {
+				for (MCODECluster c : res.getClusters())
 					c.dispose();
 			}
 		}
@@ -140,21 +152,21 @@ public class MCODEResultsManager {
 		return removed;
 	}
 	
-	public List<MCODECluster> getClusters(final int resultId) {
+	public List<MCODECluster> getClusters(int resultId) {
 		synchronized (lock) {
-			return allClusters.get(resultId);
+			MCODEResult res = getResult(resultId);
+			
+			return res != null ? res.getClusters() : Collections.emptyList();
 		}
 	}
 	
-	public MCODECluster getCluster(final int resultId, final int clusterRank) {
+	public MCODECluster getCluster(int resultId, int clusterRank) {
 		synchronized (lock) {
-			List<MCODECluster> clusters = allClusters.get(resultId);
+			List<MCODECluster> clusters = getClusters(resultId);
 			
-			if (clusters != null) {
-				for (MCODECluster c : clusters) {
-					if (clusterRank == c.getRank())
-						return c;
-				}
+			for (MCODECluster c : clusters) {
+				if (clusterRank == c.getRank())
+					return c;
 			}
 		}
 		
@@ -173,7 +185,7 @@ public class MCODEResultsManager {
 		synchronized (lock) {
 			nextResultId = 1;
 			networkResults.clear();
-			allClusters.clear();
+			allResults.clear();
 		}
 	}
 }

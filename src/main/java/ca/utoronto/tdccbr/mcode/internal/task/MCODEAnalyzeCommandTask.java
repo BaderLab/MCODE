@@ -18,7 +18,6 @@ import org.cytoscape.work.TaskMonitor;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -146,32 +145,18 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 		if (mode != INTERRUPTION) {
 			// Run MCODE
 			MCODEAnalyzeTask analyzeTask = new MCODEAnalyzeTask(network, mode, resultId, alg, resultsMgr, mcodeUtil);
-			ShowClustersTask showClustersTask = new ShowClustersTask(analyzeTask);
+			FinalizeTask finalizeTask = new FinalizeTask();
 			
-			insertTasksAfterCurrentTask(showClustersTask);
+			insertTasksAfterCurrentTask(finalizeTask);
 			insertTasksAfterCurrentTask(analyzeTask);
 		}
 	}
 	
-	private class ShowClustersTask extends AbstractTask {
+	private class FinalizeTask extends AbstractTask {
 
-		private MCODEAnalyzeTask analysisTask;
-		
-		public ShowClustersTask(MCODEAnalyzeTask analysisTask) {
-			this.analysisTask = analysisTask;
-		}
-		
 		@Override
-		@SuppressWarnings("unchecked")
 		public void run(TaskMonitor tm) throws Exception {
 			action.setDirty(params.getNetwork(), false);
-			
-			List<MCODECluster> clusters = (List<MCODECluster>) analysisTask.getResults(List.class);
-			
-			if (clusters != null && !clusters.isEmpty())
-				resultsMgr.addResult(params.getNetwork().getSUID(), clusters);
-				
-			mcodeUtil.disposeUnusedNetworks(clusters);
 		}
 	}
 }

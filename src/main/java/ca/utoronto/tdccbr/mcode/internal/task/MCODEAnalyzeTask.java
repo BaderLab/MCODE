@@ -3,10 +3,7 @@ package ca.utoronto.tdccbr.mcode.internal.task;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,6 +22,7 @@ import com.google.gson.Gson;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -82,7 +80,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	
 	private int count;
 
-	private List<MCODECluster> clusters;
+	private MCODEResult result;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
 
@@ -142,9 +140,9 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			tm.setProgress(0.001);
 			tm.setStatusMessage("Finding Clusters (Step 2 of 3)");
 
-			clusters = alg.findClusters(network, resultId);
+			List<MCODECluster> clusters = alg.findClusters(network, resultId);
 
-			if (cancelled)
+			if (cancelled || clusters.isEmpty())
 				return;
 
 			tm.setProgress(0.001);
@@ -179,9 +177,9 @@ public class MCODEAnalyzeTask implements ObservableTask {
 				return;
 			
 			try {
-				final List<Future<MCODECluster>> results = exec.invokeAll(tasks);
+				final List<Future<MCODECluster>> futureList = exec.invokeAll(tasks);
 				
-				for (final Future<MCODECluster> future : results) {
+				for (final Future<MCODECluster> future : futureList) {
 					if (cancelled)
 						break;
 					
@@ -190,6 +188,9 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			} finally {
 	            exec.shutdown();
 	        }
+			
+			result = resultsMgr.addResult(network, clusters);
+			mcodeUtil.disposeUnusedNetworks(clusters);
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		}
@@ -206,12 +207,8 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public Object getResults(Class type) {
-		if (Set.class.isAssignableFrom(type))
-			return new LinkedHashSet<>(clusters);
-		else if (List.class.isAssignableFrom(type))
-			return new ArrayList<>(clusters);
-		else if (Collection.class.isAssignableFrom(type))
-			return new ArrayList<>(clusters);
+		if (type == MCODEResult.class)
+			return result;
 		
 		if (type == String.class) {
 			Color color = LookAndFeelUtil.getSuccessColor();
@@ -219,40 +216,52 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			if (color == null)
 				color = Color.DARK_GRAY;
 			
-			StringBuilder sb = new StringBuilder(String.format(
-					"<html><body>"
-					+ "<p style='font-family: monospace; color: %1$s;'>Result ID: " + resultId + ".</p>"
-					+ "<table style='font-family: monospace; color: %1$s;'>"
-					+ "<tr style='font-weight: bold; border-width: 0px 0px 1px 0px; border-style: dotted;'>"
-					+ "<th style='text-align: left;'>Rank</th>"
-					+ "<th style='text-align: left;'>Score</th>"
-					+ "<th style='text-align: left;'>Nodes</th>"
-					+ "<th style='text-align: left;'>Edges</th>"
-					+ "</tr>",
-					("#" + Integer.toHexString(color.getRGB()).substring(2))
-			));
+			StringBuilder sb = new StringBuilder();
 			
-			for (MCODECluster c : clusters)
+			if (result == null) {
+				sb.append("No clusters were found.\n"
+						+ "You can try changing the MCODE parameters or modifying your node selection"
+						+ " if you are using a selection-specific scope."
+				);
+			} else {
+				List<MCODECluster> clusters = result.getClusters();
+				
 				sb.append(String.format(
-						"<tr>"
-						+ "<td style='text-align: right;'>%d</td>"
-						+ "<td style='text-align: right;'>%f</td>"
-						+ "<td style='text-align: right;'>%d</td>"
-						+ "<td style='text-align: right;'>%d</td></tr>",
-						c.getRank(),
-						c.getScore(),
-						c.getGraph().getNodeCount(),
-						c.getGraph().getEdgeCount()
+						"<html><body>"
+						+ "<span style='font-family: monospace; color: %1$s;'>Result #" + resultId + ":</span><br /> <br />"
+						+ "<table style='font-family: monospace; color: %1$s;'>"
+						+ "<tr style='font-weight: bold; border-width: 0px 0px 1px 0px; border-style: dotted;'>"
+						+ "<th style='text-align: left;'>Rank</th>"
+						+ "<th style='text-align: left;'>Score</th>"
+						+ "<th style='text-align: left;'>Nodes</th>"
+						+ "<th style='text-align: left;'>Edges</th>"
+						+ "</tr>",
+						("#" + Integer.toHexString(color.getRGB()).substring(2))
 				));
-			
-			sb.append("</table></body></html>");
+				
+				for (MCODECluster c : clusters)
+					sb.append(String.format(
+							"<tr>"
+							+ "<td style='text-align: right;'>%d</td>"
+							+ "<td style='text-align: right;'>%f</td>"
+							+ "<td style='text-align: right;'>%d</td>"
+							+ "<td style='text-align: right;'>%d</td></tr>",
+							c.getRank(),
+							c.getScore(),
+							c.getGraph().getNodeCount(),
+							c.getGraph().getEdgeCount()
+					));
+				
+				sb.append("</table></body></html>");
+			}
 			
 			return sb.toString();
 		}
 		
 		if (type == JSONResult.class) {
 			Gson gson = new Gson();
-			JSONResult res = () -> { return gson.toJson(clusters); };
+			JSONResult res = () -> { return gson.toJson(result); };
+			
 			return res;
 		}
 		
@@ -261,6 +270,6 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	
 	@Override
 	public List<Class<?>> getResultClasses() {
-		return Arrays.asList(String.class, List.class, Set.class, Collection.class, JSONResult.class);
+		return Arrays.asList(MCODEResult.class, String.class, JSONResult.class);
 	}
 }

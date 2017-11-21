@@ -3,6 +3,8 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.cytoscape.model.CyNetwork;
+
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
@@ -39,13 +41,15 @@ import java.util.List;
  * * Description: Utilities for MCODE
  */
 
-public class MCODEResults {
+public class MCODEResult {
 	
 	private final int id;
+	private final transient CyNetwork network;
 	private final List<MCODECluster> clusters = new ArrayList<>();
 	
-	public MCODEResults(int id, List<MCODECluster> clusters) {
+	public MCODEResult(int id, CyNetwork network, List<MCODECluster> clusters) {
 		this.id = id;
+		this.network = network;
 		
 		if (clusters != null)
 			this.clusters.addAll(clusters);
@@ -53,6 +57,10 @@ public class MCODEResults {
 	
 	public int getId() {
 		return id;
+	}
+	
+	public CyNetwork getNetwork() {
+		return network;
 	}
 	
 	public List<MCODECluster> getClusters() {

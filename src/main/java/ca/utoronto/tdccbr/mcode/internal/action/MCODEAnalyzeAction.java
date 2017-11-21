@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -142,12 +142,9 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 		TaskObserver taskObserver = new TaskObserver() {
 			
-			private List<MCODECluster> clusters;
-			
 			@Override
-			@SuppressWarnings("unchecked")
 			public void taskFinished(ObservableTask task) {
-				clusters = task.getResults(List.class);
+				// Nothing to do here...
 			}
 			
 			@Override
@@ -157,10 +154,9 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
-					if (clusters != null && !clusters.isEmpty()) {
-						params.setNetwork(network);
-						resultsMgr.addResult(network.getSUID(), clusters);
-					} else {
+					MCODEResult result = resultsMgr.getResult(resultId);
+					
+					if (result == null)
 						invokeOnEDT(() -> {
 							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 														  "No clusters were found.\n"
@@ -170,10 +166,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 														  "No Results",
 														  JOptionPane.WARNING_MESSAGE);
 						});
-					}
 				}
-
-				mcodeUtil.disposeUnusedNetworks(clusters);
 			}
 		};
 		

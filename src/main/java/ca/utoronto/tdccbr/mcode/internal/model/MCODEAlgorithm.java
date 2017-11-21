@@ -352,9 +352,8 @@ public class MCODEAlgorithm {
 
 		// In order to track the progress without significant lags (for times when many nodes have the same score
 		// and no progress is reported) we count all the scored nodes and track those instead
-		for (List<Long> value : values) {
+		for (List<Long> value : values)
 			findingTotal += value.size();
-		}
 
 		// Stores the list of clusters as ArrayLists of node indices in the input Network
 		List<MCODECluster> clusters = new ArrayList<>();

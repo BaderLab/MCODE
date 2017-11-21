@@ -21,6 +21,7 @@ import org.cytoscape.view.model.CyNetworkViewManager;
 
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -80,12 +81,13 @@ public class MCODEResultsMediator {
 	}
 	
 	private void showResultsPanel(int resultId) {
-		List<MCODECluster> clusters = resultsMgr.getClusters(resultId);
+		MCODEResult res = resultsMgr.getResult(resultId);
+		List<MCODECluster> clusters = res != null ? res.getClusters() : null;
 		
 		if (clusters == null || clusters.isEmpty())
 			return;
 		
-		CyNetwork network = clusters.get(0).getGraph().getParentNetwork(); // TODO get MCODEResults instead of just clusters
+		CyNetwork network = res.getNetwork();
 		CyNetworkView currView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
 		
 		MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction("Discard Result", resultId,

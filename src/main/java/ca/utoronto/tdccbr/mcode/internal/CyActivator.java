@@ -162,7 +162,14 @@ public class CyActivator extends AbstractCyActivator {
 			props.setProperty(COMMAND_DESCRIPTION, "Finds clusters in a network.");
 			props.setProperty(COMMAND_LONG_DESCRIPTION, "Analyzes the specified network in order to find clusters.");
 			props.setProperty(COMMAND_SUPPORTS_JSON, "true");
-			props.setProperty(COMMAND_EXAMPLE_JSON, "{ }"); // TODO
+			props.setProperty(COMMAND_EXAMPLE_JSON,
+					"{ \"id\": 1, "
+					+ "\"clusters\": [ "
+					+ "{ \"rank\": 1, \"name\": \"Cluster 1\", \"score\": 3.335, \"seedNode\": 178, \"nodes\": [ 184, 177, 178, 175 ] }, "
+					+ "{ \"rank\": 2, \"name\": \"Cluster 2\", \"score\": 2.41, \"seedNode\": 185, \"nodes\": [ 192, 201, 185, 189, 270 ] } "
+					+ "] "
+					+ "}"
+			);
 			
 			registerService(bc, factory, TaskFactory.class, props);
 		}
