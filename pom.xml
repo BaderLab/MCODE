@@ -7,7 +7,7 @@
 	<properties>
 		<bundle.symbolicName>org.cytoscape.mcode</bundle.symbolicName>
 		<bundle.namespace>ca.utoronto.tdccbr.mcode.internal</bundle.namespace>
-		<cytoscape.api.version>3.5.0</cytoscape.api.version>
+		<cytoscape.api.version>3.6.0</cytoscape.api.version>
 		<cytoscape.impl.version>3.4.0</cytoscape.impl.version>
 		<maven.build.timestamp.format>MMMM yyyy</maven.build.timestamp.format>
 		<buildDate>${maven.build.timestamp}</buildDate>
@@ -224,8 +224,30 @@
 			<artifactId>layout-api</artifactId>
 			<version>${cytoscape.api.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>command-executor-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>util-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+		</dependency>
 		
-		<!-- cyREST -->
+		<!-- Commands/Rest -->
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-client</artifactId>
+			<version>2.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.8.0</version>
+		</dependency>
+		
+		<!-- CyREST -->
 		<dependency>
 			<groupId>javax.ws.rs</groupId>
 			<artifactId>javax.ws.rs-api</artifactId>
@@ -238,7 +260,6 @@
 			<version>1.5.7</version>
 			<scope>provided</scope>
 		</dependency>
-		
 			<dependency>
 			<groupId>org.cytoscape-ci</groupId>
 			<artifactId>ci-bridge-impl</artifactId>

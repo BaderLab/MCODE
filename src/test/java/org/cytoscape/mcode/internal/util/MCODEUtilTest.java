@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -89,6 +90,7 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		
 		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
 				styleFactory, vmMgr, swingApp, vmfFactory, vmfFactory, fileUtil);
+		resultsMgr = new MCODEResultsManager(mcodeUtil);
 	}
 	
 	@Test
@@ -99,7 +101,7 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		final List<MCODECluster> clusters = findClusters(net);
 		assertEquals(1, clusters.size());
 		
-		mcodeUtil.disposeUnusedNetworks();
+		mcodeUtil.disposeUnusedNetworks(clusters);
 		
 		assertEquals(originalNetCount + clusters.size(), rn.getSubNetworkList().size());
 	}

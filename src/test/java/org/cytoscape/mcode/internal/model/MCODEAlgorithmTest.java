@@ -28,6 +28,7 @@ import org.mockito.MockitoAnnotations;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -97,6 +98,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		
 		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
 				styleFactory, vmMgr, swingApp, vmfFactory, vmfFactory, fileUtil);
+		resultsMgr = new MCODEResultsManager(mcodeUtil);
 //		networkSmall = Cytoscape.createNetworkFromFile("testData" + File.separator + "smallTest.sif");
 	}
 
@@ -118,7 +120,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Test
 	public void testCompleteGraphWithDefaultParameters() {
 		CyNetwork net = createCompleteGraph(16);
-		int resultId = mcodeUtil.getNextResultId();
+		int resultId = resultsMgr.getNextResultId();
 		List<MCODECluster> clusters = findClusters(net);
 		
 		assertEquals(1, clusters.size());
@@ -142,7 +144,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 	@Test
 	public void testCompleteGraphIncludingLoops() {
 		CyNetwork net = createCompleteGraph(16);
-		int resultId = mcodeUtil.getNextResultId();
+		int resultId = resultsMgr.getNextResultId();
 		MCODEParameters params = new MCODEParameters();
 		params.setIncludeLoops(true);
 		

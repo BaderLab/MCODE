@@ -365,8 +365,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		if (includeLoopsCkb == null) {
 			includeLoopsCkb = new JCheckBox("Include Loops");
 			includeLoopsCkb.addItemListener(new IncludeLoopsCheckBoxAction());
-			includeLoopsCkb.setToolTipText("<html>Self-edges may increase a<br>node's score slightly</html>");
-			includeLoopsCkb.setSelected(currentParamsCopy.isIncludeLoops());
+			includeLoopsCkb.setToolTipText("<html>Self-edges may increase a<br>node's score slightly.</html>");
+			includeLoopsCkb.setSelected(currentParamsCopy.getIncludeLoops());
 		}
 		
 		return includeLoopsCkb;
@@ -379,7 +379,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			degreeCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
 			degreeCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			degreeCutoffTxt.setToolTipText(
-					"<html><html>Sets the minimum number of<br>edges for a node to be scored.</html>");
+					"<html>Sets the minimum number of<br>edges for a node to be scored.</html>");
 			degreeCutoffTxt.setText(String.valueOf(currentParamsCopy.getDegreeCutoff()));
 		}
 		
@@ -391,7 +391,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			haircutCkb = new JCheckBox("Haircut");
 			haircutCkb.addItemListener(new MCODEMainPanel.HaircutCheckBoxAction());
 			haircutCkb.setToolTipText("<html>Remove singly connected<br>nodes from clusters.</html>");
-			haircutCkb.setSelected(currentParamsCopy.isHaircut());
+			haircutCkb.setSelected(currentParamsCopy.getHaircut());
 		}
 		
 		return haircutCkb;
@@ -404,7 +404,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			fluffCkb.setToolTipText(
 					"<html>Expand core cluster by one neighbour shell<br>" +
 					"(applied after the optional haircut).</html>");
-			fluffCkb.setSelected(currentParamsCopy.isFluff());
+			fluffCkb.setSelected(currentParamsCopy.getFluff());
 		}
 		
 		return fluffCkb;
@@ -476,8 +476,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	private void updateClusterFindingPanel() {
-		if (densityCutoffLabel != null) densityCutoffLabel.setEnabled(currentParamsCopy.isFluff());
-		getDensityCutoffTxt().setEnabled(currentParamsCopy.isFluff());
+		if (densityCutoffLabel != null) densityCutoffLabel.setEnabled(currentParamsCopy.getFluff());
+		getDensityCutoffTxt().setEnabled(currentParamsCopy.getFluff());
 	}
 
 	/**

@@ -5,6 +5,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskMonitor;
 
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
 
@@ -14,15 +15,20 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
 public class MCODECloseTask implements Task {
 
 	private final MCODECloseAllResultsTask closeAllResultsTask;
-	private final CyServiceRegistrar registrar;
+	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
+	private final CyServiceRegistrar registrar;
 	
-	public MCODECloseTask(final MCODECloseAllResultsTask closeAllResultsTask,
-						  final CyServiceRegistrar registrar,
-			  			  final MCODEUtil mcodeUtil) {
+	public MCODECloseTask(
+			MCODECloseAllResultsTask closeAllResultsTask,
+			MCODEResultsManager resultsMgr,
+			MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar
+	) {
 		this.closeAllResultsTask = closeAllResultsTask;
-		this.registrar = registrar;
+		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
+		this.registrar = registrar;
 	}
 
 	@Override
@@ -30,10 +36,10 @@ public class MCODECloseTask implements Task {
 		if (closeAllResultsTask == null || closeAllResultsTask.close) {
 			MCODEMainPanel mainPanel = mcodeUtil.getMainPanel();
 
-			if (mainPanel != null) {
+			if (mainPanel != null)
 				registrar.unregisterService(mainPanel, CytoPanelComponent.class);
-			}
 
+			resultsMgr.reset();
 			mcodeUtil.reset();
 		}
 	}

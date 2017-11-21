@@ -45,7 +45,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
@@ -166,12 +165,6 @@ public class MCODEUtil {
 	private MCODEParameterManager paramMgr;
 	// Keeps track of networks (id is key) and their respective algorithms
 	private Map<Long, MCODEAlgorithm> networkAlgorithms;
-	// Keeps track of analyzed networks (network SUID is key) and their respective results (list of result ids)
-	private Map<Long, Set<Integer>> networkResults;
-	// Keeps track of networks (id is key) and their respective results (list of result ids)
-	private Map<Integer, List<MCODECluster>> allClusters;
-
-	private int nextResultId;
 	
 	private Set<CySubNetwork> createdSubNetworks;
 	
@@ -206,31 +199,25 @@ public class MCODEUtil {
 		this.reset();
 	}
 
-	public int getNextResultId() {
-		return nextResultId;
-	}
-	
 	public String getProperty(String key) {
 		return props.getProperty(key);
 	}
 
 	public void reset() {
-		nextResultId = 1;
 		paramMgr = new MCODEParameterManager();
 		networkAlgorithms = new HashMap<>();
-		networkResults = new HashMap<>();
-		allClusters = new HashMap<>();
 		createdSubNetworks = new HashSet<>();
-	}	
+	}
 	
-	public synchronized void disposeUnusedNetworks() {
+	public synchronized void disposeUnusedNetworks(List<MCODECluster> clusters) {
+		if (clusters == null || clusters.isEmpty())
+			return;
+		
 		// Create an index of cluster networks
 		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<>();
 		
-		for (List<MCODECluster> clusters : allClusters.values()) {
-			for (MCODECluster c : clusters)
-				clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
-		}
+		for (MCODECluster c : clusters)
+			clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		
 		final Iterator<CySubNetwork> iterator = createdSubNetworks.iterator();
 		
@@ -280,80 +267,8 @@ public class MCODEUtil {
 		networkAlgorithms.remove(suid);
 	}
 
-	public boolean containsNetworkResult(final Long suid) {
-		return networkResults.containsKey(suid);
-	}
-
-	public Set<Integer> getNetworkResults(final Long suid) {
-		Set<Integer> ids = networkResults.get(suid);
-
-		return ids != null ? ids : new HashSet<>();
-	}
-
 	/**
-	 * @param suid Target CyNetwork SUID
-	 * @param clusters Clusters created as result of the analysis.
-	 */
-	public void addResult(final Long suid, final List<MCODECluster> clusters) {
-		Set<Integer> ids = networkResults.get(suid);
-
-		if (ids == null) {
-			ids = new HashSet<>();
-			networkResults.put(suid, ids);
-		}
-
-		ids.add(nextResultId);
-		allClusters.put(nextResultId, clusters);
-		
-		nextResultId++; // Increment next available ID
-	}
-
-	public boolean removeResult(final int resultId) {
-		boolean removed = false;
-		getParameterManager().removeResultParams(resultId);
-		
-		Long networkId = null;
-
-		for (Entry<Long, Set<Integer>> entries : networkResults.entrySet()) {
-			Set<Integer> ids = entries.getValue();
-
-			if (ids.remove(resultId)) {
-				if (ids.isEmpty())
-					networkId = entries.getKey();
-
-				removed = true;
-				break;
-			}
-		}
-
-		if (networkId != null)
-			networkResults.remove(networkId);
-		
-		final List<MCODECluster> clusters = allClusters.remove(resultId);
-		
-		if (clusters != null) {
-			for (MCODECluster c : clusters)
-				c.dispose();
-		}
-		
-		return removed;
-	}
-	
-	public MCODECluster getCluster(final int resultId, final int clusterRank) {
-		List<MCODECluster> clusters = allClusters.get(resultId);
-		
-		if (clusters != null) {
-			for (MCODECluster c : clusters) {
-				if (clusterRank == c.getRank())
-					return c;
-			}
-		}
-		
-		return null;
-	}
-
-	/**
-	 * Convert a network to an image.  This is used by the MCODEResultsPanel.
+	 * Convert a network to an image and set it to the passed cluster.
 	 * 
 	 * @param cluster Input network to convert to an image
 	 * @param height  Height that the resulting image should be
@@ -361,14 +276,15 @@ public class MCODEUtil {
 	 * @param layouter Reference to the layout algorithm
 	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
 	 * @param loader Graphic loader displaying progress and process
-	 * @return The resulting image
 	 */
-	public Image createClusterImage(final MCODECluster cluster,
-									final int height,
-									final int width,
-									SpringEmbeddedLayouter layouter,
-									boolean layoutNecessary,
-									final MCODELoader loader) {
+	public void createClusterImage(
+			final MCODECluster cluster,
+			final int height,
+			final int width,
+			SpringEmbeddedLayouter layouter,
+			boolean layoutNecessary,
+			final MCODELoader loader
+	) {
 		final CyNetwork net = cluster.getNetwork();
 		
 		// Progress reporters.
@@ -379,9 +295,8 @@ public class MCODEUtil {
 		double weightLayout = 75.0; // layout it is 70%
 		double goalTotal = weightSetupNodes + weightSetupEdges;
 
-		if (layoutNecessary) {
+		if (layoutNecessary)
 			goalTotal += weightLayout;
-		}
 
 		// keeps track of progress as a percent of the totalGoal
 		double progress = 0;
@@ -400,7 +315,7 @@ public class MCODEUtil {
 				if (layouter != null) layouter.resetDoLayout();
 				resetLoading();
 
-				return null;
+				return;
 			}
 
 			// Node position
@@ -432,11 +347,10 @@ public class MCODEUtil {
 			nv.setVisualProperty(NODE_Y_LOCATION, y);
 
 			// Node shape
-			if (cluster.getSeedNode() == nv.getModel().getSUID()) {
+			if (cluster.getSeedNode() == nv.getModel().getSUID())
 				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
-			} else {
+			else
 				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
-			}
 
 			// Update loader
 			if (loader != null) {
@@ -453,7 +367,7 @@ public class MCODEUtil {
 					if (layouter != null) layouter.resetDoLayout();
 					resetLoading();
 
-					return null;
+					return;
 				}
 
 				if (loader != null) {
@@ -465,9 +379,8 @@ public class MCODEUtil {
 		}
 
 		if (layoutNecessary) {
-			if (layouter == null) {
+			if (layouter == null)
 				layouter = new SpringEmbeddedLayouter();
-			}
 
 			layouter.setGraphView(clusterView);
 
@@ -476,17 +389,17 @@ public class MCODEUtil {
 				// Otherwise, if layout is not completed, set the interruption to false, and return null, not an image
 				resetLoading();
 
-				return null;
+				return;
 			}
 		}
-
+		
+		final SpringEmbeddedLayouter finalLayouter = layouter;
 		final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = (Graphics2D) image.getGraphics();
+		final Dimension size = new Dimension(width, height);
 
-		SwingUtilities.invokeLater(() -> {
+		invokeOnEDT(() -> {
 			try {
-				final Dimension size = new Dimension(width, height);
-
 				JPanel panel = new JPanel();
 				panel.setPreferredSize(size);
 				panel.setSize(size);
@@ -508,18 +421,20 @@ public class MCODEUtil {
 				re.createImage(width, height);
 				re.printCanvas(g);
 				g.dispose();
-
+				
 				if (!clusterView.getNodeViews().isEmpty())
 					cluster.setView(clusterView);
+				
+				cluster.setImage(image);
+				
+				if (finalLayouter != null)
+					finalLayouter.resetDoLayout();
+				
+				resetLoading();
 			} catch (Exception ex) {
 				throw new RuntimeException(ex);
 			}
 		});
-
-		layouter.resetDoLayout();
-		resetLoading();
-		
-		return image;
 	}
 
 	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes, final boolean includeLoops) {
@@ -583,11 +498,12 @@ public class MCODEUtil {
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
 		final CyNetworkView view = networkViewFactory.createNetworkView(net);
 
-		if (vs == null) vs = visualMappingMgr.getDefaultVisualStyle();
+		if (vs == null)
+			vs = visualMappingMgr.getDefaultVisualStyle();
+		
 		visualMappingMgr.setVisualStyle(vs, view);
 		vs.apply(view);
-		view.updateView();
-
+		
 		return view;
 	}
 
@@ -597,7 +513,6 @@ public class MCODEUtil {
 		applicationMgr.setCurrentNetworkView(view);
 
 		view.fitContent();
-		view.updateView();
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

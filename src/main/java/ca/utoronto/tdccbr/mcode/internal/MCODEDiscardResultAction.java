@@ -11,6 +11,7 @@ import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.service.util.CyServiceRegistrar;
 
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
@@ -22,11 +23,19 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 
 	private final int resultId;
 	private final MCODEUtil mcodeUtil;
+	private final MCODEResultsManager resultsMgr;
 	private final CyServiceRegistrar registrar;
 
-	public MCODEDiscardResultAction(String name, int resultId, MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
+	public MCODEDiscardResultAction(
+			String name,
+			int resultId,
+			MCODEResultsManager resultsMgr,
+			MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar
+	) {
 		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, registrar);
 		this.resultId = resultId;
+		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 	}
@@ -55,7 +64,7 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 
 			if (confirmed == JOptionPane.YES_OPTION) {
 				registrar.unregisterService(panel, CytoPanelComponent.class);
-				mcodeUtil.removeResult(resultId);
+				resultsMgr.removeResult(resultId);
 			}
 		}
 
@@ -68,6 +77,7 @@ public class MCODEDiscardResultAction extends AbstractMCODEAction {
 
 		if (getResultPanels().size() == 0) {
 			// Reset the results cache
+			resultsMgr.reset();
 			mcodeUtil.reset();
 		}
 	}

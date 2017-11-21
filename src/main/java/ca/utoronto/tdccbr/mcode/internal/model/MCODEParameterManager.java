@@ -3,6 +3,8 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.cytoscape.model.CyNetwork;
+
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
@@ -75,40 +77,38 @@ public class MCODEParameterManager {
 	 *
 	 * @param newParams The new current parameters to set
 	 * @param resultId Id of the result set
-	 * @param networkID Id of the network
+	 * @param network The target network
 	 */
-	public void setParams(MCODEParameters newParams, int resultId, Long networkID) {
+	public void setParams(MCODEParameters newParams, int resultId, CyNetwork network) {
 		//cannot simply equate the params and newParams classes since that creates a permanent reference
 		//and prevents us from keeping 2 sets of the class such that the saved version is not altered
 		//until this method is called
 		MCODEParameters currentParamSet = new MCODEParameters(
-				networkID,
+				network,
 				newParams.getScope(),
 				newParams.getSelectedNodes(),
-				newParams.isIncludeLoops(),
+				newParams.getIncludeLoops(),
 				newParams.getDegreeCutoff(),
 				newParams.getKCore(),
-				newParams.isOptimize(),
 				newParams.getMaxDepthFromStart(),
 				newParams.getNodeScoreCutoff(),
-				newParams.isFluff(),
-				newParams.isHaircut(),
+				newParams.getFluff(),
+				newParams.getHaircut(),
 				newParams.getFluffNodeDensityCutoff());
 
-		currentParams.put(networkID, currentParamSet);
+		currentParams.put(network.getSUID(), currentParamSet);
 
 		MCODEParameters resultParamSet = new MCODEParameters(
-				networkID,
+				network,
 				newParams.getScope(),
 				newParams.getSelectedNodes(),
-				newParams.isIncludeLoops(),
+				newParams.getIncludeLoops(),
 				newParams.getDegreeCutoff(),
 				newParams.getKCore(),
-				newParams.isOptimize(),
 				newParams.getMaxDepthFromStart(),
 				newParams.getNodeScoreCutoff(),
-				newParams.isFluff(),
-				newParams.isHaircut(),
+				newParams.getFluff(),
+				newParams.getHaircut(),
 				newParams.getFluffNodeDensityCutoff());
 
 		resultParams.put(resultId, resultParamSet);

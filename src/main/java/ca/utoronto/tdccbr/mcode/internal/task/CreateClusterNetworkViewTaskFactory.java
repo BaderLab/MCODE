@@ -1,19 +1,11 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import java.util.Collection;
-import java.util.Set;
-
-import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
-import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.TaskIterator;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -45,26 +37,20 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
  * * along with this library; if not, write to the Free Software Foundation,
  * * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
  * *
- * * User: Gary Bader
- * * Date: Jun 25, 2004
- * * Time: 7:00:13 PM
- * * Description: Utilities for MCODE
- */
+ ** User: Gary Bader
+ ** Date: Jan 26, 2004
+ ** Time: 2:44:30 PM
+ ** Description: Stores an MCODE parameter set
+ **/
 
-public class MCODECloseTaskFactory implements TaskFactory, NetworkAboutToBeDestroyedListener {
-	
-	private final CySwingApplication swingApplication;
+public class CreateClusterNetworkViewTaskFactory implements TaskFactory {
+
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
-	public MCODECloseTaskFactory(
-			CySwingApplication swingApplication,
-			MCODEResultsManager resultsMgr,
-			MCODEUtil mcodeUtil,
-			CyServiceRegistrar registrar
-	) {
-		this.swingApplication = swingApplication;
+	public CreateClusterNetworkViewTaskFactory(MCODEResultsManager resultsMgr, MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar) {
 		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
@@ -72,33 +58,11 @@ public class MCODECloseTaskFactory implements TaskFactory, NetworkAboutToBeDestr
 
 	@Override
 	public TaskIterator createTaskIterator() {
-		final TaskIterator taskIterator = new TaskIterator();
-		final Collection<MCODEResultsPanel> resultPanels = mcodeUtil.getResultPanels();
-		final MCODECloseAllResultsTask closeResultsTask = new MCODECloseAllResultsTask(swingApplication, mcodeUtil);
-
-		if (resultPanels.size() > 0)
-			taskIterator.append(closeResultsTask);
-		
-		taskIterator.append(new MCODECloseTask(closeResultsTask, resultsMgr, mcodeUtil, registrar));
-		
-		return taskIterator;
+		return new TaskIterator(new CreateClusterNetworkViewTask(mcodeUtil, resultsMgr, registrar));
 	}
 
 	@Override
 	public boolean isReady() {
-		return mcodeUtil.isOpened();
-	}
-	
-	@Override
-	public void handleEvent(final NetworkAboutToBeDestroyedEvent e) {
-		if (mcodeUtil.isOpened()) {
-			CyNetwork network = e.getNetwork();
-			Set<Integer> resultIds = resultsMgr.getNetworkResults(network.getSUID());
-
-			for (int id : resultIds) {
-				MCODEResultsPanel panel = mcodeUtil.getResultPanel(id);
-				if (panel != null) panel.discard(false);
-			}
-		}
+		return true;
 	}
 }

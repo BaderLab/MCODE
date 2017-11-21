@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.cytoscape.application.CyUserLog;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
@@ -69,7 +70,7 @@ public class MCODEAlgorithm {
 	private boolean cancelled;
 	private TaskMonitor taskMonitor;
 	
-	private static final Logger logger = LoggerFactory.getLogger(MCODEAlgorithm.class);
+	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 
 	//data structure for storing information required for each node
 	private static class NodeInfo {
@@ -190,9 +191,8 @@ public class MCODEAlgorithm {
 		for (double nodeScore : nodeScoreSortedMap.keySet()) {
 			List<Long> nodes = nodeScoreSortedMap.get(nodeScore);
 
-			if (nodes.contains(nodeId)) {
+			if (nodes.contains(nodeId))
 				return nodeScore;
-			}
 		}
 
 		return 0.0;
@@ -318,6 +318,9 @@ public class MCODEAlgorithm {
 	 * @return A list containing an MCODECluster object for each cluster.
 	 */
 	public List<MCODECluster> findClusters(final CyNetwork inputNetwork, final int resultId) {
+		if (inputNetwork == null)
+			throw new IllegalArgumentException("The input network was must not be null.");
+		
 		final SortedMap<Double, List<Long>> nodeScoreSortedMap;
 		final Map<Long, NodeInfo> nodeInfoHashMap;
 
@@ -336,17 +339,8 @@ public class MCODEAlgorithm {
 			nodeInfoHashMap = nodeInfoResultsMap.get(resultId);
 		}
 
-		String callerID = "MCODEAlgorithm.findClusters";
-
-		if (inputNetwork == null) {
-			logger.error("In " + callerID + ": inputNetwork was null.");
-			return null;
-		}
-
-		if (nodeInfoHashMap == null || nodeScoreSortedMap == null) {
-			logger.error("In " + callerID + ": nodeInfoHashMap or nodeScoreSortedMap was null.");
-			return null;
-		}
+		if (nodeInfoHashMap == null || nodeScoreSortedMap == null)
+			throw new NullPointerException("nodeInfoHashMap or nodeScoreSortedMap was null.");
 
 		// Initialization
 		long msTimeBefore = System.currentTimeMillis();
@@ -390,10 +384,10 @@ public class MCODEAlgorithm {
 						MCODEGraph clusterGraph = createClusterGraph(clusterCore, inputNetwork);
 
 						if (!filterCluster(clusterGraph)) {
-							if (params.isHaircut())
+							if (params.getHaircut())
 								haircutCluster(clusterGraph, clusterCore);
 
-							if (params.isFluff())
+							if (params.getFluff())
 								fluffClusterBoundary(clusterCore, nodeSeenHashMap, nodeInfoHashMap);
 
 							clusterGraph = createClusterGraph(clusterCore, inputNetwork);
@@ -412,9 +406,8 @@ public class MCODEAlgorithm {
 					// miniscule decimal increments so that the taskMonitor isn't overwhelmed
 					double newProgress = ++findingProgress / findingTotal;
 
-					if ( Math.round(newProgress * 100) != Math.round((newProgress - 0.01) * 100) ) {
+					if (Math.round(newProgress * 100) != Math.round((newProgress - 0.01) * 100))
 						taskMonitor.setProgress(newProgress);
-					}
 				}
 
 				if (cancelled)
@@ -492,10 +485,10 @@ public class MCODEAlgorithm {
 		// Create an input graph for the filter and haircut methods
 		MCODEGraph clusterGraph = createClusterGraph(clusterCore, inputNet);
 
-		if (params.isHaircut())
+		if (params.getHaircut())
 			haircutCluster(clusterGraph, clusterCore);
 
-		if (params.isFluff())
+		if (params.getFluff())
 			fluffClusterBoundary(clusterCore, nodeSeenHashMap, nodeInfoHashMap);
 
 		clusterGraph = createClusterGraph(clusterCore, inputNet);
@@ -516,7 +509,7 @@ public class MCODEAlgorithm {
 			nodes.add(n);
 		}
 
-		final MCODEGraph clusterGraph = mcodeUtil.createGraph(inputNet, nodes, params.isIncludeLoops());
+		final MCODEGraph clusterGraph = mcodeUtil.createGraph(inputNet, nodes, params.getIncludeLoops());
 
 		return clusterGraph;
 	}
@@ -550,7 +543,7 @@ public class MCODEAlgorithm {
 		double density = 0.0, score = 0.0;
 
 		numNodes = clusterGraph.getNodeCount();
-		density = calcDensity(clusterGraph, params.isIncludeLoops());
+		density = calcDensity(clusterGraph, params.getIncludeLoops());
 		score = density * numNodes;
 
 		return score;
@@ -615,14 +608,14 @@ public class MCODEAlgorithm {
 			return null;
 		
 		// extract neighborhood subgraph
-		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors, params.isIncludeLoops());
+		final MCODEGraph neighborhoodGraph = mcodeUtil.createGraph(inputNetwork, neighbors, params.getIncludeLoops());
 
 		// Calculate the node information for each node
 		final NodeInfo nodeInfo = new NodeInfo(node);
 
 		// Density
 		if (neighborhoodGraph != null)
-			nodeInfo.density = calcDensity(neighborhoodGraph, params.isIncludeLoops());
+			nodeInfo.density = calcDensity(neighborhoodGraph, params.getIncludeLoops());
 		
 		nodeInfo.numNodeNeighbors = neighborhood.length;
 
@@ -636,7 +629,7 @@ public class MCODEAlgorithm {
 		// Calculate the core density - amplifies the density of heavily interconnected regions and attenuates
 		// that of less connected regions
 		if (kCore != null)
-			nodeInfo.coreDensity = calcDensity(kCore, params.isIncludeLoops());
+			nodeInfo.coreDensity = calcDensity(kCore, params.getIncludeLoops());
 
 		// Record neighbor array for later use in cluster detection step
 		nodeInfo.nodeNeighbors = neighborhood;
@@ -903,7 +896,7 @@ public class MCODEAlgorithm {
 				if (cancelled)
 					return null;
 				
-				int degree = getDegree(outputGraph, n, params.isIncludeLoops());
+				int degree = getDegree(outputGraph, n, params.getIncludeLoops());
 
 				if (degree >= k)
 					outputNodes.add(n); //contains all nodes with degree >= k
@@ -915,7 +908,7 @@ public class MCODEAlgorithm {
 				if (outputNodes.isEmpty())
 					return null;
 				
-				outputGraph = mcodeUtil.createGraph(outputGraph.getParentNetwork(), outputNodes, params.isIncludeLoops());
+				outputGraph = mcodeUtil.createGraph(outputGraph.getParentNetwork(), outputNodes, params.getIncludeLoops());
 				
 				if (outputGraph.getNodeCount() == 0)
 					return null;

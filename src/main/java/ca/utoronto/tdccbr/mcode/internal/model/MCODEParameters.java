@@ -2,6 +2,10 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 
 import static ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope.NETWORK;
 
+import org.cytoscape.command.StringToModel;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.work.Tunable;
+
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
@@ -44,9 +48,8 @@ import static ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope.NETWORK
 public class MCODEParameters {
 
 	// scope
-	private Long networkSUID;
+	private CyNetwork network;
 	private MCODEAnalysisScope scope;
-	private Long[] selectedNodes;
 
 	// used in scoring stage
 	private boolean includeLoops;
@@ -54,16 +57,18 @@ public class MCODEParameters {
 	private int kCore;
 
 	// used in cluster finding stage
-	private boolean optimize;
 	private int maxDepthFromStart;
 	private double nodeScoreCutoff;
-	private boolean fluff;
 	private boolean haircut;
+	private boolean fluff;
 	private double fluffNodeDensityCutoff;
+	
+	/** Caches the SUID of selected nodes. */
+	private Long[] selectedNodes;
 
 	/**
 	 * Constructor for the parameter set object. Default parameters are:
-	 * networkViewSUID = null, ('use the current view')
+	 * network = null, ('use the current network')
 	 * scope = NETWORK,
 	 * selectedNodes = new Integer[0],
 	 * loops = false,
@@ -84,13 +89,12 @@ public class MCODEParameters {
 	 * Once an alalysis is conducted, new parameters must be saved so that they can be retrieved in the result panel
 	 * for exploration and export purposes.
 	 *
-	 * @param networkSUID CyNetwork to be analyzed
+	 * @param network {@link CyNetwork} to be analyzed
 	 * @param scope scope of the search (equal to one of the two fields NETWORK or SELECTION)
 	 * @param selectedNodes Node selection for selection-based scope
 	 * @param includeLoops include loops
 	 * @param degreeCutoff degree cutoff
 	 * @param kCore K-core
-	 * @param optimize determines if parameters are customized by user/default or optimized
 	 * @param maxDepthFromStart max depth from start
 	 * @param nodeScoreCutoff node score cutoff
 	 * @param fluff fluff
@@ -98,20 +102,19 @@ public class MCODEParameters {
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
 	public MCODEParameters(
-			Long networkSUID,
+			CyNetwork network,
 			MCODEAnalysisScope scope,
 			Long[] selectedNodes,
 			boolean includeLoops,
 			int degreeCutoff,
 			int kCore,
-			boolean optimize,
 			int maxDepthFromStart,
 			double nodeScoreCutoff,
 			boolean fluff,
 			boolean haircut,
 			double fluffNodeDensityCutoff
 	) {
-		setAllAlgorithmParams(networkSUID, scope, selectedNodes, includeLoops, degreeCutoff, kCore, optimize,
+		setAllAlgorithmParams(network, scope, selectedNodes, includeLoops, degreeCutoff, kCore,
 				maxDepthFromStart, nodeScoreCutoff, fluff, haircut, fluffNodeDensityCutoff);
 	}
 
@@ -119,19 +122,18 @@ public class MCODEParameters {
 	 * Method for setting all parameters to their default values
 	 */
 	public void setDefaultParams() {
-		setAllAlgorithmParams(null, NETWORK, new Long[0], false, 2, 2, false, 100, 0.2, false, true, 0.1);
+		setAllAlgorithmParams(null, NETWORK, new Long[0], false, 2, 2, 100, 0.2, false, true, 0.1);
 	}
 
 	/**
 	 * Convenience method to set all the main algorithm parameters
 	 *
-	 * @param networkSUID CyNetwork to be analyzed
+	 * @param network {@link CyNetwork} to be analyzed
 	 * @param scope scope
 	 * @param selectedNodes Node selection for selection-based scopes
 	 * @param includeLoops include loops
 	 * @param degreeCutoff degree cutoff
 	 * @param kCore K-core
-	 * @param optimize determines if parameters are customized by user/default or optimized
 	 * @param maxDepthFromStart max depth from start
 	 * @param nodeScoreCutoff node score cutoff
 	 * @param fluff fluff
@@ -139,26 +141,24 @@ public class MCODEParameters {
 	 * @param fluffNodeDensityCutoff fluff node density cutoff
 	 */
 	public void setAllAlgorithmParams(
-			Long networkSUID,
+			CyNetwork network,
 			MCODEAnalysisScope scope,
 			Long[] selectedNodes,
 			boolean includeLoops,
 			int degreeCutoff,
 			int kCore,
-			boolean optimize,
 			int maxDepthFromStart,
 			double nodeScoreCutoff,
 			boolean fluff,
 			boolean haircut,
 			double fluffNodeDensityCutoff
 	) {
-		this.networkSUID = networkSUID;
+		this.network = network;
 		this.scope = scope;
 		this.selectedNodes = selectedNodes;
 		this.includeLoops = includeLoops;
 		this.degreeCutoff = degreeCutoff;
 		this.kCore = kCore;
-		this.optimize = optimize;
 		this.maxDepthFromStart = maxDepthFromStart;
 		this.nodeScoreCutoff = nodeScoreCutoff;
 		this.fluff = fluff;
@@ -173,13 +173,12 @@ public class MCODEParameters {
 	 */
 	public MCODEParameters copy() {
 		MCODEParameters newParam = new MCODEParameters();
-		newParam.setNetworkSUID(networkSUID);
+		newParam.setNetwork(network);
 		newParam.setScope(scope);
 		newParam.setSelectedNodes(selectedNodes);
 		newParam.setIncludeLoops(includeLoops);
 		newParam.setDegreeCutoff(degreeCutoff);
 		newParam.setKCore(kCore);
-		newParam.setOptimize(optimize);
 		newParam.setMaxDepthFromStart(maxDepthFromStart);
 		newParam.setNodeScoreCutoff(nodeScoreCutoff);
 		newParam.setFluff(fluff);
@@ -189,14 +188,26 @@ public class MCODEParameters {
 		return newParam;
 	}
 	
-	public Long getNetworkSUID() {
-		return networkSUID;
+	@Tunable(
+			description = "Network",
+			longDescription = StringToModel.CY_NETWORK_LONG_DESCRIPTION,
+			exampleStringValue = StringToModel.CY_NETWORK_EXAMPLE_STRING,
+			context = "nogui"
+	)
+	public CyNetwork getNetwork() {
+		return network;
 	}
 	
-	public void setNetworkSUID(Long networkSUID) {
-		this.networkSUID = networkSUID;
+	public void setNetwork(CyNetwork network) {
+		this.network = network;
 	}
 
+	@Tunable(
+			description = "Scope",
+			longDescription = "The scope of the analysis may be ```SELECTION``` or ```NETWORK``` (the default).",
+			exampleStringValue = "NETWORK",
+			context = "nogui"
+	)
 	public MCODEAnalysisScope getScope() {
 		return scope;
 	}
@@ -205,15 +216,14 @@ public class MCODEParameters {
 		this.scope = scope;
 	}
 
-	public Long[] getSelectedNodes() {
-		return selectedNodes;
-	}
-
-	public void setSelectedNodes(Long[] selectedNodes) {
-		this.selectedNodes = selectedNodes;
-	}
-
-	public boolean isIncludeLoops() {
+	@Tunable(
+			description = "Include Loops",
+			longDescription = "If ```true```, self-edges may increase a node's score slightly.",
+			exampleStringValue = "false",
+			context = "nogui"
+	)
+	// Don't name this method isIncludeLoops(), because Cytoscape Tunables only accept the prefix "get".
+	public boolean getIncludeLoops() {
 		return includeLoops;
 	}
 
@@ -221,6 +231,12 @@ public class MCODEParameters {
 		this.includeLoops = includeLoops;
 	}
 
+	@Tunable(
+			description = "Degree Cutoff",
+			longDescription = "Sets the minimum number of edges for a node to be scored.",
+			exampleStringValue = "2",
+			context = "nogui"
+	)
 	public int getDegreeCutoff() {
 		return degreeCutoff;
 	}
@@ -229,6 +245,12 @@ public class MCODEParameters {
 		this.degreeCutoff = degreeCutoff;
 	}
 
+	@Tunable(
+			description = "K-Core",
+			longDescription = "Filters out clusters lacking a maximally inter-connected core of at least k edges per node.",
+			exampleStringValue = "2",
+			context = "nogui"
+	)
 	public int getKCore() {
 		return kCore;
 	}
@@ -237,14 +259,12 @@ public class MCODEParameters {
 		this.kCore = kCore;
 	}
 
-	public void setOptimize(boolean optimize) {
-		this.optimize = optimize;
-	}
-
-	public boolean isOptimize() {
-		return optimize;
-	}
-
+	@Tunable(
+			description = "Max. Depth",
+			longDescription = "Limits the cluster size by setting the maximum search distance from a seed node (100 virtually means no limit).",
+			exampleStringValue = "100",
+			context = "nogui"
+	)
 	public int getMaxDepthFromStart() {
 		return maxDepthFromStart;
 	}
@@ -253,6 +273,12 @@ public class MCODEParameters {
 		this.maxDepthFromStart = maxDepthFromStart;
 	}
 
+	@Tunable(
+			description = "Node Score Cutoff",
+			longDescription = "Sets the acceptable score deviance from the seed node's score for expanding a cluster (most influental parameter for cluster size).",
+			exampleStringValue = "0.2",
+			context = "nogui"
+	)
 	public double getNodeScoreCutoff() {
 		return nodeScoreCutoff;
 	}
@@ -261,28 +287,56 @@ public class MCODEParameters {
 		this.nodeScoreCutoff = nodeScoreCutoff;
 	}
 
-	public boolean isFluff() {
-		return fluff;
-	}
-
-	public void setFluff(boolean fluff) {
-		this.fluff = fluff;
-	}
-
-	public boolean isHaircut() {
+	@Tunable(
+			description = "Haircut",
+			longDescription = "Remove singly connected nodes from clusters.",
+			exampleStringValue = "true",
+			context = "nogui"
+	)
+	// Don't name this method isHaircut(), because Cytoscape Tunables only accept the prefix "get".
+	public boolean getHaircut() {
 		return haircut;
 	}
 
 	public void setHaircut(boolean haircut) {
 		this.haircut = haircut;
 	}
+	
+	@Tunable(
+			description = "Fluff",
+			longDescription = "Expand core cluster by one neighbour shell (applied after the optional haircut).",
+			exampleStringValue = "true",
+			context = "nogui"
+	)
+	// Don't name this method isFluff(), because Cytoscape Tunables only accept the prefix "get".
+	public boolean getFluff() {
+		return fluff;
+	}
 
+	public void setFluff(boolean fluff) {
+		this.fluff = fluff;
+	}
+	
+	@Tunable(
+			description = "Fluff Node Density Cutoff",
+			longDescription = "Limits fluffing by setting the acceptable node density deviance from the core cluster density (allows clusters' edges to overlap).",
+			exampleStringValue = "0.1",
+			context = "nogui"
+	)
 	public double getFluffNodeDensityCutoff() {
 		return fluffNodeDensityCutoff;
 	}
 
 	public void setFluffNodeDensityCutoff(double fluffNodeDensityCutoff) {
 		this.fluffNodeDensityCutoff = fluffNodeDensityCutoff;
+	}
+	
+	public Long[] getSelectedNodes() {
+		return selectedNodes;
+	}
+
+	public void setSelectedNodes(Long[] selectedNodes) {
+		this.selectedNodes = selectedNodes;
 	}
 
 	/**

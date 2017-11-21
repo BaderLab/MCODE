@@ -1,6 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal.model;
 
 import java.awt.Image;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.util.List;
 import java.util.Map;
 
@@ -64,6 +66,9 @@ public class MCODECluster {
 	private transient MCODEGraph graph;
 	private transient Image image;
 	private transient boolean disposed;
+	
+	private transient final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+	private transient final Object lock = new Object();
 
 	public MCODECluster(
 			int resultId,
@@ -103,11 +108,11 @@ public class MCODECluster {
 		return graph;
 	}
 	
-	public synchronized CyNetworkView getView() {
+	public CyNetworkView getView() {
 		return view;
 	}
 
-	public synchronized void setView(final CyNetworkView view) {
+	public void setView(final CyNetworkView view) {
 		throwExceptionIfDisposed();
 		
 		if (this.view != null)
@@ -116,7 +121,7 @@ public class MCODECluster {
 		this.view = view;
 	}
 
-	public synchronized CySubNetwork getNetwork() {
+	public CySubNetwork getNetwork() {
 		return graph.getSubNetwork();
 	}
 	
@@ -145,29 +150,47 @@ public class MCODECluster {
 		this.name = "Cluster " + rank;
 	}
 	
-	public synchronized Image getImage() {
+	public Image getImage() {
 		return image;
 	}
 
-	public synchronized void setImage(Image image) {
+	public void setImage(Image image) {
+		Image oldImage = this.image;
 		this.image = image;
+		pcs.firePropertyChange("image", oldImage, image);
 	}
 
-	public synchronized boolean isDisposed() {
-		return disposed;
+	public boolean isDisposed() {
+		synchronized (lock) {
+			return disposed;
+		}
 	}
 
-	public synchronized void dispose() {
-		if (isDisposed()) return;
-		
-		if (view != null)
-			view.dispose();
-		
-		graph.dispose();
-		
-		disposed = true;
+	public void dispose() {
+		synchronized (lock) {
+			if (isDisposed())
+				return;
+			
+			if (view != null)
+				view.dispose();
+			
+			graph.dispose();
+			disposed = true;
+		}
 	}
 
+	public void addPropertyChangeListener(PropertyChangeListener listener) {
+		pcs.addPropertyChangeListener(listener);
+	}
+
+	public void addPropertyChangeListener(String propertyName, PropertyChangeListener listener) {
+		pcs.addPropertyChangeListener(propertyName, listener);
+	}
+
+	public void removePropertyChangeListener(PropertyChangeListener listener) {
+		pcs.removePropertyChangeListener(listener);
+	}
+	
 	@Override
 	public String toString() {
 		return "MCODECluster [clusterName=" + name + ", clusterScore=" + score + 

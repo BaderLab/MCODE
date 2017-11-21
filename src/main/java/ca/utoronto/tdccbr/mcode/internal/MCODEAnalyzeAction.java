@@ -1,24 +1,18 @@
 package ca.utoronto.tdccbr.mcode.internal;
 
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDTAndWait;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
 import org.cytoscape.application.events.SetCurrentNetworkEvent;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.ActionEnableSupport;
-import org.cytoscape.application.swing.CytoPanel;
-import org.cytoscape.application.swing.CytoPanelComponent;
-import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.events.AddedEdgesEvent;
@@ -30,7 +24,6 @@ import org.cytoscape.model.events.RemovedEdgesListener;
 import org.cytoscape.model.events.RemovedNodesEvent;
 import org.cytoscape.model.events.RemovedNodesListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
-import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.FinishStatus;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskObserver;
@@ -42,9 +35,9 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -95,19 +88,25 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	public final static int REFIND = 2;
 	public final static int INTERRUPTION = 3;
 
-	private final CyServiceRegistrar registrar;
-	private final MCODEUtil mcodeUtil;
-
 	private int mode = FIRST_TIME;
-	
 	private Map<Long/*network_suid*/, Boolean> dirtyNetworks;
+	
+	private final MCODEResultsManager resultsMgr;
+	private final MCODEUtil mcodeUtil;
+	private final CyServiceRegistrar registrar;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeAction.class);
 
-	public MCODEAnalyzeAction(String title, CyServiceRegistrar registrar, MCODEUtil mcodeUtil) {
+	public MCODEAnalyzeAction(
+			String title,
+			MCODEResultsManager resultsMgr,
+			MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar
+	) {
 		super(title, ActionEnableSupport.ENABLE_FOR_NETWORK, registrar);
-		this.registrar = registrar;
+		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
+		this.registrar = registrar;
 		dirtyNetworks = new HashMap<>();
 	}
 
@@ -137,7 +136,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 			return;
 		}
 		
-		final int resultId = mcodeUtil.getNextResultId();
+		final int resultId = resultsMgr.getNextResultId();
 		final MCODEParameters params =
 				getMainPanel() != null ? getMainPanel().getCurrentParamsCopy() : new MCODEParameters();
 
@@ -159,9 +158,8 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
 					if (clusters != null && !clusters.isEmpty()) {
-						params.setNetworkSUID(network.getSUID());
-						mcodeUtil.addResult(network.getSUID(), clusters);
-						showResultsPanel(network, resultId, clusters);
+						params.setNetwork(network);
+						resultsMgr.addResult(network.getSUID(), clusters);
 					} else {
 						invokeOnEDT(() -> {
 							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
@@ -175,7 +173,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 					}
 				}
 
-				mcodeUtil.disposeUnusedNetworks();
+				mcodeUtil.disposeUnusedNetworks(clusters);
 			}
 		};
 		
@@ -246,15 +244,15 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
 		// the clustering parameters are relevant if the optimization is used
 		if (mode == FIRST_TIME || isDirty(network)
-				|| currentParams.isIncludeLoops() != savedParams.isIncludeLoops()
+				|| currentParams.getIncludeLoops() != savedParams.getIncludeLoops()
 				|| currentParams.getDegreeCutoff() != savedParams.getDegreeCutoff()) {
 			mode = RESCORE;
 			logger.debug("Analysis: score network, find clusters");
-			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
+			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network);
 		} else if (parametersChanged(savedParams, currentParams)) {
 			mode = REFIND;
 			logger.debug("Analysis: find clusters");
-			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network.getSUID());
+			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network);
 		} else {
 			mode = INTERRUPTION;
 			interruptedMessage = "The parameters you specified have not changed.";
@@ -274,7 +272,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 										  JOptionPane.WARNING_MESSAGE);
 		} else {
 			// Run MCODE
-			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, mcodeUtil);
+			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, resultsMgr, mcodeUtil);
 			registrar.getService(DialogTaskManager.class).execute(tf.createTaskIterator(), taskObserver);
 		}
 	}
@@ -287,13 +285,12 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	private boolean parametersChanged(final MCODEParameters p1, final MCODEParameters p2) {
 		boolean b = !p2.getScope().equals(p1.getScope());
 		b = b || (p2.getScope() != MCODEAnalysisScope.NETWORK && p2.getSelectedNodes() != p1.getSelectedNodes());
-		b = b || (p2.isOptimize() != p1.isOptimize());
-		b = b || (!p2.isOptimize() && (p2.getKCore() != p1.getKCore() ||
-										p2.getMaxDepthFromStart() != p1.getMaxDepthFromStart() ||
-										p2.isHaircut() != p1.isHaircut() ||
-										p2.getNodeScoreCutoff() != p1.getNodeScoreCutoff() ||
-										p2.isFluff() != p1.isFluff() || 
-										(p2.isFluff() && p2.getFluffNodeDensityCutoff() != p1.getFluffNodeDensityCutoff())));
+		b = b || (p2.getKCore() != p1.getKCore() ||
+					p2.getMaxDepthFromStart() != p1.getMaxDepthFromStart() ||
+					p2.getHaircut() != p1.getHaircut() ||
+					p2.getNodeScoreCutoff() != p1.getNodeScoreCutoff() ||
+					p2.getFluff() != p1.getFluff() || 
+					(p2.getFluff() && p2.getFluffNodeDensityCutoff() != p1.getFluffNodeDensityCutoff()));
 		return b;
 	}
 	
@@ -320,27 +317,5 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	 */
 	public boolean isDirty(final CyNetwork net) {
 		return Boolean.TRUE.equals(dirtyNetworks.get(net.getSUID()));
-	}
-	
-	public void showResultsPanel(final CyNetwork network, final int resultId, List<MCODECluster> clusters) {
-		invokeOnEDTAndWait(() -> {
-			MCODEDiscardResultAction discardResultAction =
-					new MCODEDiscardResultAction("Discard Result", resultId, mcodeUtil, registrar);
-
-			final CyNetworkView networkView = applicationManager.getCurrentNetworkView();
-			
-			MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network,
-					networkView, resultId, discardResultAction, registrar);
-			
-			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-			
-			// Focus the result panel
-			CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.EAST);
-			int index = cytoPanel.indexOfComponent(resultsPanel);
-			cytoPanel.setSelectedIndex(index);
-
-			if (cytoPanel.getState() == CytoPanelState.HIDE)
-				cytoPanel.setState(CytoPanelState.DOCK);
-		}, logger);
 	}
 }

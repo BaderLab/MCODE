@@ -13,6 +13,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.net.URL;
 import java.text.Collator;
 import java.text.NumberFormat;
@@ -79,7 +81,7 @@ import ca.utoronto.tdccbr.mcode.internal.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
-import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkTask;
+import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTask;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
@@ -275,6 +277,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		});
 	}
 
+	ClusterBrowserPanel getClusterBrowserPnl() {
+		return clusterBrowserPnl;
+	}
+	
 	/**
 	 * Creates a panel containing the explore collapsable panel and result set
 	 * specific buttons
@@ -341,7 +347,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	
 	private JButton getCreateSubNetButton() {
 		if (createSubNetButton == null) {
-			createSubNetButton = new JButton("Create Sub-Network");
+			createSubNetButton = new JButton("Create Cluster Network");
 			createSubNetButton.addActionListener(new CreateSubNetworkAction(MCODEResultsPanel.this));
 			
 			final ListSelectionModel lsm = clusterBrowserPnl.getTable().getSelectionModel();
@@ -441,8 +447,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final int selectedRow = lsm.getMinSelectionIndex();
 			final MCODECluster cluster = clusters.get(selectedRow);
 			
-			final CreateClusterNetworkTask task =
-					new CreateClusterNetworkTask(cluster, networkView, trigger.getResultId(), alg, mcodeUtil);
+			final CreateClusterNetworkViewTask task = new CreateClusterNetworkViewTask(cluster, networkView,
+					trigger.getResultId(), alg, mcodeUtil, registrar);
 			registrar.getService(DialogTaskManager.class).execute(new TaskIterator(task));
 		}
 	}
@@ -451,7 +457,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * Panel that contains the browser table with a scroll bar.
 	 */
 	@SuppressWarnings("serial")
-	private class ClusterBrowserPanel extends JPanel {
+	class ClusterBrowserPanel extends JPanel {
 		
 		private final ClusterBrowserTableModel browserModel;
 		private final JTable table;
@@ -666,7 +672,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			for (int i = 0; i < clusters.size(); i++) {
 				final MCODECluster c = clusters.get(i);
-				c.setRank(i + 1);
 				final Image image = c.getImage();
 
 				data[i][0] = i + 1;
@@ -1128,7 +1133,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			final double nodeScoreCutoff = (((double) source.getValue()) / 1000);
 			final int clusterRow = selectedRow;
 			// Store current cluster content for comparison
-        	final MCODECluster oldCluster = clusters.get(clusterRow);
+			final MCODECluster oldCluster = clusters.get(clusterRow);
 			
 			if (futureLoader != null && !futureLoader.isDone()) {
 				drawer.stop();
@@ -1138,45 +1143,43 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					oldCluster.dispose();
 			}
 			
-			final Runnable command = new Runnable() {
-	            @Override
-	        	public void run() {
+			final Runnable command = (() -> {
 	            	final List<Long> oldNodes = oldCluster.getNodes();
-					// Find the new cluster given the node score cutoff
-					final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
+				// Find the new cluster given the node score cutoff
+				final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
+				
+				// We only want to do the following work if the newly found cluster is actually different
+				// So we get the new cluster content
+				List<Long> newNodes = newCluster.getNodes();
+				
+				// If the new cluster is too large to draw within a reasonable time
+				// and won't look understandable in the table cell, then we draw a place holder
+				drawPlaceHolder = newNodes.size() > 300;
+				
+				// And compare the old and new
+				if (!newNodes.equals(oldNodes)) {
+					// If the cluster has changed, then we conduct all non-rate-limiting steps:
+					// Update the cluster array
+					clusters.set(clusterRow, newCluster);
+					// Update the cluster details
+					clusterBrowserPnl.update(newCluster, clusterRow);
+					// Fire the enumeration action
+					nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
+	
+					// There is a small difference between expanding and retracting the cluster size.
+					// When expanding, new nodes need random position and thus must go through the layout.
+					// When retracting, we simply use the layout that was generated and stored.
+					// This speeds up the drawing process greatly.
+					boolean layoutNecessary = newNodes.size() > oldNodes.size();
 					
-					// We only want to do the following work if the newly found cluster is actually different
-					// So we get the new cluster content
-					List<Long> newNodes = newCluster.getNodes();
-					
-					// If the new cluster is too large to draw within a reasonable time
-					// and won't look understandable in the table cell, then we draw a place holder
-					drawPlaceHolder = newNodes.size() > 300;
-					
-					// And compare the old and new
-					if (!newNodes.equals(oldNodes)) {
-						// If the cluster has changed, then we conduct all non-rate-limiting steps:
-						// Update the cluster array
-						clusters.set(clusterRow, newCluster);
-						// Update the cluster details
-						clusterBrowserPnl.update(newCluster, clusterRow);
-						// Fire the enumeration action
-						nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
-		
-						// There is a small difference between expanding and retracting the cluster size.
-						// When expanding, new nodes need random position and thus must go through the layout.
-						// When retracting, we simply use the layout that was generated and stored.
-						// This speeds up the drawing process greatly.
-						boolean layoutNecessary = newNodes.size() > oldNodes.size();
-						// Draw Graph and select the cluster in the view in a separate thread so that it can be
-						// interrupted by the slider movement
-						if (!newCluster.isDisposed()) {
-							drawer.drawGraph(newCluster, layoutNecessary, drawPlaceHolder);
-							oldCluster.dispose();
-						}
+					// Draw Graph and select the cluster in the view in a separate thread so that it can be
+					// interrupted by the slider movement
+					if (!newCluster.isDisposed()) {
+						drawer.drawGraph(newCluster, layoutNecessary, drawPlaceHolder);
+						oldCluster.dispose();
 					}
-	            }
-	        };
+				}
+	        });
 	        
 	        futureLoader = scheduler.schedule(command, 100, TimeUnit.MILLISECONDS);
 		}
@@ -1196,7 +1199,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		boolean layoutNecessary;
 		boolean clusterSelected;
 		private Thread t;
-		private final  MCODELoader loader;
+		private final MCODELoader loader;
 
 		GraphDrawer(final MCODELoader loader) {
 			this.loader = loader;
@@ -1246,29 +1249,35 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// process was interrupted by the slider movement
 					// In that case the drawing must occur for a new cluster using the drawGraph method
 					if (drawGraph && !drawPlaceHolder) {
-						Image image = mcodeUtil.createClusterImage(cluster,
-																   graphPicSize,
-																   graphPicSize,
-																   layouter,
-																   layoutNecessary,
-																   loader);
-						// If the drawing process was interrupted, a new cluster must have been found and
-						// this will have returned null, the drawing will be recalled (with the new cluster)
-						// However, if the graphing was successful, we update
-						// the table, stop the loader from animating and select the new cluster
-						if (image != null && drawGraph) {
-							// Select the new cluster (surprisingly a time consuming step)
-							loader.setProgress(100, "Selecting Nodes");
-							selectCluster(cluster.getNetwork());
-							clusterSelected = true;
-							cluster.setImage(image);
-							// Update the table
-							clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
-							drawGraph = false;
-						}
-
-						// This is here just in case to reset the variable
-						placeHolderDrawn = false;
+						mcodeUtil.createClusterImage(cluster, graphPicSize, graphPicSize, layouter, layoutNecessary,
+								loader);
+						
+						PropertyChangeListener pcl = new PropertyChangeListener() {
+							@Override
+							public void propertyChange(PropertyChangeEvent evt) {
+								Image image = cluster.getImage();
+								
+								// If the drawing process was interrupted, a new cluster must have been found and
+								// this will have returned null, the drawing will be recalled (with the new cluster)
+								// However, if the graphing was successful, we update
+								// the table, stop the loader from animating and select the new cluster
+								if (image != null && drawGraph) {
+									cluster.removePropertyChangeListener(this);
+									// Select the new cluster (surprisingly a time consuming step)
+									loader.setProgress(100, "Selecting Nodes");
+									selectCluster(cluster.getNetwork());
+									clusterSelected = true;
+									// Update the table
+									clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
+									drawGraph = false;
+								}
+	
+								// This is here just in case to reset the variable
+								placeHolderDrawn = false;
+							}
+						};
+						
+						cluster.addPropertyChangeListener("image", pcl);
 					} else if (drawPlaceHolder && !placeHolderDrawn) {
 						// draw place holder, only once though (as per the if statement)
 						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
