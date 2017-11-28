@@ -114,8 +114,7 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		NumberFormat nf = NumberFormat.getInstance();
 		nf.setMaximumFractionDigits(3);
 		
-		String title = id + ": " + cluster.getName() + " (Score: " +
-				 nf.format(cluster.getScore()) + ")";
+		String title = id + ": " + cluster.getName() + " (Score: " + nf.format(cluster.getScore()) + ")";
 
 		// Create the child network and view
 		CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
@@ -170,8 +169,8 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		}
 
 		if (layoutNecessary) {
-			SpringEmbeddedLayouter lay = new SpringEmbeddedLayouter(newNetworkView);
-			lay.doLayout(0, 0, 0, null);
+			SpringEmbeddedLayouter layouter = new SpringEmbeddedLayouter(newNetworkView);
+			layouter.doLayout();
 		}
 	
 		if (interrupted)

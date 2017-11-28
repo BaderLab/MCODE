@@ -11,20 +11,23 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.net.URL;
 import java.text.Collator;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -37,14 +40,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.AbstractAction;
-import javax.swing.Box;
+import javax.swing.ActionMap;
+import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -52,16 +58,19 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JTable;
+import javax.swing.KeyStroke;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.ListSelectionModel;
+import javax.swing.Scrollable;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableCellRenderer;
 
+import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyColumn;
@@ -71,6 +80,7 @@ import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
+import org.cytoscape.util.swing.LookAndFeelUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.swing.DialogTaskManager;
@@ -85,7 +95,6 @@ import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTask;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -124,21 +133,16 @@ import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
 /**
  * Reports the results of MCODE cluster finding. This class sets up the UI.
  */
+@SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
-	private static final long serialVersionUID = 868213052692609076L;
-	
 	private static final String SCORE_ATTR = "MCODE_Score";
 	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
 	private static final String CLUSTER_ATTR = "MCODE_Cluster";
 	
-	// table size parameters
-	private static final int graphPicSize = 80;
-	
 	private final int resultId;
 	private final MCODEAlgorithm alg;
 	private final List<MCODECluster> clusters;
-	private ExploreContentPanel[] exploreContent;
 	private MCODEParameters currentParamsCopy;
 	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
 	private int enumerationSelection;
@@ -150,6 +154,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private final MCODEDiscardResultAction discardResultAction;
 
 	// Graphical classes
+	private JScrollPane clusterBrowserScroll;
 	private ClusterBrowserPanel clusterBrowserPnl;
 	private BasicCollapsiblePanel explorePnl;
 	private JPanel bottomPnl;
@@ -158,7 +163,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	
 	private final CyServiceRegistrar registrar;
 
-	private static final Logger logger = LoggerFactory.getLogger(MCODEResultsPanel.class);
+	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 
 	/**
 	 * Constructor for the Results Panel which displays the clusters in a
@@ -196,7 +201,16 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		this.discardResultAction = discardResultAction;
 		this.currentParamsCopy = mcodeUtil.getParameterManager().getResultParams(resultId);
 		
-		this.clusterBrowserPnl = new ClusterBrowserPanel();
+		clusterBrowserScroll = new JScrollPane();
+		clusterBrowserPnl = new ClusterBrowserPanel(clusters);
+		
+		clusterBrowserScroll.setViewportView(clusterBrowserPnl);
+		clusterBrowserScroll.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentResized(ComponentEvent e) {
+				clusterBrowserPnl.updateScrollableTracksViewportHeight();
+			}
+		});
 		
 		final GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
@@ -205,11 +219,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		
 		layout.setHorizontalGroup(
 				layout.createParallelGroup(Alignment.CENTER, true)
-				.addComponent(clusterBrowserPnl, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(clusterBrowserScroll, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getBottomPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 		);
 		layout.setVerticalGroup(layout.createSequentialGroup()
-				.addComponent(clusterBrowserPnl, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(clusterBrowserScroll, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getBottomPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 		);
 	}
@@ -243,25 +257,22 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		return networkView;
 	}
 	
-	public List<MCODECluster> getClusters() {
-		return clusters;
-	}
-
 	public CyNetwork getNetwork() {
 		return network;
 	}
 
 	public int getSelectedClusterRow() {
-		return clusterBrowserPnl.getSelectedRow();
+		return clusterBrowserPnl.getSelectedIndex();
+	}
+	
+	public List<MCODECluster> getClusters() {
+		return new ArrayList<>(clusters);
 	}
 	
 	public MCODECluster getSelectedCluster() {
-		final int idx = getSelectedClusterRow();
+		ClusterPanel p = clusterBrowserPnl.getSelectedItem();
 		
-		if (idx >= 0 && clusters.size() > idx)
-			return clusters.get(idx);
-		
-		return null;
+		return p != null ? p.getCluster() : null;
 	}
 
 	public void discard(final boolean requestUserConfirmation) {
@@ -276,7 +287,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 										 oldRequestUserConfirmation);
 		});
 	}
-
+	
 	ClusterBrowserPanel getClusterBrowserPnl() {
 		return clusterBrowserPnl;
 	}
@@ -350,8 +361,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			createSubNetButton = new JButton("Create Cluster Network");
 			createSubNetButton.addActionListener(new CreateSubNetworkAction(MCODEResultsPanel.this));
 			
-			final ListSelectionModel lsm = clusterBrowserPnl.getTable().getSelectionModel();
-			createSubNetButton.setEnabled(!lsm.isSelectionEmpty());
+			createSubNetButton.setEnabled(clusterBrowserPnl.getSelectedIndex() >= 0);
 		}
 		
 		return createSubNetButton;
@@ -404,7 +414,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
 			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
 
-			for (final MCODECluster cluster : clusters) {
+			for (MCODECluster cluster : clusters) {
 				if (cluster.getNodes().contains(nId)) {
 					Set<String> clusterNameSet = new LinkedHashSet<>();
 
@@ -428,7 +438,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Handles the create child network press in the cluster exploration panel
 	 */
-	@SuppressWarnings("serial")
 	private class CreateSubNetworkAction extends AbstractAction {
 
 		MCODEResultsPanel trigger;
@@ -439,13 +448,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 		@Override
 		public void actionPerformed(final ActionEvent evt) {
-			final ListSelectionModel lsm = clusterBrowserPnl.getTable().getSelectionModel();
-
-			if (lsm.isSelectionEmpty())
+			if (clusterBrowserPnl.getSelectedIndex() < 0)
 				return;
 			
-			final int selectedRow = lsm.getMinSelectionIndex();
-			final MCODECluster cluster = clusters.get(selectedRow);
+			final MCODECluster cluster = getSelectedCluster();
 			
 			final CreateClusterNetworkViewTask task = new CreateClusterNetworkViewTask(cluster, networkView,
 					trigger.getResultId(), alg, mcodeUtil, registrar);
@@ -456,115 +462,253 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Panel that contains the browser table with a scroll bar.
 	 */
-	@SuppressWarnings("serial")
-	class ClusterBrowserPanel extends JPanel {
+	class ClusterBrowserPanel extends JPanel implements Scrollable {
 		
-		private final ClusterBrowserTableModel browserModel;
-		private final JTable table;
+		private final JPanel filler = new JPanel();
 		
-		public ClusterBrowserPanel() {
-			if (isAquaLAF())
-				setOpaque(false);
+		private final LinkedHashMap<MCODECluster, ClusterPanel> items = new LinkedHashMap<>();
+		private boolean scrollableTracksViewportHeight;
+		
+		public ClusterBrowserPanel(List<MCODECluster> clusters) {
+			setBackground(UIManager.getColor("Table.background"));
 			
-			setLayout(new BorderLayout());
-
-			// main data table
-			browserModel = new ClusterBrowserTableModel();
-
-			table = new JTable(browserModel);
-			table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			table.setRowHeight(graphPicSize + 8);
-			table.setDefaultRenderer(MCODECluster.class, new ClusterDetailsRenderer());
-			table.setIntercellSpacing(new Dimension(0, 4));
-			table.setShowGrid(false);
-			table.setShowHorizontalLines(true);
-			table.setGridColor(new JSeparator().getForeground());
-			table.setFocusable(false); // removes an outline that appears when the user clicks on the images
-			table.getTableHeader().setReorderingAllowed(false);
+			Color fg = UIManager.getColor("Label.disabledForeground");
+			fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
 			
-			table.getColumnModel().getColumn(0).setMinWidth(24);
-			table.getColumnModel().getColumn(0).setPreferredWidth(46);
-			table.getColumnModel().getColumn(0).setMaxWidth(52);
-			table.getColumnModel().getColumn(1).setMinWidth(84);
-			table.getColumnModel().getColumn(1).setPreferredWidth(84);
-			table.getColumnModel().getColumn(2).setMinWidth(84);
-			table.getColumnModel().getColumn(2).setPreferredWidth(124);
+			filler.setBorder(null);
+			filler.setAlignmentX(LEFT_ALIGNMENT);
+			filler.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
+			filler.setBackground(getBackground());
+			filler.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(final MouseEvent e) {
+					if (!e.isPopupTrigger())
+						setSelectedItem(null);
+				}
+			});
 			
-			// Looks better on Nimbus
-			table.setBackground(
-						(Color)UIManager.getLookAndFeelDefaults().get("Table:\"Table.cellRenderer\".background"));
-
-			// Ask to be notified of selection changes.
-			final ListSelectionModel rowSM = table.getSelectionModel();
-			rowSM.addListSelectionListener(new TableRowSelectionHandler());
-
-			final JScrollPane tableScrollPane = new JScrollPane(table);
-			tableScrollPane.getViewport().setBackground(Color.WHITE);
-
-			add(tableScrollPane, BorderLayout.CENTER);
-			add(Box.createVerticalStrut(10), BorderLayout.SOUTH);
+			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+			addItems(clusters);
+			add(filler);
+			
+			updateScrollableTracksViewportHeight();
 		}
 
-		public int getSelectedRow() {
-			return table.getSelectedRow();
+		List<MCODECluster> getClusters() {
+			return new ArrayList<>(items.keySet());
+		}
+
+		ClusterPanel getSelectedItem() {
+			for (ClusterPanel p : items.values()) {
+				if (p.isSelected())
+					return p;
+			}
+			
+			return null;
 		}
 		
-		public void update(final ImageIcon image, final int row) {
-			table.setValueAt(image, row, 1);
+		int getSelectedIndex() {
+			int idx = -1;
+			
+			for (ClusterPanel p : items.values()) {
+				idx++;
+				
+				if (p.isSelected())
+					break;
+			}
+			
+			return idx;
 		}
 		
-		public void update(final MCODECluster cluster, final int row) {
-			table.setValueAt(cluster, row, 2);
+		void setSelectedIndex(int index) {
+			setSelectedItem(getItem(index));
+		}
+		
+		void setSelectedItem(ClusterPanel item) {
+			for (ClusterPanel p : items.values())
+				p.setSelected(p.equals(item));
+		}
+		
+		public void scrollTo(ClusterPanel item) {
+			if (item != null)
+				((JComponent) item.getParent()).scrollRectToVisible(item.getBounds());
+		}
+		
+		int getIndex(ClusterPanel item) {
+			return item == null ? -1 : new ArrayList<>(items.values()).indexOf(item);
+		}
+		
+		ClusterPanel getItem(int index) {
+			return index < 0 ? null : new ArrayList<>(items.values()).get(index);
+		}
+		
+		List<ClusterPanel> getAllItems() {
+			return new ArrayList<>(items.values());
+		}
+		
+		public int getItemsSize() {
+			return items.size();
+		}
+		
+		boolean isEmpty() {
+			return items.isEmpty();
 		}
 
-		JTable getTable() { // TODO: delete it: do not expose the JTable
-			return table;
+		@Override
+		public Dimension getPreferredScrollableViewportSize() {
+			return getPreferredSize();
+		}
+
+		@Override
+		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return 10;
+		}
+
+		@Override
+		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return ((orientation == SwingConstants.VERTICAL) ? visibleRect.height : visibleRect.width) - 10;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportWidth() {
+			return true;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportHeight() {
+			return scrollableTracksViewportHeight;
+		}
+		
+		void updateScrollableTracksViewportHeight() {
+			final boolean oldValue = scrollableTracksViewportHeight;
+			
+			if (items == null || items.isEmpty()) {
+				scrollableTracksViewportHeight = true;
+			} else if (clusterBrowserScroll.getViewport() != null) {
+				int ih = 0; // Total items height
+				
+				for (ClusterPanel p : items.values())
+					ih += p.getHeight();
+				
+				scrollableTracksViewportHeight = ih <= clusterBrowserScroll.getViewport().getHeight();
+			}
+			
+			if (oldValue != scrollableTracksViewportHeight)
+				updateUI();
+		}
+		
+		private void addItems(List<MCODECluster> clusters) {
+			int rank = 0;
+			
+			for (MCODECluster c : clusters) {
+				c.setRank(++rank);
+				
+				ClusterPanel p = new ClusterPanel(c, currentParamsCopy, mcodeUtil, registrar);
+				p.setAlignmentX(LEFT_ALIGNMENT);
+				p.addComponentListener(new ComponentAdapter() {
+					@Override
+					public void componentResized(ComponentEvent e) {
+						updateScrollableTracksViewportHeight();
+					}
+				});
+				addMouseListenersForSelection(p);
+				setKeyBindings(p);
+				
+				p.getSizeSlider().addChangeListener(new SizeAction(rank));
+				
+				items.put(c, p);
+				add(p);
+			}
+		}
+		
+		private void addMouseListenersForSelection(ClusterPanel item, JComponent... components) {
+			// This mouse listener listens for mouse pressed events to select the list items
+			final MouseListener selectionListener = new MouseAdapter() {
+				@Override
+				public void mousePressed(MouseEvent e) {
+					item.requestFocusInWindow();
+					final boolean isMac = LookAndFeelUtil.isMac();
+					
+					if ((isMac && e.isMetaDown()) || (!isMac && e.isControlDown())) {
+						// COMMAND button down on MacOS or CONTROL button down on another OS.
+						// Toggle this item's selection state
+						setSelectedItem(item.isSelected() ? null : item);
+					} else {
+						setSelectedItem(item);
+					}
+				}
+			};
+			
+			item.addMouseListener(selectionListener);
+			
+			for (JComponent c : components)
+				c.addMouseListener(selectionListener);
+		}
+		
+		private void setKeyBindings(final JComponent comp) {
+			final ActionMap actionMap = comp.getActionMap();
+			final InputMap inputMap = comp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+			final int CTRL = LookAndFeelUtil.isMac() ? InputEvent.META_DOWN_MASK :  InputEvent.CTRL_DOWN_MASK;
+
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), KeyAction.VK_UP);
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), KeyAction.VK_DOWN);
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, CTRL + InputEvent.SHIFT_DOWN_MASK), KeyAction.VK_CTRL_SHIFT_A);
+			
+			actionMap.put(KeyAction.VK_UP, new KeyAction(KeyAction.VK_UP));
+			actionMap.put(KeyAction.VK_DOWN, new KeyAction(KeyAction.VK_DOWN));
+			actionMap.put(KeyAction.VK_CTRL_SHIFT_A, new KeyAction(KeyAction.VK_CTRL_SHIFT_A));
+		}
+		
+		private class KeyAction extends AbstractAction {
+
+			final static String VK_UP = "VK_UP";
+			final static String VK_DOWN = "VK_DOWN";
+			final static String VK_CTRL_SHIFT_A = "VK_CTRL_SHIFT_A";
+			
+			KeyAction(final String actionCommand) {
+				putValue(ACTION_COMMAND_KEY, actionCommand);
+			}
+
+			@Override
+			public void actionPerformed(final ActionEvent e) {
+				if (clusterBrowserPnl.isEmpty())
+					return;
+				
+				final String cmd = e.getActionCommand();
+				int idx = clusterBrowserPnl.getSelectedIndex();
+				
+				if (cmd.equals(VK_UP)) {
+					if (idx > 0)  {
+						clusterBrowserPnl.setSelectedIndex(idx - 1);
+						scrollTo(clusterBrowserPnl.getSelectedItem());
+					}
+				} else if (cmd.equals(VK_DOWN)) {
+					if (idx >= 0 && idx < clusterBrowserPnl.getItemsSize() - 1) {
+						clusterBrowserPnl.setSelectedIndex(idx + 1);
+						scrollTo(clusterBrowserPnl.getSelectedItem());
+					}
+				} else if (cmd.equals(VK_CTRL_SHIFT_A)) {
+					clusterBrowserPnl.setSelectedItem(null);
+				}
+			}
 		}
 	}
 	
-	@SuppressWarnings("serial")
 	private class ExploreContentPanel extends JPanel {
 		
 		private JComboBox<String> nodeAttributesComboBox;
 		
-		ExploreContentPanel(final int selectedRow) {
+		ExploreContentPanel(int selectedRow) {
 			if (isAquaLAF())
 				setOpaque(false);
 			
-			// Create a slider to manipulate node score cutoff
-			final String SIZE_THRESHOLD_TOOL_TIP = "Node Attribute Enumerator";
-			final JLabel sizeThresholdLbl = new JLabel("Size Threshold:");
-			sizeThresholdLbl.setToolTipText(SIZE_THRESHOLD_TOOL_TIP);
-			
-			// (goes to 1000 so that we get a more precise double variable out of it)
-			final JSlider sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000,
-					(int) (currentParamsCopy.getNodeScoreCutoff() * 1000));
-
-			// Turn on ticks and labels at major and minor intervals.
-			sizeSlider.setMajorTickSpacing(200);
-			sizeSlider.setMinorTickSpacing(50);
-			sizeSlider.setPaintTicks(true);
-			sizeSlider.setPaintLabels(true);
-			
-			// Set labels ranging from 0 to 100
-			final Dictionary<Integer, JLabel> labelTable = new Hashtable<>();
-			// Make a special label for the initial position
-			labelTable.put((int) (currentParamsCopy.getNodeScoreCutoff() * 1000), new JLabel("*"));
-
-			sizeSlider.setLabelTable(labelTable);
-			sizeSlider.setFont(
-					sizeSlider.getFont() != null ? 
-					sizeSlider.getFont().deriveFont(getSmallFontSize()) : 
-					new Font("Arial", Font.PLAIN, (int) getSmallFontSize())
-			);
-			sizeSlider.setToolTipText(SIZE_THRESHOLD_TOOL_TIP);
-
 			// Node attributes enumerator
 			final JLabel attrEnumLbl = new JLabel("Node Attribute:");
 			final String ATTR_ENUM_TOOL_TIP = "Node Attribute Enumerator";
 			attrEnumLbl.setToolTipText(ATTR_ENUM_TOOL_TIP);
 
-			final CyNetwork net = clusters.get(selectedRow).getNetwork();
+			final ClusterPanel clusterPanel = clusterBrowserPnl.getItem(selectedRow);
+			final CyNetwork net = clusterPanel.getCluster().getNetwork();
 			
 			final Collection<CyColumn> nodeColumns = net.getDefaultNodeTable().getColumns();
 			final List<String> attributesList = new ArrayList<>(nodeColumns.size());
@@ -592,15 +736,13 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				}
 			});
 
-			sizeSlider.addChangeListener(new SizeAction(selectedRow, nodeAttributesComboBox));
-
 			// Create a table listing the node attributes and their enumerations
 			final ResultsEnumeratorTableModel modelEnumerator;
 			modelEnumerator = new ResultsEnumeratorTableModel(new HashMap<>());
 
 			final JTable enumerationsTable = new JTable(modelEnumerator);
 			final JScrollPane tableScrollPane = new JScrollPane(enumerationsTable);
-			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, graphPicSize));
+			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, ClusterPanel.GRAPH_IMG_SIZE));
 			enumerationsTable.setGridColor(new JSeparator().getForeground());
 			enumerationsTable.setFont(new Font(enumerationsTable.getFont().getFontName(), Font.PLAIN,
 					(int) getSmallFontSize()));
@@ -612,8 +754,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			nodeAttributesComboBox.setSelectedItem(null);
 
 			if (isAquaLAF()) {
-				sizeThresholdLbl.putClientProperty("JComponent.sizeVariant", "small");
-				sizeSlider.putClientProperty("JComponent.sizeVariant", "mini");
 				attrEnumLbl.putClientProperty("JComponent.sizeVariant", "small");
 				nodeAttributesComboBox.putClientProperty("JComponent.sizeVariant", "small");
 				enumerationsTable.putClientProperty("JComponent.sizeVariant", "small");
@@ -624,14 +764,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(!isAquaLAF());
 			
-			final JSeparator sep = new JSeparator();
-			
 			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.LEADING, true)
-					.addGroup(layout.createSequentialGroup()
-							.addComponent(sizeThresholdLbl)
-							.addComponent(sizeSlider, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-					)
-					.addComponent(sep)
 					.addGroup(layout.createSequentialGroup()
 							.addComponent(attrEnumLbl)
 							.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
@@ -639,11 +772,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 			);
 			layout.setVerticalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
-							.addComponent(sizeThresholdLbl)
-							.addComponent(sizeSlider)
-					)
-					.addComponent(sep, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
 							.addComponent(attrEnumLbl)
 							.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
@@ -658,64 +786,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 	
 	/**
-	 * Handles the data to be displayed in the cluster browser table
-	 */
-	@SuppressWarnings("serial")
-	private class ClusterBrowserTableModel extends AbstractTableModel {
-
-		private final String[] columnNames = { "Rank", "Cluster", "Details" };
-		private final Object[][] data; // the actual table data
-
-		public ClusterBrowserTableModel() {
-			exploreContent = new ExploreContentPanel[clusters.size()];
-			data = new Object[clusters.size()][columnNames.length];
-
-			for (int i = 0; i < clusters.size(); i++) {
-				final MCODECluster c = clusters.get(i);
-				final Image image = c.getImage();
-
-				data[i][0] = i + 1;
-				data[i][1] = image != null ? new ImageIcon(image) : new ImageIcon();
-				data[i][2] = c;
-			}
-		}
-
-		@Override
-		public String getColumnName(int col) {
-			return columnNames[col];
-		}
-
-		@Override
-		public int getColumnCount() {
-			return columnNames.length;
-		}
-
-		@Override
-		public int getRowCount() {
-			return data.length;
-		}
-
-		@Override
-		public Object getValueAt(int row, int col) {
-			return data[row][col];
-		}
-
-		@Override
-		public void setValueAt(Object object, int row, int col) {
-			data[row][col] = object;
-			fireTableCellUpdated(row, col);
-		}
-
-		@Override
-		public Class<?> getColumnClass(int c) {
-			return getValueAt(0, c).getClass();
-		}
-	}
-
-	/**
 	 * Handles the data to be displayed in the node attribute enumeration table
 	 */
-	@SuppressWarnings("serial")
 	private class ResultsEnumeratorTableModel extends AbstractTableModel {
 
 		String[] columnNames = { "Value", "Occurrence" };
@@ -814,7 +886,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Handles the selection of all available node attributes for the enumeration within the cluster
 	 */
-	@SuppressWarnings("serial")
 	private class EnumerateAction extends AbstractAction {
 
 		int selectedRow;
@@ -838,7 +909,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			// If its the generic 'please select' option then we don't do any enumeration
 			if (attributeName != null) {
-				final CyNetwork net = clusters.get(selectedRow).getNetwork();
+				final ClusterPanel clusterPanel = clusterBrowserPnl.getItem(selectedRow);
+				final CyNetwork net = clusterPanel.getCluster().getNetwork();
 				
 				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
 				for (final CyNode node : net.getNodeList()) {
@@ -894,12 +966,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	/**
 	 * Handles the Export press for this panel (export results to a text file)
 	 */
-	@SuppressWarnings("serial")
 	private class ExportAction extends AbstractAction {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			mcodeUtil.exportMCODEResults(alg, clusters, network);
+			mcodeUtil.exportMCODEResults(alg, getClusters(), network);
 		}
 	}
 
@@ -908,11 +979,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 */
 	private class TableRowSelectionHandler implements ListSelectionListener {
 
+		private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>();
+		
 		@Override
 		public void valueChanged(ListSelectionEvent e) {
 			try {
 				// Ignore extra messages.
-				if (e.getValueIsAdjusting()) return;
+				if (e.getValueIsAdjusting())
+					return;
 	
 				final ListSelectionModel lsm = (ListSelectionModel) e.getSource();
 				final CyNetwork gpCluster;
@@ -928,11 +1002,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// Upon selection of a cluster, we must show the corresponding explore panel content
 					// First we test if this cluster has been selected yet and if its content exists
 					// If it does not, we create it
-					if (exploreContent[selectedRow] == null)
-						exploreContent[selectedRow] = createExploreContent(selectedRow);
+					ExploreContentPanel explorePanel = exploreContentPanels.get(selectedRow);
 					
-					final ExploreContentPanel exploreContentPanel = exploreContent[selectedRow];
-	
+					if (explorePanel == null)
+						exploreContentPanels.put(selectedRow, explorePanel = createExploreContent(selectedRow));
+					
 					// Next, if this is the first time explore panel content is being displayed, then the
 					// explore panel is not visible yet, and there is no content in
 					// it yet, so we do not have to remove it, otherwise,
@@ -941,7 +1015,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 						getExplorePnl().getContentPane().removeAll();
 	
 					// Now we add the currently selected cluster's explore panel content
-					getExplorePnl().getContentPane().add(exploreContentPanel);
+					getExplorePnl().getContentPane().add(explorePanel);
 	
 					// and set the explore panel to visible so that it can be seen
 					// (this should only happen once after the first time the user selects a cluster
@@ -950,20 +1024,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	
 					// Finally the explore panel must be redrawn upon the selection
 					// event to display the new content with the name of the cluster, if it exists
-					String title = "Explore: ";
-	
-					if (c.getName() != null)
-						title = title + c.getName();
-					else
-						title = title + "Cluster " + (selectedRow + 1);
-	
+					String title = "Explore: " + c.getName();
 					getExplorePnl().setTitleComponentText(title);
 					getExplorePnl().updateUI();
 	
 					// In order for the enumeration to be conducted for this cluster
 					// on the same attribute that might already have been selected
 					// we get a reference to the combo box within the explore content
-					final JComboBox<String> nodeAttributesComboBox = exploreContentPanel.getNodeAttributesComboBox();
+					final JComboBox<String> nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
 					// and fire the enumeration action
 					nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
 	
@@ -973,7 +1041,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 					// table.scrollRectToVisible(table.getCellRect(selectedRow, 0, true));
 				}
 			} catch (Exception ex) {
-				ex.printStackTrace();
+				logger.error("Unexpected MCODE error", ex);
 			}
 		}
 	}
@@ -1001,103 +1069,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			mcodeUtil.setSelected(new ArrayList<>(), network); // deselect all
 		}
 	}
-
-	/**
-	 * A text area renderer that creates a line wrapped, non-editable text area
-	 */
-	@SuppressWarnings("serial")
-	private static class ClusterDetailsRenderer extends JPanel implements TableCellRenderer {
-
-		private final Font FONT = new Font(this.getFont().getFontName(), Font.PLAIN,
-				(int) getSmallFontSize());
-		private final GroupLayout layout = new GroupLayout(this);
-		private final JLabel labels[][] = new JLabel[][]{
-				{ new JLabel("Score:"), new JLabel("Nodes:"), new JLabel("Edges:") },
-				{ new JLabel("0"), new JLabel("0"), new JLabel("0") }
-		};
-		
-		public ClusterDetailsRenderer() {
-			setMinimumSize(new Dimension());
-			setLayout(layout);
-			layout.setAutoCreateContainerGaps(true);
-			
-			int i = 0, j = 0;
-			
-			for (; i < labels.length; i++) {
-				j = 0;
-				
-				for (; j < labels[i].length; j++) {
-					final JLabel lbl = labels[i][j];
-					lbl.setHorizontalAlignment(JLabel.RIGHT);
-					
-					if (isAquaLAF())
-						lbl.putClientProperty("JComponent.sizeVariant", "small");
-					else
-						lbl.setFont(FONT);
-				}
-			}
-			
-			layout.setHorizontalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.LEADING, false)
-							.addComponent(labels[(i=0)][(j=0)])
-							.addComponent(labels[i][++j])
-							.addComponent(labels[i][++j])
-					).addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(labels[(i=1)][(j=0)])
-							.addComponent(labels[i][++j])
-							.addComponent(labels[i][++j])
-					)
-			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
-					.addGroup(layout.createSequentialGroup()
-							.addComponent(labels[(i=0)][(j=0)])
-							.addComponent(labels[i][++j])
-							.addComponent(labels[i][++j])
-					).addGroup(layout.createSequentialGroup()
-							.addComponent(labels[(i=1)][(j=0)])
-							.addComponent(labels[i][++j])
-							.addComponent(labels[i][++j])
-					)
-			);
-		}
-
-		@Override
-		public Component getTableCellRendererComponent(JTable table,
-													   Object value,
-													   boolean isSelected,
-													   boolean hasFocus,
-													   int row,
-													   int column) {
-			final MCODECluster cluster = (MCODECluster) value;
-			
-			if (isSelected) {
-				this.setBackground(table.getSelectionBackground());
-				this.setForeground(table.getSelectionForeground());
-			} else {
-				this.setBackground(table.getBackground());
-				this.setForeground(table.getForeground());
-			}
-			
-			for (int i = 0; i < labels.length; i++) {
-				for (int j = 0; j < labels[i].length; j++) {
-					final JLabel lbl = labels[i][j];
-					lbl.setForeground(isSelected ? table.getSelectionForeground() : table.getForeground());
-				}
-			}
-			
-			final NumberFormat nf = NumberFormat.getInstance();
-			nf.setMaximumFractionDigits(3);
-			final String score = nf.format(cluster.getScore());
-
-			((JLabel)labels[1][0]).setText(score);
-			((JLabel)labels[1][1]).setText("" + cluster.getGraph().getNodeCount());
-			((JLabel)labels[1][2]).setText("" + cluster.getGraph().getEdgeCount());
-
-			return this;
-		}
-	}
-
+	
 	/**
 	 * Handles the dynamic cluster size manipulation via the JSlider
 	 */
@@ -1106,38 +1078,30 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		private final ScheduledExecutorService scheduler =  Executors.newScheduledThreadPool(3);
 		private ScheduledFuture<?> futureLoader;
 		
-		private int selectedRow;
-		private JComboBox<String> nodeAttributesComboBox;
-		private boolean drawPlaceHolder;
-		private final GraphDrawer drawer;
-		private final MCODELoader loader;
+		private final int row;
 		
 		/**
-		 * @param selectedRow The selected cluster
+		 * @param row The selected cluster row
 		 * @param nodeAttributesComboBox Reference to the attribute enumeration picker
 		 */
-		SizeAction(final int selectedRow, final JComboBox<String> nodeAttributesComboBox) {
-			this.selectedRow = selectedRow;
-			this.nodeAttributesComboBox = nodeAttributesComboBox;
-			loader = new MCODELoader(selectedRow, clusterBrowserPnl.getTable(), graphPicSize, graphPicSize);
-			drawer = new GraphDrawer(loader);
+		SizeAction(int row) {
+			this.row = row;
 		}
 
 		@Override
-		public void stateChanged(final ChangeEvent e) {
+		public void stateChanged(ChangeEvent evt) {
 			// This method as been written so that the slider is responsive to the user's input at all times, despite
 			// the computationally challenging drawing, layout out, and selection of large clusters. As such, we only
 			// perform real work if the slider produces a different cluster, and furthermore we only perform the quick
 			// processes here, while the heavy weights are handled by the drawer's thread.
-			final JSlider source = (JSlider) e.getSource();
+			final JSlider source = (JSlider) evt.getSource();
 			final double nodeScoreCutoff = (((double) source.getValue()) / 1000);
-			final int clusterRow = selectedRow;
+			final int clusterRow = row;
 			// Store current cluster content for comparison
 			final MCODECluster oldCluster = clusters.get(clusterRow);
 			
 			if (futureLoader != null && !futureLoader.isDone()) {
-				drawer.stop();
-				futureLoader.cancel(false);
+				futureLoader.cancel(true);
 				
 				if (!oldCluster.equals(clusters.get(clusterRow)))
 					oldCluster.dispose();
@@ -1151,167 +1115,166 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				// We only want to do the following work if the newly found cluster is actually different
 				// So we get the new cluster content
 				List<Long> newNodes = newCluster.getNodes();
-				
-				// If the new cluster is too large to draw within a reasonable time
-				// and won't look understandable in the table cell, then we draw a place holder
-				drawPlaceHolder = newNodes.size() > 300;
-				
-				// And compare the old and new
-				if (!newNodes.equals(oldNodes)) {
-					// If the cluster has changed, then we conduct all non-rate-limiting steps:
-					// Update the cluster array
-					clusters.set(clusterRow, newCluster);
-					// Update the cluster details
-					clusterBrowserPnl.update(newCluster, clusterRow);
-					// Fire the enumeration action
-					nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
-	
-					// There is a small difference between expanding and retracting the cluster size.
-					// When expanding, new nodes need random position and thus must go through the layout.
-					// When retracting, we simply use the layout that was generated and stored.
-					// This speeds up the drawing process greatly.
-					boolean layoutNecessary = newNodes.size() > oldNodes.size();
-					
-					// Draw Graph and select the cluster in the view in a separate thread so that it can be
-					// interrupted by the slider movement
-					if (!newCluster.isDisposed()) {
-						drawer.drawGraph(newCluster, layoutNecessary, drawPlaceHolder);
-						oldCluster.dispose();
-					}
-				}
+
+				// TODO
+//				if (newNodes.size() <= 300 && !newNodes.equals(oldNodes)) { // And compare the old and new
+//					// If the cluster has changed, then we conduct all non-rate-limiting steps:
+//					// Update the cluster array
+//					clusters.set(clusterRow, newCluster);
+//					// Update the cluster details
+//					clusterBrowserPnl.update(newCluster, clusterRow);
+//					// Fire the enumeration action
+//					nodeAttributesComboBox.setSelectedIndex(nodeAttributesComboBox.getSelectedIndex());
+//	
+//					// There is a small difference between expanding and retracting the cluster size.
+//					// When expanding, new nodes need random position and thus must go through the layout.
+//					// When retracting, we simply use the layout that was generated and stored.
+//					// This speeds up the drawing process greatly.
+//					boolean layoutNecessary = newNodes.size() > oldNodes.size();
+//					
+//					// Draw Graph and select the cluster in the view in a separate thread so that it can be
+//					// interrupted by the slider movement
+//					if (!newCluster.isDisposed()) {
+//						// TODO draw cluster image
+//						drawGraph(row, newCluster, layoutNecessary);
+//						oldCluster.dispose();
+//					}
+//				}
 	        });
 	        
 	        futureLoader = scheduler.schedule(command, 100, TimeUnit.MILLISECONDS);
 		}
 	}
 
-	/**
-	 * Threaded method for drawing exploration graphs which allows the slider to
-	 * move uninterruptedly despite MCODE's drawing efforts
-	 */
-	private class GraphDrawer implements Runnable {
-
-		private boolean drawGraph; // run switch
-		private boolean placeHolderDrawn;
-		private boolean drawPlaceHolder;
-		MCODECluster cluster;
-		SpringEmbeddedLayouter layouter;
-		boolean layoutNecessary;
-		boolean clusterSelected;
-		private Thread t;
-		private final MCODELoader loader;
-
-		GraphDrawer(final MCODELoader loader) {
-			this.loader = loader;
-			layouter = new SpringEmbeddedLayouter();
-		}
-
-		/**
-		 * Constructor for drawing graphs during exploration
-		 * 
-		 * @param cluster Cluster to be drawn
-		 * @param layout Necessary True only if the cluster is expanding in size or lacks a DGView
-		 * @param trigger Reference to the slider size action
-		 * @param drawPlaceHolder Determines if the cluster should be drawn or a place
-		 *                        holder in the case of big clusters
-		 */
-		public void drawGraph(MCODECluster cluster,
-							  boolean layoutNecessary,
-							  boolean drawPlaceHolder) {
-			this.cluster = cluster;
-			this.layoutNecessary = layoutNecessary;
-
-			// Graph drawing will only occur if the cluster is not too large,
-			// otherwise a place holder will be drawn
-			drawGraph = !drawPlaceHolder;
-			this.drawPlaceHolder = drawPlaceHolder;
-			clusterSelected = false;
-			t = new Thread(this);
-			t.start();
-		}
-
-		@Override
-		public void run() {
-			try {
-				// We want to set the loader only once during continuous exploration
-				// It is only set again when a graph is fully loaded and placed in the table
-				if (!drawPlaceHolder) {
-					// internally, the loader is only drawn into the appropriate cell after a short sleep period
-					// to ensure that quick loads are not displayed unnecessarily
-					loader.start();
-				}
-				
-				final Thread currentThread = Thread.currentThread(); 
-				
-				while (t == currentThread) {
-					// This ensures that the drawing of this cluster is only attempted once
-					// if it is unsuccessful it is because the setup or layout
-					// process was interrupted by the slider movement
-					// In that case the drawing must occur for a new cluster using the drawGraph method
-					if (drawGraph && !drawPlaceHolder) {
-						mcodeUtil.createClusterImage(cluster, graphPicSize, graphPicSize, layouter, layoutNecessary,
-								loader);
-						
-						PropertyChangeListener pcl = new PropertyChangeListener() {
-							@Override
-							public void propertyChange(PropertyChangeEvent evt) {
-								Image image = cluster.getImage();
-								
-								// If the drawing process was interrupted, a new cluster must have been found and
-								// this will have returned null, the drawing will be recalled (with the new cluster)
-								// However, if the graphing was successful, we update
-								// the table, stop the loader from animating and select the new cluster
-								if (image != null && drawGraph) {
-									cluster.removePropertyChangeListener(this);
-									// Select the new cluster (surprisingly a time consuming step)
-									loader.setProgress(100, "Selecting Nodes");
-									selectCluster(cluster.getNetwork());
-									clusterSelected = true;
-									// Update the table
-									clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
-									drawGraph = false;
-								}
-	
-								// This is here just in case to reset the variable
-								placeHolderDrawn = false;
-							}
-						};
-						
-						cluster.addPropertyChangeListener("image", pcl);
-					} else if (drawPlaceHolder && !placeHolderDrawn) {
-						// draw place holder, only once though (as per the if statement)
-						Image image = mcodeUtil.getPlaceHolderImage(graphPicSize, graphPicSize);
-						cluster.setImage(image);
-						// Update the table
-						clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
-						// select the cluster
-						selectCluster(cluster.getNetwork());
-						drawGraph = false;
-						// Make sure this block is not run again unless if we need to reload the image
-						placeHolderDrawn = true;
-					} else if (!drawGraph && drawPlaceHolder && !clusterSelected) {
-						selectCluster(cluster.getNetwork());
-						clusterSelected = true;
-					}
-
-					if ((!drawGraph && !drawPlaceHolder) || placeHolderDrawn)
-						stop();
-					
-					// This sleep time produces the drawing response time of 1 20th of a second
-					Thread.sleep(100);
-				}
-			} catch (Exception e) {
-				logger.error("Error while drawing cluster image", e);
-			}
-		}
-
-		void stop() {
-			// stop loader from animating and taking up computer processing power
-			loader.stop();
-			layouter.interruptDoLayout();
-			mcodeUtil.interruptLoading();
-			drawGraph = false;
-			t = null;
-		}
-	}
+//	/**
+//	 * Threaded method for drawing exploration graphs which allows the slider to
+//	 * move uninterruptedly despite MCODE's drawing efforts
+//	 */
+//	class GraphDrawer implements Runnable {
+//
+//		private boolean drawGraph; // run switch
+//		private boolean placeHolderDrawn;
+//		private boolean drawPlaceHolder;
+//		MCODECluster cluster;
+//		SpringEmbeddedLayouter layouter;
+//		boolean layoutNecessary;
+//		boolean clusterSelected;
+//		private Thread t;
+//		private final MCODELoadIcon loadIcon;
+//		private boolean interrupted;
+//
+//		GraphDrawer(MCODELoadIcon loadIcon) {
+//			this.loadIcon = loadIcon;
+//			layouter = new SpringEmbeddedLayouter();
+//		}
+//
+//		/**
+//		 * @param cluster Cluster to be drawn
+//		 * @param layoutNecessary True only if the cluster is expanding in size or lacks a DGView
+//		 * @param drawPlaceHolder Determines if the cluster should be drawn or a place
+//		 *                        holder in the case of big clusters
+//		 */
+//		public void drawGraph(MCODECluster cluster, boolean layoutNecessary, boolean drawPlaceHolder) {
+//			this.cluster = cluster;
+//			this.layoutNecessary = layoutNecessary;
+//
+//			// Graph drawing will only occur if the cluster is not too large,
+//			// otherwise a place holder will be drawn
+//			drawGraph = !drawPlaceHolder;
+//			this.drawPlaceHolder = drawPlaceHolder;
+//			clusterSelected = false;
+//			t = new Thread(this);
+//			t.start();
+//		}
+//
+//		@Override
+//		public void run() {
+//			try {
+//				// We want to set the loader only once during continuous exploration
+//				// It is only set again when a graph is fully loaded and placed in the table
+//				if (!drawPlaceHolder) {
+//					// internally, the loader is only drawn into the appropriate cell after a short sleep period
+//					// to ensure that quick loads are not displayed unnecessarily
+//					loadIcon.start();
+//				}
+//				
+//				final Thread currentThread = Thread.currentThread(); 
+//				
+//				while (t == currentThread) {
+//					// This ensures that the drawing of this cluster is only attempted once
+//					// if it is unsuccessful it is because the setup or layout
+//					// process was interrupted by the slider movement
+//					// In that case the drawing must occur for a new cluster using the drawGraph method
+//					if (drawGraph && !drawPlaceHolder) {
+//						PropertyChangeListener pcl = new PropertyChangeListener() {
+//							@Override
+//							public void propertyChange(PropertyChangeEvent evt) {
+//								Image image = cluster.getImage();
+//								
+//								// If the drawing process was interrupted, a new cluster must have been found and
+//								// this will have returned null, the drawing will be recalled (with the new cluster)
+//								// However, if the graphing was successful, we update
+//								// the table, stop the loader from animating and select the new cluster
+//								if (image != null && drawGraph) {
+//									cluster.removePropertyChangeListener(this);
+//									// Select the new cluster (surprisingly a time consuming step)
+//									loadIcon.setProgress(100, "Selecting Nodes");
+//									selectCluster(cluster.getNetwork());
+//									clusterSelected = true;
+//									// Update the table
+//									clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
+//									drawGraph = false;
+//								}
+//	
+//								// This is here just in case to reset the variable
+//								placeHolderDrawn = false;
+//							}
+//						};
+//						
+//						cluster.addPropertyChangeListener("image", pcl);
+//						createClusterImage(cluster, GRAPH_IMG_SIZE, GRAPH_IMG_SIZE, layouter, layoutNecessary, loadIcon);
+//					} else if (drawPlaceHolder && !placeHolderDrawn) {
+//						// draw place holder, only once though (as per the if statement)
+//						Image image = mcodeUtil.getPlaceHolderImage(GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
+//						cluster.setImage(image);
+//						// Update the table
+//						clusterBrowserPnl.update(new ImageIcon(image), cluster.getRank() - 1);
+//						// select the cluster
+//						selectCluster(cluster.getNetwork());
+//						drawGraph = false;
+//						// Make sure this block is not run again unless if we need to reload the image
+//						placeHolderDrawn = true;
+//					} else if (!drawGraph && drawPlaceHolder && !clusterSelected) {
+//						selectCluster(cluster.getNetwork());
+//						clusterSelected = true;
+//					}
+//
+//					if ((!drawGraph && !drawPlaceHolder) || placeHolderDrawn)
+//						stop();
+//					
+//					// This sleep time produces the drawing response time of 1 20th of a second
+//					Thread.sleep(100);
+//				}
+//			} catch (Exception e) {
+//				logger.error("Error while drawing cluster image", e);
+//			}
+//		}
+//		
+//		void interruptLoading() {
+//			interrupted = true;
+//		}
+//
+//		void resetLoading() {
+//			interrupted = false;
+//		}
+//
+//		void stop() {
+//			// stop loader from animating and taking up computer processing power
+//			loadIcon.stop();
+//			layouter.interruptDoLayout();
+//			interruptLoading();
+//			drawGraph = false;
+//			t = null;
+//		}
+//	}
 }

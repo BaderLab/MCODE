@@ -1,13 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
 import java.awt.Color;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.util.swing.LookAndFeelUtil;
@@ -67,8 +62,6 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
  */
 public class MCODEAnalyzeTask implements ObservableTask {
 
-	private static final int IMAGE_SIZE = 80;
-	
 	private final MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
 	private final MCODEResultsManager resultsMgr;
@@ -78,8 +71,6 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	private boolean cancelled;
 	private CyNetwork network;
 	
-	private int count;
-
 	private MCODEResult result;
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
@@ -118,8 +109,6 @@ public class MCODEAnalyzeTask implements ObservableTask {
 
 		tm.setTitle("MCODE Analysis");
 		
-		mcodeUtil.resetLoading();
-
 		try {
 			// Run MCODE scoring algorithm - node scores are saved in the alg object
 			alg.setTaskMonitor(tm, network.getSUID());
@@ -145,52 +134,14 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			if (cancelled || clusters.isEmpty())
 				return;
 
-			tm.setProgress(0.001);
+			mcodeUtil.sortClusters(clusters);
+			
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");
 
-			// Also create all the images here for the clusters, since it can be a time consuming operation
-			mcodeUtil.sortClusters(clusters);
-			count = 0;
-			final double total = clusters.size();
-			
-			final int cores = Runtime.getRuntime().availableProcessors();
-			final ExecutorService exec = Executors.newFixedThreadPool(cores);
-			final List<Callable<MCODECluster>> tasks = new ArrayList<>();
-			int rank = 0;
-			
-			for (final MCODECluster c : clusters) {
-				c.setRank(++rank);
-				
-				final Callable<MCODECluster> callable = () -> {
-					if (cancelled)
-						return null;
-
-					mcodeUtil.createClusterImage(c, IMAGE_SIZE, IMAGE_SIZE, null, true, null);
-					tm.setProgress((++count) / total);
-					
-					return c;
-				};
-				tasks.add(callable);
-			}
-			
-			if (cancelled)
-				return;
-			
-			try {
-				final List<Future<MCODECluster>> futureList = exec.invokeAll(tasks);
-				
-				for (final Future<MCODECluster> future : futureList) {
-					if (cancelled)
-						break;
-					
-					MCODECluster c = future.get();
-				}
-			} finally {
-	            exec.shutdown();
-	        }
-			
 			result = resultsMgr.addResult(network, clusters);
 			mcodeUtil.disposeUnusedNetworks(clusters);
+			
+			tm.setProgress(1.0);
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
 		}

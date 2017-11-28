@@ -6,9 +6,6 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_S
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_UNSELECTED_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_BORDER_WIDTH;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_FILL_COLOR;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_HEIGHT;
@@ -16,13 +13,10 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_P
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SHAPE;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SIZE;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.Container;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -34,6 +28,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -47,10 +42,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
+import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
@@ -73,7 +70,6 @@ import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.model.View;
 import org.cytoscape.view.model.VisualLexicon;
 import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.RenderingEngine;
@@ -97,8 +93,6 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEGraph;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterManager;
-import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODELoader;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
@@ -158,7 +152,6 @@ public class MCODEUtil {
 	private final FileUtil fileUtil;
 	private final Properties props;
 
-	private boolean interrupted;
 	private Image placeHolderImage;
 	private VisualStyle clusterStyle;
 	private VisualStyle appStyle;
@@ -267,176 +260,6 @@ public class MCODEUtil {
 		networkAlgorithms.remove(suid);
 	}
 
-	/**
-	 * Convert a network to an image and set it to the passed cluster.
-	 * 
-	 * @param cluster Input network to convert to an image
-	 * @param height  Height that the resulting image should be
-	 * @param width   Width that the resulting image should be
-	 * @param layouter Reference to the layout algorithm
-	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
-	 * @param loader Graphic loader displaying progress and process
-	 */
-	public void createClusterImage(
-			final MCODECluster cluster,
-			final int height,
-			final int width,
-			SpringEmbeddedLayouter layouter,
-			boolean layoutNecessary,
-			final MCODELoader loader
-	) {
-		final CyNetwork net = cluster.getNetwork();
-		
-		// Progress reporters.
-		// There are three basic tasks, the progress of each is calculated and then combined
-		// using the respective weighting to get an overall progress global progress
-		int weightSetupNodes = 20; // setting up the nodes and edges is deemed as 25% of the whole task
-		int weightSetupEdges = 5;
-		double weightLayout = 75.0; // layout it is 70%
-		double goalTotal = weightSetupNodes + weightSetupEdges;
-
-		if (layoutNecessary)
-			goalTotal += weightLayout;
-
-		// keeps track of progress as a percent of the totalGoal
-		double progress = 0;
-
-		final VisualStyle vs = getClusterStyle();
-		final CyNetworkView clusterView = createNetworkView(net, vs);
-
-		clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
-		clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
-
-		for (View<CyNode> nv : clusterView.getNodeViews()) {
-			if (interrupted) {
-				logger.debug("Interrupted: Node Setup");
-				// before we short-circuit the method we reset the interruption so that the method can run without
-				// problems the next time around
-				if (layouter != null) layouter.resetDoLayout();
-				resetLoading();
-
-				return;
-			}
-
-			// Node position
-			final double x;
-			final double y;
-
-			// First we check if the MCODECluster already has a node view of this node (posing the more generic condition
-			// first prevents the program from throwing a null pointer exception in the second condition)
-			if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
-				//If it does, then we take the layout position that was already generated for it
-				x = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_X_LOCATION);
-				y = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_Y_LOCATION);
-			} else {
-				// Otherwise, randomize node positions before layout so that they don't all layout in a line
-				// (so they don't fall into a local minimum for the SpringEmbedder)
-				// If the SpringEmbedder implementation changes, this code may need to be removed
-				// size is small for many default drawn graphs, thus +100
-				x = (clusterView.getVisualProperty(NETWORK_WIDTH) + 100) * Math.random();
-				y = (clusterView.getVisualProperty(NETWORK_HEIGHT) + 100) * Math.random();
-
-				if (!layoutNecessary) {
-					goalTotal += weightLayout;
-					progress /= (goalTotal / (goalTotal - weightLayout));
-					layoutNecessary = true;
-				}
-			}
-
-			nv.setVisualProperty(NODE_X_LOCATION, x);
-			nv.setVisualProperty(NODE_Y_LOCATION, y);
-
-			// Node shape
-			if (cluster.getSeedNode() == nv.getModel().getSUID())
-				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
-			else
-				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
-
-			// Update loader
-			if (loader != null) {
-				progress += 100.0 * (1.0 / (double) clusterView.getNodeViews().size()) *
-							((double) weightSetupNodes / (double) goalTotal);
-				loader.setProgress((int) progress, "Setup: nodes");
-			}
-		}
-
-		if (clusterView.getEdgeViews() != null) {
-			for (int i = 0; i < clusterView.getEdgeViews().size(); i++) {
-				if (interrupted) {
-					logger.error("Interrupted: Edge Setup");
-					if (layouter != null) layouter.resetDoLayout();
-					resetLoading();
-
-					return;
-				}
-
-				if (loader != null) {
-					progress += 100.0 * (1.0 / (double) clusterView.getEdgeViews().size()) *
-								((double) weightSetupEdges / (double) goalTotal);
-					loader.setProgress((int) progress, "Setup: edges");
-				}
-			}
-		}
-
-		if (layoutNecessary) {
-			if (layouter == null)
-				layouter = new SpringEmbeddedLayouter();
-
-			layouter.setGraphView(clusterView);
-
-			// The doLayout method should return true if the process completes without interruption
-			if (!layouter.doLayout(weightLayout, goalTotal, progress, loader)) {
-				// Otherwise, if layout is not completed, set the interruption to false, and return null, not an image
-				resetLoading();
-
-				return;
-			}
-		}
-		
-		final SpringEmbeddedLayouter finalLayouter = layouter;
-		final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D g = (Graphics2D) image.getGraphics();
-		final Dimension size = new Dimension(width, height);
-
-		invokeOnEDT(() -> {
-			try {
-				JPanel panel = new JPanel();
-				panel.setPreferredSize(size);
-				panel.setSize(size);
-				panel.setMinimumSize(size);
-				panel.setMaximumSize(size);
-				panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
-
-				JWindow window = new JWindow();
-				window.getContentPane().add(panel, BorderLayout.CENTER);
-
-				RenderingEngine<CyNetwork> re = renderingEngineFactory.createRenderingEngine(panel, clusterView);
-
-				vs.apply(clusterView);
-				clusterView.fitContent();
-				clusterView.updateView();
-				window.pack();
-				window.repaint();
-
-				re.createImage(width, height);
-				re.printCanvas(g);
-				g.dispose();
-				
-				if (!clusterView.getNodeViews().isEmpty())
-					cluster.setView(clusterView);
-				
-				cluster.setImage(image);
-				
-				if (finalLayouter != null)
-					finalLayouter.resetDoLayout();
-				
-				resetLoading();
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
-			}
-		});
-	}
-
 	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes, final boolean includeLoops) {
 		final Set<CyEdge> edges = new HashSet<>();
 
@@ -505,6 +328,10 @@ public class MCODEUtil {
 		vs.apply(view);
 		
 		return view;
+	}
+	
+	public RenderingEngine<CyNetwork> createRenderingEngine(JPanel panel, CyNetworkView view) {
+		return renderingEngineFactory.createRenderingEngine(panel, view);
 	}
 
 	public void displayNetworkView(final CyNetworkView view) {
@@ -623,14 +450,6 @@ public class MCODEUtil {
 			boolean select = elements.contains(nodeOrEdge);
 			network.getRow(nodeOrEdge).set(CyNetwork.SELECTED, select);
 		}
-	}
-
-	public void interruptLoading() {
-		interrupted = true;
-	}
-
-	public void resetLoading() {
-		interrupted = false;
 	}
 
 	/**
@@ -851,6 +670,22 @@ public class MCODEUtil {
 	 */
 	public boolean isOpened() {
 		return getMainPanel() != null;
+	}
+	
+	public ImageIcon createSpinnerIcon() {
+		URL url = MCODEUtil.class.getClassLoader().getResource("img/snake-spinner-32.gif");
+		
+		return new ImageIcon(url);
+	}
+	
+	public static void recursiveDo(Component component, Consumer<JComponent> c) {
+		if (component instanceof JComponent)
+			c.accept((JComponent) component);
+		
+		if (component instanceof Container) {
+			for (Component child : ((Container) component).getComponents())
+				recursiveDo(child, c);
+		}
 	}
 	
 	/**

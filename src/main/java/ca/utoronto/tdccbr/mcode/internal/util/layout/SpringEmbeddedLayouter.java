@@ -19,8 +19,6 @@ import org.cytoscape.model.CyNode;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
 
-import ca.utoronto.tdccbr.mcode.internal.view.MCODELoader;
-
 /**
  * An implementation of Kamada and Kawai's spring embedded layout algorithm.
  * Note 1: this was copied from giny.util because it is being phased out.  Eventually
@@ -68,16 +66,9 @@ public class SpringEmbeddedLayouter {
 
 	private boolean interrupted;
 
-	public SpringEmbeddedLayouter() {
-	}
-
-	public SpringEmbeddedLayouter(CyNetworkView graph_view) {
-		setGraphView(graph_view);
+	public SpringEmbeddedLayouter(CyNetworkView graphView) {
+		this.graphView = graphView;
 		initializeSpringEmbeddedLayouter();
-	}
-
-	public void setGraphView(CyNetworkView new_graph_view) {
-		graphView = new_graph_view;
 	}
 
 	public View<CyNetwork> getGraphView() {
@@ -99,20 +90,16 @@ public class SpringEmbeddedLayouter {
 	/**
 	 * Performs the layout of nodes.
 	 *
-	 * @param weightLayout Weighting of this process as calculated by MCODEUtil.convertNetworkToImage
-	 * @param goalTotal Numerical aim as calculated by MCODEUtil.convertNetworkToImage based on number of processes required
-	 * @param progress Amount of work completed in finding the cluster before this process started
-	 * @param loader Loading animation which displays the progress of this process
 	 * @return true if the layout was completed without interruption, false otherwise
 	 */
-	public boolean doLayout(double weightLayout, double goalTotal, double progress, MCODELoader loader) {
+	public boolean doLayout() {
 		// Initialize the layouting.
 		nodeCount = graphView.getModel().getNodeCount();
 		edgeCount = graphView.getModel().getEdgeCount();
 
 		// Initialize the index map
-		nodeIndexToMatrixIndexMap = new HashMap<Long, Integer>();
-		matrixIndexToNodeIndexMap = new TreeMap<Integer, Long>();
+		nodeIndexToMatrixIndexMap = new HashMap<>();
+		matrixIndexToNodeIndexMap = new TreeMap<>();
 
 		Iterator<CyNode> nodes = graphView.getModel().getNodeList().iterator();
 		int count = 0;
@@ -157,7 +144,7 @@ public class SpringEmbeddedLayouter {
 			// furthest node towards where it wants to be.
 			for (int iterations_i = 0; ((iterations_i < num_iterations) && (furthest_node_partials.euclideanDistance >= euclidean_distance_threshold)); iterations_i++) {
 				if (interrupted) {
-					System.err.println("Interrupted: Layouter");
+					System.err.println("[MCODE] Interrupted: Layouter");
 					// Before we shortcircuit the method, we reset the interruption so that the method can run without
 					// problems for the next cluster
 					resetDoLayout();
@@ -165,16 +152,7 @@ public class SpringEmbeddedLayouter {
 				}
 
 				furthest_node_partials = moveNode(furthest_node_partials, partials_list, potential_energy);
-
-				progress += 100.0 * (((double) 1 / (double) (num_iterations * numLayoutPasses))) *
-							((double) weightLayout / (double) goalTotal);
-
-				if (loader != null) {
-					loader.setProgress((int) progress, "Laying out");
-				}
-
-			} // End for each iteration, attempt to minimize the total potential
-			// energy by moving the node that is furthest from where it should be.
+			} // End for each iteration, attempt to minimize the total potential energy by moving the node that is furthest from where it should be.
 		} // End for each layout pass
 
 		// Just in case an interruption occured right before we exit the method, we reset it, such an interruption
@@ -193,19 +171,17 @@ public class SpringEmbeddedLayouter {
 
 	protected void setupNodeDistanceSprings() {
 		// We only have to do this once.
-		if (layoutPass != 0) {
+		if (layoutPass != 0)
 			return;
-		}
 
 		nodeDistanceSpringRestLengths = new double[nodeCount][nodeCount];
 		nodeDistanceSpringStrengths = new double[nodeCount][nodeCount];
 
-		if (nodeDistanceSpringScalars[layoutPass] == 0.0) {
+		if (nodeDistanceSpringScalars[layoutPass] == 0.0)
 			return;
-		}
 
 		//create a list of nodes that has the same indices as the nodeIndexToMatrixIndexMap
-		List<CyNode> nodeList = new ArrayList<CyNode>();
+		List<CyNode> nodeList = new ArrayList<>();
 		Collection<Long> matrixIndices = matrixIndexToNodeIndexMap.values();
 		int i = 0;
 
@@ -217,9 +193,8 @@ public class SpringEmbeddedLayouter {
 		NodeDistances ind = new NodeDistances(nodeList, graphView.getModel(), nodeIndexToMatrixIndexMap);
 		int[][] node_distances = ind.calculate();
 
-		if (node_distances == null) {
+		if (node_distances == null)
 			return;
-		}
 
 		// TODO: A good strength_constant is the characteristic path length of the graph.
 		// For now we'll just use nodeDistanceStrengthConstant.
@@ -313,9 +288,8 @@ public class SpringEmbeddedLayouter {
 				other_node_view = other_node_partials.getNodeView();
 			}
 
-			if (nodeView.getModel().getSUID() == other_node_view.getModel().getSUID()) {
+			if (nodeView.getModel().getSUID() == other_node_view.getModel().getSUID())
 				continue;
-			}
 
 			other_node_view_index = nodeIndexToMatrixIndexMap.get(other_node_view.getModel().getSUID());
 			other_node_view_radius = Math.max(other_node_view.getVisualProperty(NODE_WIDTH),
@@ -331,201 +305,181 @@ public class SpringEmbeddedLayouter {
 
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * (delta_x - ((nodeDistanceSpringRestLengths[node_view_index][other_node_view_index] * delta_x) / euclidean_distance))));
 
-			if (!reversed) {
+			if (!reversed)
 				partials.x += incremental_change;
-			}
 
 			if (other_node_partials != null) {
 				incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[other_node_view_index][node_view_index] * (-delta_x - ((nodeDistanceSpringRestLengths[other_node_view_index][node_view_index] * -delta_x) / euclidean_distance))));
-				if (reversed) {
+				
+				if (reversed)
 					other_node_partials.x -= incremental_change;
-				} else {
+				else
 					other_node_partials.x += incremental_change;
-				}
 			}
 
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (delta_x - (((node_view_radius + other_node_view_radius) * delta_x) / euclidean_distance))));
 
-				if (!reversed) {
+				if (!reversed)
 					partials.x += incremental_change;
-				}
 
 				if (other_node_partials != null) {
 					incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (-delta_x - (((node_view_radius + other_node_view_radius) * -delta_x) / euclidean_distance))));
 
-					if (reversed) {
+					if (reversed)
 						other_node_partials.x -= incremental_change;
-						//System.out.println( "Other_Node_Partials (-): "+other_node_partials.x );
-					} else {
+					else
 						other_node_partials.x += incremental_change;
-						//System.out.println( "Other_Node_Partials (+): "+other_node_partials.x );
-					}
 				}
 			}
+			
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * (delta_y - ((nodeDistanceSpringRestLengths[node_view_index][other_node_view_index] * delta_y) / euclidean_distance))));
 
-			if (!reversed) {
+			if (!reversed)
 				partials.y += incremental_change;
-			}
 
 			if (other_node_partials != null) {
 				incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[other_node_view_index][node_view_index] * (-delta_y - ((nodeDistanceSpringRestLengths[other_node_view_index][node_view_index] * -delta_y) / euclidean_distance))));
-				if (reversed) {
+				
+				if (reversed)
 					other_node_partials.y -= incremental_change;
-				} else {
+				else
 					other_node_partials.y += incremental_change;
-				}
 			}
 
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (delta_y - (((node_view_radius + other_node_view_radius) * delta_y) / euclidean_distance))));
 
-				if (!reversed) {
+				if (!reversed)
 					partials.y += incremental_change;
-				}
 
 				if (other_node_partials != null) {
 					incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (-delta_y - (((node_view_radius + other_node_view_radius) * -delta_y) / euclidean_distance))));
-					if (reversed) {
+					
+					if (reversed)
 						other_node_partials.y -= incremental_change;
-					} else {
+					else
 						other_node_partials.y += incremental_change;
-					}
 				}
 			}
 
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * (1.0 - ((nodeDistanceSpringRestLengths[node_view_index][other_node_view_index] * (delta_y * delta_y)) / euclidean_distance_cubed))));
 
 			if (reversed) {
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					other_node_partials.xx -= incremental_change;
-				}
 			} else {
 				partials.xx += incremental_change;
 
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					other_node_partials.xx += incremental_change;
-				}
 			}
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (1.0 - (((node_view_radius + other_node_view_radius) * (delta_y * delta_y)) / euclidean_distance_cubed))));
 
 				if (reversed) {
-					if (other_node_partials != null) {
+					if (other_node_partials != null)
 						other_node_partials.xx -= incremental_change;
-					}
 				} else {
 					partials.xx += incremental_change;
-					if (other_node_partials != null) {
+					
+					if (other_node_partials != null)
 						other_node_partials.xx += incremental_change;
-					}
 				}
 			}
 
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * (1.0 - ((nodeDistanceSpringRestLengths[node_view_index][other_node_view_index] * (delta_x * delta_x)) / euclidean_distance_cubed))));
 
 			if (reversed) {
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					other_node_partials.yy -= incremental_change;
-				}
 			} else {
 				partials.yy += incremental_change;
-				if (other_node_partials != null) {
+				
+				if (other_node_partials != null)
 					other_node_partials.yy += incremental_change;
-				}
 			}
 
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (1.0 - (((node_view_radius + other_node_view_radius) * (delta_x * delta_x)) / euclidean_distance_cubed))));
+				
 				if (reversed) {
-					if (other_node_partials != null) {
+					if (other_node_partials != null)
 						other_node_partials.yy -= incremental_change;
-					}
 				} else {
 					partials.yy += incremental_change;
-					if (other_node_partials != null) {
+					
+					if (other_node_partials != null)
 						other_node_partials.yy += incremental_change;
-					}
 				}
 			}
 
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * (nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * ((nodeDistanceSpringRestLengths[node_view_index][other_node_view_index] * (delta_x * delta_y)) / euclidean_distance_cubed)));
 
 			if (reversed) {
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					other_node_partials.xy -= incremental_change;
-				}
 			} else {
 				partials.xy += incremental_change;
-				if (other_node_partials != null) {
+				
+				if (other_node_partials != null)
 					other_node_partials.xy += incremental_change;
-				}
 			}
 
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * (anticollisionSpringStrength * (((node_view_radius + other_node_view_radius) * (delta_x * delta_y)) / euclidean_distance_cubed)));
 
 				if (reversed) {
-					if (other_node_partials != null) {
+					if (other_node_partials != null)
 						other_node_partials.xy -= incremental_change;
-					}
 				} else {
 					partials.xy += incremental_change;
-					if (other_node_partials != null) {
+					
+					if (other_node_partials != null)
 						other_node_partials.xy += incremental_change;
-					}
 				}
 			}
 
 			distance_from_rest = (euclidean_distance - nodeDistanceSpringRestLengths[node_view_index][other_node_view_index]);
 			incremental_change = (nodeDistanceSpringScalars[layoutPass] * ((nodeDistanceSpringStrengths[node_view_index][other_node_view_index] * (distance_from_rest * distance_from_rest)) / 2));
 
-			//System.out.println( "Distance_From_Rest: "+distance_from_rest+" Incremental_Change: "+incremental_change );
-
 			if (reversed) {
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					potential_energy.totalEnergy -= incremental_change;
-				}
 			} else {
 				potential_energy.totalEnergy += incremental_change;
 
-				if (other_node_partials != null) {
+				if (other_node_partials != null)
 					potential_energy.totalEnergy += incremental_change;
-				}
 			}
 
 			if (distance_from_touching < 0.0) {
 				incremental_change = (anticollisionSpringScalars[layoutPass] * ((anticollisionSpringStrength * (distance_from_touching * distance_from_touching)) / 2));
 				if (reversed) {
-					if (other_node_partials != null) {
+					if (other_node_partials != null)
 						potential_energy.totalEnergy -= incremental_change;
-					}
 				} else {
 					potential_energy.totalEnergy += incremental_change;
-					if (other_node_partials != null) {
+					
+					if (other_node_partials != null)
 						potential_energy.totalEnergy += incremental_change;
-					}
 				}
 			}
 			if (other_node_partials != null) {
 				other_node_partials.euclideanDistance = Math.sqrt((other_node_partials.x * other_node_partials.x) +
 																  (other_node_partials.y * other_node_partials.y));
 				if ((furthest_partials == null) ||
-					(other_node_partials.euclideanDistance > furthest_partials.euclideanDistance)) {
+					(other_node_partials.euclideanDistance > furthest_partials.euclideanDistance))
 					furthest_partials = other_node_partials;
-				}
 			}
 
 		}
 
-		if (!reversed) {
+		if (!reversed)
 			partials.euclideanDistance = Math.sqrt((partials.x * partials.x) + (partials.y * partials.y));
-		}
 
-		if ((furthest_partials == null) || (partials.euclideanDistance > furthest_partials.euclideanDistance)) {
+		if ((furthest_partials == null) || (partials.euclideanDistance > furthest_partials.euclideanDistance))
 			furthest_partials = partials;
-		}
 
 		return furthest_partials;
 	}
@@ -565,7 +519,7 @@ public class SpringEmbeddedLayouter {
 	}
 
 	protected List<PartialDerivatives> createPartialsList() {
-		return new ArrayList<PartialDerivatives>();
+		return new ArrayList<>();
 	}
 
 	static class PartialDerivatives {
@@ -624,5 +578,4 @@ public class SpringEmbeddedLayouter {
 			totalEnergy = 0.0;
 		}
 	}
-
 }

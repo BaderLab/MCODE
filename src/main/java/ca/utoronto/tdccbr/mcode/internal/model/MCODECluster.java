@@ -89,6 +89,7 @@ public class MCODECluster {
 		this.score = score;
 		this.nodes = nodes;
 		this.nodeSeenHashMap = nodeSeenHashMap;
+		this.name = "Cluster " + rank;
 	}
 
 	public int getResultId() {
