@@ -1,6 +1,5 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
-import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
 
@@ -9,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.text.NumberFormat;
 import java.util.Dictionary;
+import java.util.Enumeration;
 import java.util.Hashtable;
 
 import javax.swing.BorderFactory;
@@ -144,42 +144,53 @@ public class ClusterPanel extends JPanel {
 				.addPreferredGap(ComponentPlacement.UNRELATED)
 				.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
 						.addGroup(layout.createSequentialGroup()
-								.addGroup(layout.createParallelGroup(Alignment.LEADING, false)
-										.addComponent(lbl1)
-										.addComponent(lbl2)
-										.addComponent(lbl3)
-								)
+								.addComponent(lbl1)
 								.addPreferredGap(ComponentPlacement.RELATED)
-								.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-										.addComponent(getScoreLabel())
-										.addComponent(getNodesLabel())
-										.addComponent(getEdgesLabel())
-								)
+								.addComponent(getScoreLabel())
+								.addPreferredGap(ComponentPlacement.UNRELATED)
+								.addComponent(lbl2)
+								.addPreferredGap(ComponentPlacement.RELATED)
+								.addComponent(getNodesLabel())
+								.addPreferredGap(ComponentPlacement.UNRELATED)
+								.addComponent(lbl3)
+								.addPreferredGap(ComponentPlacement.RELATED)
+								.addComponent(getEdgesLabel())
+								.addPreferredGap(ComponentPlacement.RELATED)
 						)
-						.addComponent(getSizeSlider(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+						.addComponent(getSizeSlider())
 				)
 				.addGap(0, 0, Short.MAX_VALUE)
 		);
-		layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+		layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
 				.addComponent(getRankLabel())
 				.addComponent(getImageLabel())
 				.addGroup(layout.createSequentialGroup()
 						.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
 								.addComponent(lbl1)
 								.addComponent(getScoreLabel())
-						)
-						.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
 								.addComponent(lbl2)
 								.addComponent(getNodesLabel())
-						)
-						.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
 								.addComponent(lbl3)
 								.addComponent(getEdgesLabel())
 						)
+						.addGap(0, 0, Short.MAX_VALUE)
 						.addComponent(getSizeSlider())
 				)
 		);
 		
+		// Change the slider's label sizes -- only works if it's done after the slider has been added to
+		// its parent container and had its UI assigned
+		Font tickFont = getSizeSlider().getFont().deriveFont(getSmallFontSize());
+		Dictionary<Integer, JLabel> labelTable = getSizeSlider().getLabelTable();
+		
+		for (Enumeration<Integer> enumeration = labelTable.keys(); enumeration.hasMoreElements();) {
+			int k = enumeration.nextElement();
+			JLabel label = labelTable.get(k);
+			label.setFont(tickFont); // Updates the font size
+			label.setSize(label.getPreferredSize()); // Updates the label size and slider layout
+		}
+		
+		revalidate();
 		update();
 	}
 	
@@ -288,6 +299,8 @@ public class ClusterPanel extends JPanel {
 		final Color c = UIManager.getColor(isSelected() ? "Table.selectionBackground" : "Table.background");
 		setBackground(c);
 		getSizeSlider().setVisible(isSelected());
+		
+		revalidate();
 	}
 	
 	private void updateLabels() {
@@ -300,7 +313,7 @@ public class ClusterPanel extends JPanel {
 		getNodesLabel().setText("" + cluster.getGraph().getNodeCount());
 		getEdgesLabel().setText("" + cluster.getGraph().getEdgeCount());
 		
-		repaint();
+		revalidate();
 	}
 	
 	private void updateImage() {

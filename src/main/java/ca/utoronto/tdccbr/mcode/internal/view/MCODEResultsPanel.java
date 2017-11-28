@@ -60,14 +60,11 @@ import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.LayoutStyle.ComponentPlacement;
-import javax.swing.ListSelectionModel;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 
 import org.cytoscape.application.CyUserLog;
@@ -160,6 +157,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private JPanel bottomPnl;
 	private JButton createSubNetButton;
 	private JButton closeBtn;
+	private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>();
 	
 	private final CyServiceRegistrar registrar;
 
@@ -376,6 +374,63 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		return closeBtn;
 	}
 
+	private void updateExploreControlPanel() {
+		try {
+			ClusterPanel item = clusterBrowserPnl.getSelectedItem();
+			getCreateSubNetButton().setEnabled(item != null);
+			
+			if (item != null) {
+				final int selectedRow = clusterBrowserPnl.getSelectedIndex();
+				final MCODECluster cluster = item.getCluster();
+				final CyNetwork net = cluster.getNetwork();
+				selectCluster(net);
+
+				// Upon selection of a cluster, we must show the corresponding explore panel content
+				// First we test if this cluster has been selected yet and if its content exists.
+				// If it does not, we create it.
+				ExploreContentPanel explorePanel = exploreContentPanels.get(selectedRow);
+				
+				if (explorePanel == null)
+					exploreContentPanels.put(selectedRow, explorePanel = createExploreContent(selectedRow));
+				
+				// Next, if this is the first time explore panel content is being displayed, then the
+				// explore panel is not visible yet, and there is no content in
+				// it yet, so we do not have to remove it, otherwise,
+				// if the panel is visible, then it must have content which needs to be removed
+				if (getExplorePnl().isVisible())
+					getExplorePnl().getContentPane().removeAll();
+
+				// Now we add the currently selected cluster's explore panel content
+				getExplorePnl().getContentPane().add(explorePanel);
+
+				// and set the explore panel to visible so that it can be seen
+				// (this should only happen once after the first time the user selects a cluster
+				if (!getExplorePnl().isVisible())
+					getExplorePnl().setVisible(true);
+
+				// Finally the explore panel must be redrawn upon the selection
+				// event to display the new content with the name of the cluster, if it exists
+				String title = "Explore: " + cluster.getName();
+				getExplorePnl().setTitleComponentText(title);
+				getExplorePnl().updateUI();
+
+				// In order for the enumeration to be conducted for this cluster
+				// on the same attribute that might already have been selected
+				// we get a reference to the combo box within the explore content...
+				final JComboBox<String> nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
+				// ...and fire the enumeration action
+				nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
+
+				// TODO: it doesn't work from here
+				// This needs to be called when the explore panel shows up 
+				// so that any selection in the cluster browser is centered in the visible portion of the table
+				// table.scrollRectToVisible(table.getCellRect(selectedRow, 0, true));
+			}
+		} catch (Exception ex) {
+			logger.error("Unexpected MCODE error", ex);
+		}
+	}
+	
 	/**
 	 * This method creates a JPanel containing a node score cutoff slider and a
 	 * node attribute enumeration viewer
@@ -527,6 +582,8 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		void setSelectedItem(ClusterPanel item) {
 			for (ClusterPanel p : items.values())
 				p.setSelected(p.equals(item));
+			
+			updateExploreControlPanel();
 		}
 		
 		public void scrollTo(ClusterPanel item) {
@@ -971,78 +1028,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			mcodeUtil.exportMCODEResults(alg, getClusters(), network);
-		}
-	}
-
-	/**
-	 * Handler to select nodes in graph when a row is selected
-	 */
-	private class TableRowSelectionHandler implements ListSelectionListener {
-
-		private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>();
-		
-		@Override
-		public void valueChanged(ListSelectionEvent e) {
-			try {
-				// Ignore extra messages.
-				if (e.getValueIsAdjusting())
-					return;
-	
-				final ListSelectionModel lsm = (ListSelectionModel) e.getSource();
-				final CyNetwork gpCluster;
-	
-				getCreateSubNetButton().setEnabled(!lsm.isSelectionEmpty());
-				
-				if (!lsm.isSelectionEmpty()) {
-					final int selectedRow = lsm.getMinSelectionIndex();
-					final MCODECluster c = clusters.get(selectedRow);
-					gpCluster = c.getNetwork();
-					selectCluster(gpCluster);
-	
-					// Upon selection of a cluster, we must show the corresponding explore panel content
-					// First we test if this cluster has been selected yet and if its content exists
-					// If it does not, we create it
-					ExploreContentPanel explorePanel = exploreContentPanels.get(selectedRow);
-					
-					if (explorePanel == null)
-						exploreContentPanels.put(selectedRow, explorePanel = createExploreContent(selectedRow));
-					
-					// Next, if this is the first time explore panel content is being displayed, then the
-					// explore panel is not visible yet, and there is no content in
-					// it yet, so we do not have to remove it, otherwise,
-					// if the panel is visible, then it must have content which needs to be removed
-					if (getExplorePnl().isVisible())
-						getExplorePnl().getContentPane().removeAll();
-	
-					// Now we add the currently selected cluster's explore panel content
-					getExplorePnl().getContentPane().add(explorePanel);
-	
-					// and set the explore panel to visible so that it can be seen
-					// (this should only happen once after the first time the user selects a cluster
-					if (!getExplorePnl().isVisible())
-						getExplorePnl().setVisible(true);
-	
-					// Finally the explore panel must be redrawn upon the selection
-					// event to display the new content with the name of the cluster, if it exists
-					String title = "Explore: " + c.getName();
-					getExplorePnl().setTitleComponentText(title);
-					getExplorePnl().updateUI();
-	
-					// In order for the enumeration to be conducted for this cluster
-					// on the same attribute that might already have been selected
-					// we get a reference to the combo box within the explore content
-					final JComboBox<String> nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
-					// and fire the enumeration action
-					nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
-	
-					// TODO: it doesn't work from here
-					// This needs to be called when the explore panel shows up 
-					// so that any selection in the cluster browser is centered in the visible portion of the table
-					// table.scrollRectToVisible(table.getCellRect(selectedRow, 0, true));
-				}
-			} catch (Exception ex) {
-				logger.error("Unexpected MCODE error", ex);
-			}
 		}
 	}
 
