@@ -678,7 +678,7 @@ public class MCODEUtil {
 		return new ImageIcon(url);
 	}
 	
-	public static void recursiveDo(Component component, Consumer<JComponent> c) {
+	public void recursiveDo(Component component, Consumer<JComponent> c) {
 		if (component instanceof JComponent)
 			c.accept((JComponent) component);
 		

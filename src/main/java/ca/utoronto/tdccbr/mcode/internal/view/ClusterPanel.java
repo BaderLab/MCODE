@@ -1,5 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static javax.swing.GroupLayout.DEFAULT_SIZE;
+import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
 
@@ -140,54 +142,45 @@ public class ClusterPanel extends JPanel {
 		setBackground(UIManager.getColor("Table.background"));
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Separator.foreground")));
 		
-		JLabel lbl1 = createLabel("Score:");
-		JLabel lbl2 = createLabel("Nodes:");
-		JLabel lbl3 = createLabel("Edges:");
-		
 		final GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
-		layout.setAutoCreateContainerGaps(true);
+		layout.setAutoCreateContainerGaps(false);
 		layout.setAutoCreateGaps(false);
 		
 		layout.setHorizontalGroup(layout.createSequentialGroup()
+				.addContainerGap()
 				.addComponent(getRankLabel())
 				.addPreferredGap(ComponentPlacement.UNRELATED)
 				.addComponent(getImageLabel())
 				.addPreferredGap(ComponentPlacement.UNRELATED)
-				.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
+				.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
+						.addComponent(getScoreLabel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+						.addComponent(getSizeSlider(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 						.addGroup(layout.createSequentialGroup()
-								.addComponent(lbl1)
-								.addPreferredGap(ComponentPlacement.RELATED)
-								.addComponent(getScoreLabel())
-								.addPreferredGap(ComponentPlacement.UNRELATED)
-								.addComponent(lbl2)
-								.addPreferredGap(ComponentPlacement.RELATED)
 								.addComponent(getNodesLabel())
 								.addPreferredGap(ComponentPlacement.UNRELATED)
-								.addComponent(lbl3)
-								.addPreferredGap(ComponentPlacement.RELATED)
 								.addComponent(getEdgesLabel())
-								.addPreferredGap(ComponentPlacement.RELATED)
 						)
-						.addComponent(getSizeSlider())
 				)
-				.addGap(0, 0, Short.MAX_VALUE)
+				.addContainerGap()
 		);
-		layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, false)
+		layout.setVerticalGroup(layout.createParallelGroup(Alignment.CENTER, true)
+				.addGap(2)
 				.addComponent(getRankLabel())
 				.addComponent(getImageLabel())
 				.addGroup(layout.createSequentialGroup()
+						.addContainerGap()
+						.addComponent(getScoreLabel())
+						.addGap(0, 0, Short.MAX_VALUE)
+						.addComponent(getSizeSlider(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addGap(0, 0, Short.MAX_VALUE)
 						.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
-								.addComponent(lbl1)
-								.addComponent(getScoreLabel())
-								.addComponent(lbl2)
 								.addComponent(getNodesLabel())
-								.addComponent(lbl3)
 								.addComponent(getEdgesLabel())
 						)
-						.addGap(0, 0, Short.MAX_VALUE)
-						.addComponent(getSizeSlider())
+						.addContainerGap()
 				)
+				.addGap(2)
 		);
 		
 		// Change the slider's label sizes -- only works if it's done after the slider has been added to
@@ -212,7 +205,7 @@ public class ClusterPanel extends JPanel {
 			rankLabel.setToolTipText("Rank");
 			rankLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
 			rankLabel.setHorizontalAlignment(JLabel.RIGHT);
-			rankLabel.setPreferredSize(new Dimension(36, rankLabel.getPreferredSize().height));
+			rankLabel.setPreferredSize(new Dimension(32, rankLabel.getPreferredSize().height));
 			rankLabel.setMinimumSize(rankLabel.getPreferredSize());
 			rankLabel.setMaximumSize(rankLabel.getPreferredSize());
 		}
@@ -236,8 +229,8 @@ public class ClusterPanel extends JPanel {
 			imageLabel.setSize(d);
 			
 			imageLabel.setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createLineBorder(UIManager.getColor("Separator.foreground"), 1),
-					BorderFactory.createLineBorder(UIManager.getColor("Table.background"), bw - 1)));
+					BorderFactory.createMatteBorder(0, 1, 0, 1, UIManager.getColor("Separator.foreground")),
+					BorderFactory.createMatteBorder(bw, bw - 1, bw, bw - 1, UIManager.getColor("Table.background"))));
 		}
 		
 		return imageLabel;
@@ -246,6 +239,7 @@ public class ClusterPanel extends JPanel {
 	protected JLabel getScoreLabel() {
 		if (scoreLabel == null) {
 			scoreLabel = createLabel("");
+			scoreLabel.setToolTipText("Score");
 			scoreLabel.setHorizontalAlignment(JLabel.RIGHT);
 		}
 		
@@ -313,7 +307,7 @@ public class ClusterPanel extends JPanel {
 	private void updateSelection() {
 		final Color c = UIManager.getColor(isSelected() ? "Table.selectionBackground" : "Table.background");
 		setBackground(c);
-		getSizeSlider().setVisible(isSelected());
+		getSizeSlider().setEnabled(isSelected());
 		
 		revalidate();
 	}
@@ -325,8 +319,8 @@ public class ClusterPanel extends JPanel {
 
 		getRankLabel().setText("" + cluster.getRank());
 		getScoreLabel().setText(nf.format(cluster.getScore()));
-		getNodesLabel().setText("" + cluster.getGraph().getNodeCount());
-		getEdgesLabel().setText("" + cluster.getGraph().getEdgeCount());
+		getNodesLabel().setText(cluster.getGraph().getNodeCount() + " nodes");
+		getEdgesLabel().setText(cluster.getGraph().getEdgeCount() + " edges");
 		
 		revalidate();
 	}

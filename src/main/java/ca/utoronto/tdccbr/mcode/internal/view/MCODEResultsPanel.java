@@ -37,10 +37,11 @@ import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
-import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
+import javax.swing.GroupLayout.ParallelGroup;
+import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
@@ -547,10 +548,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				}
 			});
 			
-			setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 			addItems(clusters);
-			add(filler);
-			
 			updateScrollableTracksViewportHeight();
 		}
 
@@ -660,26 +658,43 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 		
 		private void addItems(List<MCODECluster> clusters) {
+			removeAll();
+			
+			GroupLayout layout = new GroupLayout(this);
+			setLayout(layout);
+			layout.setAutoCreateContainerGaps(false);
+			layout.setAutoCreateGaps(false);
+			
+			ParallelGroup hGroup = layout.createParallelGroup(Alignment.CENTER, true);
+			SequentialGroup vGroup = layout.createSequentialGroup();
+			layout.setHorizontalGroup(hGroup);
+			layout.setVerticalGroup(vGroup);
+			
 			int index = 0;
 			
 			for (MCODECluster c : clusters) {
 				c.setRank(index + 1);
 				
 				ClusterPanel p = new ClusterPanel(index, c, currentParamsCopy, mcodeUtil, registrar);
-				p.setAlignmentX(LEFT_ALIGNMENT);
 				p.addComponentListener(new ComponentAdapter() {
 					@Override
 					public void componentResized(ComponentEvent e) {
 						updateScrollableTracksViewportHeight();
 					}
 				});
-				addMouseListenersForSelection(p);
+				mcodeUtil.recursiveDo(p, comp -> addMouseListenersForSelection(p, comp));
 				setKeyBindings(p);
 				
 				items.put(c, p);
-				add(p);
+				
+				hGroup.addComponent(p, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
+				vGroup.addComponent(p, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE);
+				
 				++index;
 			}
+			
+			hGroup.addComponent(filler, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
+			vGroup.addComponent(filler, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
 		}
 		
 		private void addMouseListenersForSelection(ClusterPanel item, JComponent... components) {
