@@ -84,23 +84,31 @@ public class ClusterPanel extends JPanel {
 	
 	private boolean selected;
 	
+	private final int index;
 	private MCODECluster cluster;
 	private final MCODEParameters params;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
-	public ClusterPanel(MCODECluster cluster, MCODEParameters params, MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
+	public ClusterPanel(int index, MCODECluster cluster, MCODEParameters params, MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar) {
+		this.index = index;
 		this.cluster = cluster;
 		this.params = params;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 		
-		Font font = registrar.getService(IconManager.class).getIconFont(18.0f);
-		warnIcon = new TextIcon(IconManager.ICON_WARNING, font, LookAndFeelUtil.getWarnColor(),
-				GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
+		Font font = registrar.getService(IconManager.class).getIconFont(64.0f);
+		Color fg = UIManager.getColor("Label.disabledForeground");
+		fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
+		warnIcon = new TextIcon(IconManager.ICON_BAN, font, fg, GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
 		
 		cluster.addPropertyChangeListener("image", evt -> updateImage());
 		init();
+	}
+	
+	public int getIndex() {
+		return index;
 	}
 	
 	public MCODECluster getCluster() {
@@ -108,8 +116,11 @@ public class ClusterPanel extends JPanel {
 	}
 	
 	public void setCluster(MCODECluster cluster) {
-		this.cluster = cluster;
-		update();
+		if (!cluster.equals(this.cluster)) {
+			this.cluster = cluster;
+			cluster.addPropertyChangeListener("image", evt -> updateImage());
+			update();
+		}
 	}
 	
 	public boolean isSelected() {
@@ -124,6 +135,7 @@ public class ClusterPanel extends JPanel {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private void init() {
 		setBackground(UIManager.getColor("Table.background"));
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Separator.foreground")));
@@ -197,6 +209,7 @@ public class ClusterPanel extends JPanel {
 	protected JLabel getRankLabel() {
 		if (rankLabel == null) {
 			rankLabel = createLabel("" + cluster.getRank());
+			rankLabel.setToolTipText("Rank");
 			rankLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
 			rankLabel.setHorizontalAlignment(JLabel.RIGHT);
 			rankLabel.setPreferredSize(new Dimension(36, rankLabel.getPreferredSize().height));
@@ -211,6 +224,8 @@ public class ClusterPanel extends JPanel {
 		if (imageLabel == null) {
 			imageLabel = new JLabel();
 			imageLabel.setHorizontalAlignment(JLabel.CENTER);
+			imageLabel.setOpaque(true);
+			imageLabel.setBackground(UIManager.getColor("Table.background"));
 			
 			final int bw = 3; // Border width
 			
@@ -318,14 +333,18 @@ public class ClusterPanel extends JPanel {
 	
 	private void updateImage() {
 		if (cluster.getImage() == null) {
-			if (cluster.getNodes().size() > 300)
+			if (cluster.isTooLargeToVisualize()) {
 				// If the new cluster is too large to draw within a reasonable time
 				// and won't look understandable in the table cell, then we just show a warning
 				showIcon(warnIcon, false);
-			else
+				getImageLabel().setToolTipText("Cluster is too big to show");
+			} else {
 				showIcon(mcodeUtil.createSpinnerIcon(), true);
+				getImageLabel().setToolTipText("Loading...");
+			}
 		} else {
 			showIcon(new ImageIcon(cluster.getImage()), false);
+			getImageLabel().setToolTipText("Cluster");
 		}
 	}
 	

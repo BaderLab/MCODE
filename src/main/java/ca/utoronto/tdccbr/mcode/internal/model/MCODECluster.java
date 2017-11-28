@@ -161,6 +161,10 @@ public class MCODECluster {
 		pcs.firePropertyChange("image", oldImage, image);
 	}
 
+	public boolean isTooLargeToVisualize() {
+		return getNodes().size() > 300;
+	}
+	
 	public boolean isDisposed() {
 		synchronized (lock) {
 			return disposed;

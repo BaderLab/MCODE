@@ -22,9 +22,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.JWindow;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
@@ -43,11 +49,13 @@ import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.vizmap.VisualStyle;
 
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel.ExploreContentPanel;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -128,10 +136,11 @@ public class MCODEResultsMediator {
 					netView = allViews.iterator().next();
 			}
 			
+			// Create Results panel
 			MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network, netView, resultId,
 					discardResultAction, registrar);
 			
-			// Also create all the images here for the clusters, since it can be a time consuming operation
+			// Create all the images here for the clusters, since it can be a time consuming operation
 			new Thread(() -> {
 				final int cores = Runtime.getRuntime().availableProcessors();
 				final ExecutorService exec = Executors.newFixedThreadPool(cores);
@@ -139,10 +148,12 @@ public class MCODEResultsMediator {
 				int rank = 0;
 				
 				for (MCODECluster c : clusters) {
-					final int row = rank;
 					c.setRank(++rank);
 					
-					final Callable<MCODECluster> callable = () -> {System.out.println(">>> " + row);
+					if (c.isTooLargeToVisualize())
+						continue;
+					
+					final Callable<MCODECluster> callable = () -> {
 						createClusterImage(c, true);
 						
 						return c;
@@ -161,6 +172,12 @@ public class MCODEResultsMediator {
 		            exec.shutdown();
 		        }
 			}).start();
+			
+			// Add required listeners to results components
+			List<ClusterPanel> clusterPanels = resultsPanel.getClusterBrowserPnl().getAllItems();
+			
+			for (ClusterPanel p : clusterPanels)
+				p.getSizeSlider().addChangeListener(new SizeAction(resultsPanel, p));
 			
 			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
 			
@@ -264,5 +281,101 @@ public class MCODEResultsMediator {
 				throw new RuntimeException(ex);
 			}
 		});
+	}
+	
+	/**
+	 * Handles the dynamic cluster size manipulation via the JSlider
+	 */
+	private class SizeAction implements ChangeListener {
+
+		private final ScheduledExecutorService scheduler =  Executors.newScheduledThreadPool(3);
+		private ScheduledFuture<?> futureLoader;
+		
+		private final MCODEResultsPanel resultsPanel;
+		private final ClusterPanel clusterPanel;
+		
+		/**
+		 * @param resultsPanel 
+		 * @param p The selected cluster row
+		 * @param nodeAttributesComboBox Reference to the attribute enumeration picker
+		 */
+		SizeAction(MCODEResultsPanel resultsPanel, ClusterPanel clusterPanel) {
+			this.resultsPanel = resultsPanel;
+			this.clusterPanel = clusterPanel;
+		}
+
+		@Override
+		public void stateChanged(ChangeEvent evt) {
+			JSlider source = (JSlider) evt.getSource();
+
+			if (source.getValueIsAdjusting())
+				return;
+			
+			// This method as been written so that the slider is responsive to the user's input at all times, despite
+			// the computationally challenging drawing, layout out, and selection of large clusters. As such, we only
+			// perform real work if the slider produces a different cluster, and furthermore we only perform the quick
+			// processes here, while the heavy weights are handled by the drawer's thread.
+			final double nodeScoreCutoff = (((double) source.getValue()) / 1000);
+			final int index = clusterPanel.getIndex();
+			// Store current cluster content for comparison
+			final MCODECluster oldCluster = clusterPanel.getCluster();
+			
+			if (futureLoader != null && !futureLoader.isDone()) {
+				futureLoader.cancel(true);
+				
+				if (!oldCluster.equals(resultsPanel.getCluster(index)))
+					oldCluster.dispose();
+			}
+			
+			final int resultId = resultsPanel.getResultId();
+			final MCODEResult res = resultsMgr.getResult(resultId);
+			final CyNetwork network = res.getNetwork();
+			final MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+			
+			final Runnable command = (() -> {
+	            	final List<Long> oldNodes = oldCluster.getNodes();
+	            	// Find the new cluster given the node score cutoff
+				final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
+				// We only want to do the following work if the newly found cluster is actually different
+				// So we get the new cluster content
+				List<Long> newNodes = newCluster.getNodes();
+
+				// And compare the old and new
+				if (!newNodes.equals(oldNodes)) {
+					// We want to set the loading icon
+					oldCluster.setImage(null);
+					
+					// If the cluster has changed, then we conduct all non-rate-limiting steps...
+					// Update the cluster array
+					resultsPanel.replaceCluster(index, newCluster);
+					// Update the cluster details
+					clusterPanel.setCluster(newCluster);
+					
+					// Update the node attributes table
+					ExploreContentPanel explorePanel = resultsPanel.getExploreContentPanels(index);
+					
+					if (explorePanel != null)
+						explorePanel.updateEnumerationsTable(index);
+					
+					// Draw Graph and select the cluster in the view in a separate thread so that it can be
+					// interrupted by the slider movement
+					if (!newCluster.isDisposed()) {
+						// There is a small difference between expanding and retracting the cluster size.
+						// When expanding, new nodes need random position and thus must go through the layout.
+						// When retracting, we simply use the layout that was generated and stored.
+						// This speeds up the drawing process greatly.
+						boolean layoutNecessary = newNodes.size() > oldNodes.size();
+						oldCluster.dispose();
+						
+						// Graph drawing will only occur if the cluster is not too large,
+						// otherwise a place holder will be drawn
+						if (!newCluster.isTooLargeToVisualize())
+							createClusterImage(newCluster, layoutNecessary);
+					}
+				}
+	        });
+	        
+	        futureLoader = scheduler.schedule(command, 100, TimeUnit.MILLISECONDS);
+		}
 	}
 }
