@@ -352,7 +352,7 @@ public class MCODEResultsMediator {
 					clusterPanel.setCluster(newCluster);
 					
 					// Update the node attributes table
-					ExploreContentPanel explorePanel = resultsPanel.getExploreContentPanels(index);
+					ExploreContentPanel explorePanel = resultsPanel.getExploreContentPanel(index);
 					
 					if (explorePanel != null)
 						explorePanel.updateEnumerationsTable(index);

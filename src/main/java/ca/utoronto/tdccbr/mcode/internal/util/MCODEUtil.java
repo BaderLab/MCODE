@@ -673,7 +673,7 @@ public class MCODEUtil {
 	}
 	
 	public ImageIcon createSpinnerIcon() {
-		URL url = MCODEUtil.class.getClassLoader().getResource("img/snake-spinner-32.gif");
+		URL url = MCODEUtil.class.getClassLoader().getResource("img/lines-spinner-32.gif");
 		
 		return new ImageIcon(url);
 	}

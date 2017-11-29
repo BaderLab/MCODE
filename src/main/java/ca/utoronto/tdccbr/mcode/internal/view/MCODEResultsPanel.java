@@ -136,7 +136,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	private final List<MCODECluster> clusters;
 	private MCODEParameters currentParamsCopy;
 	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
-	private int enumerationSelection;
+	private int enumerationSelection = -1;
 	
 	// Actual cluster data
 	private final CyNetwork network;
@@ -288,7 +288,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		});
 	}
 	
-	public ExploreContentPanel getExploreContentPanels(int index) {
+	public ExploreContentPanel getExploreContentPanel(int index) {
 		return exploreContentPanels.get(index);
 	}
 	
@@ -394,10 +394,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				// Upon selection of a cluster, we must show the corresponding explore panel content
 				// First we test if this cluster has been selected yet and if its content exists.
 				// If it does not, we create it.
-				ExploreContentPanel explorePanel = getExploreContentPanels(index);
+				ExploreContentPanel explorePanel = getExploreContentPanel(index);
 				
 				if (explorePanel == null)
-					exploreContentPanels.put(index, explorePanel = createExploreContent(index));
+					exploreContentPanels.put(index, explorePanel = new ExploreContentPanel(index));
 				
 				// Next, if this is the first time explore panel content is being displayed, then the
 				// explore panel is not visible yet, and there is no content in
@@ -437,21 +437,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 	}
 	
-	/**
-	 * This method creates a JPanel containing a node score cutoff slider and a
-	 * node attribute enumeration viewer
-	 * 
-	 * @param selectedRow
-	 *            The cluster that is selected in the cluster browser
-	 * @return panel A JPanel with the contents of the explore panel, get's
-	 *         added to the explore collapsable panel's content pane
-	 */
-	private ExploreContentPanel createExploreContent(int selectedRow) {
-		final ExploreContentPanel panel = new ExploreContentPanel(selectedRow);
-
-		return panel;
-	}
-
 	/**
 	 * Sets the network node attributes to the current result set's scores and clusters.
 	 * This method is accessed from MCODEVisualStyleAction only when a results panel is selected in the east cytopanel.
@@ -583,10 +568,20 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		}
 		
 		void setSelectedItem(ClusterPanel item) {
-			for (ClusterPanel p : items.values())
-				p.setSelected(p.equals(item));
+			ClusterPanel previousItem = getSelectedItem();
 			
-			updateExploreControlPanel();
+			if (item != previousItem) {
+				int idx = previousItem != null ? previousItem.getIndex() : -1;
+				ExploreContentPanel expPnl = getExploreContentPanel(idx);
+				
+				if (expPnl != null)
+					enumerationSelection = expPnl.getNodeAttributesComboBox().getSelectedIndex();
+				
+				for (ClusterPanel p : items.values())
+					p.setSelected(p.equals(item));
+				
+				updateExploreControlPanel();
+			}
 		}
 		
 		public void scrollTo(ClusterPanel item) {
@@ -827,7 +822,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 			// Create a combo box that lists all the available node attributes for enumeration
 			nodeAttributesComboBox.addActionListener(evt -> updateEnumerationsTable(index));
-			nodeAttributesComboBox.setSelectedItem(null);
+			nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
 
 			if (isAquaLAF()) {
 				attrEnumLbl.putClientProperty("JComponent.sizeVariant", "small");

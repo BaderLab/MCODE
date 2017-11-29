@@ -154,7 +154,10 @@ public class ClusterPanel extends JPanel {
 				.addComponent(getImageLabel())
 				.addPreferredGap(ComponentPlacement.UNRELATED)
 				.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
-						.addComponent(getScoreLabel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+						.addGroup(layout.createSequentialGroup()
+								.addGap(0, 0, Short.MAX_VALUE)
+								.addComponent(getScoreLabel(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						)
 						.addComponent(getSizeSlider(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 						.addGroup(layout.createSequentialGroup()
 								.addComponent(getNodesLabel())
@@ -203,6 +206,7 @@ public class ClusterPanel extends JPanel {
 		if (rankLabel == null) {
 			rankLabel = createLabel("" + cluster.getRank());
 			rankLabel.setToolTipText("Rank");
+			rankLabel.setFont(rankLabel.getFont().deriveFont(Font.BOLD));
 			rankLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
 			rankLabel.setHorizontalAlignment(JLabel.RIGHT);
 			rankLabel.setPreferredSize(new Dimension(32, rankLabel.getPreferredSize().height));
@@ -229,8 +233,9 @@ public class ClusterPanel extends JPanel {
 			imageLabel.setSize(d);
 			
 			imageLabel.setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createMatteBorder(0, 1, 0, 1, UIManager.getColor("Separator.foreground")),
-					BorderFactory.createMatteBorder(bw, bw - 1, bw, bw - 1, UIManager.getColor("Table.background"))));
+					BorderFactory.createDashedBorder(UIManager.getColor("Separator.foreground"), 1, 1, 1, true),
+					BorderFactory.createLineBorder(UIManager.getColor("Table.background"), bw - 1)
+			));
 		}
 		
 		return imageLabel;
