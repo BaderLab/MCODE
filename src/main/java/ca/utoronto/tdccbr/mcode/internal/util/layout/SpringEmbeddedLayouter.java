@@ -79,11 +79,11 @@ public class SpringEmbeddedLayouter {
 		// Do nothing.
 	}
 
-	public void interruptDoLayout() {
+	public void cancel() {
 		this.interrupted = true;
 	}
 
-	public void resetDoLayout() {
+	public void reset() {
 		this.interrupted = false;
 	}
 
@@ -123,6 +123,13 @@ public class SpringEmbeddedLayouter {
 
 		for (layoutPass = 0; layoutPass < numLayoutPasses; layoutPass++) {
 			setupForLayoutPass();
+			
+			if (interrupted) {
+				// Before we shortcircuit the method, we reset the interruption so that the method can run without
+				// problems for the next cluster
+				reset();
+				return false;
+			}
 
 			// Initialize this layout pass
 			potential_energy.reset();
@@ -130,6 +137,11 @@ public class SpringEmbeddedLayouter {
 
 			// Calculate all node distances.  Keep track of the furthest.
 			for (View<CyNode> node_view : graphView.getNodeViews()) {
+				if (interrupted) {
+					reset();
+					return false;
+				}
+				
 				partials = new PartialDerivatives(node_view);
 				calculatePartials(partials, null, potential_energy, false);
 				partials_list.add(partials);
@@ -144,10 +156,7 @@ public class SpringEmbeddedLayouter {
 			// furthest node towards where it wants to be.
 			for (int iterations_i = 0; ((iterations_i < num_iterations) && (furthest_node_partials.euclideanDistance >= euclidean_distance_threshold)); iterations_i++) {
 				if (interrupted) {
-					System.err.println("[MCODE] Interrupted: Layouter");
-					// Before we shortcircuit the method, we reset the interruption so that the method can run without
-					// problems for the next cluster
-					resetDoLayout();
+					reset();
 					return false;
 				}
 
@@ -157,7 +166,7 @@ public class SpringEmbeddedLayouter {
 
 		// Just in case an interruption occured right before we exit the method, we reset it, such an interruption
 		// will be dealt with in the MCODEUtil class
-		resetDoLayout();
+		reset();
 
 		return true;
 	}
@@ -213,20 +222,21 @@ public class SpringEmbeddedLayouter {
 		// Calculate the rest lengths and strengths based on the node distance data
 		for (int node_i = 0; node_i < nodeCount; node_i++) {
 			for (int node_j = (node_i + 1); node_j < nodeCount; node_j++) {
-				if (node_distances[node_i][node_j] == Integer.MAX_VALUE) {
+				if (interrupted)
+					return;
+				
+				if (node_distances[node_i][node_j] == Integer.MAX_VALUE)
 					nodeDistanceSpringRestLengths[node_i][node_j] = disconnectedNodeDistanceSpringRestLength;
-				} else {
+				else
 					nodeDistanceSpringRestLengths[node_i][node_j] = (node_distance_rest_length_constant * node_distances[node_i][node_j]);
-				}
 
 				// Mirror over the diagonal.
 				nodeDistanceSpringRestLengths[node_j][node_i] = nodeDistanceSpringRestLengths[node_i][node_j];
 
-				if (node_distances[node_i][node_j] == Integer.MAX_VALUE) {
+				if (node_distances[node_i][node_j] == Integer.MAX_VALUE)
 					nodeDistanceSpringStrengths[node_i][node_j] = disconnectedNodeDistanceSpringStrength;
-				} else {
+				else
 					nodeDistanceSpringStrengths[node_i][node_j] = (node_distance_strength_constant / (node_distances[node_i][node_j] * node_distances[node_i][node_j]));
-				}
 
 				// Mirror over the diagonal.
 				nodeDistanceSpringStrengths[node_j][node_i] = nodeDistanceSpringStrengths[node_i][node_j];

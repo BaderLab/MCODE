@@ -63,6 +63,8 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 	private CyNetworkView newNetworkView;
 	private boolean interrupted;
 	
+	private SpringEmbeddedLayouter layouter;
+	
 	/**
 	 * This constructor requires the tunable fields.
 	 */
@@ -95,6 +97,9 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 	
 	@Override
 	public void run(TaskMonitor tm) throws Exception {
+		tm.setTitle("Create Cluster Network");
+		tm.setStatusMessage("Creating Network...");
+		
 		if (cluster == null && resultsMgr != null) {
 			// From commands
 			cluster = resultsMgr.getCluster(id, rank);
@@ -120,6 +125,9 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
 				alg.getParams().getIncludeLoops(), SavePolicy.SESSION_FILE);
 		newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
+		
+		if (interrupted)
+			return;
 		
 		VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
 		newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
@@ -169,7 +177,8 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		}
 
 		if (layoutNecessary) {
-			SpringEmbeddedLayouter layouter = new SpringEmbeddedLayouter(newNetworkView);
+			tm.setStatusMessage("Applying Layout...");
+			layouter = new SpringEmbeddedLayouter(newNetworkView);
 			layouter.doLayout();
 		}
 	
@@ -177,12 +186,14 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 			return;
 		
 		newNetworkView.fitContent();
-		newNetworkView.updateView();
 	}
 
 	@Override
 	public void cancel() {
 		interrupted = true;
+		
+		if (layouter != null)
+			layouter.cancel();
 	}
 
 	@Override
