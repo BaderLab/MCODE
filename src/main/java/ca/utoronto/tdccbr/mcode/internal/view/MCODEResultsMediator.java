@@ -10,14 +10,17 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,8 +41,12 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.application.swing.CytoPanelState;
+import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
+import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
+import org.cytoscape.model.CyRow;
+import org.cytoscape.model.CyTable;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -93,7 +100,11 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel.ExploreContentPa
  * * Description: Utilities for MCODE
  */
 
-public class MCODEResultsMediator {
+public class MCODEResultsMediator implements CytoPanelComponentSelectedListener {
+	
+	private static final String SCORE_ATTR = "MCODE_Score";
+	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
+	private static final String CLUSTER_ATTR = "MCODE_Cluster";
 	
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
@@ -110,6 +121,87 @@ public class MCODEResultsMediator {
 			if (resultId != null)
 				showResultsPanel(resultId);
 		});
+	}
+	
+	/**
+	 * Whenever an MCODE result tab is selected in the east CytoPanel, the MCODE attributes
+	 * have to be rewritten to correspond to that particular result.
+	 */
+	@Override
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public void handleEvent(CytoPanelComponentSelectedEvent evt) {
+		// When the user selects a tab in the east cytopanel we want to see if it is a results panel
+		// and if it is we want to re-draw the network with the MCODE visual style and reselect the
+		// cluster that may be selected in the results panel
+		Component component = evt.getCytoPanel().getSelectedComponent();
+
+		if (component instanceof MCODEResultsPanel) {
+			MCODEResultsPanel resultsPanel = (MCODEResultsPanel) component;
+
+			// To re-initialize the calculators we need the highest score of this particular result set
+			double maxScore = setNodeAttributesAndGetMaxScore(resultsPanel);
+			// Get the updated app's style
+			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
+			// Register the app's style but don't make it active by default
+			mcodeUtil.registerVisualStyle(appStyle);
+			
+			// Get selected cluster of this results panel and select its nodes/edges again
+			MCODECluster cluster = resultsPanel.getSelectedCluster();
+			
+			if (cluster != null) {
+				List elements = new ArrayList<>();
+				elements.addAll(cluster.getGraph().getEdgeList());
+				elements.addAll(cluster.getGraph().getNodeList());
+				
+				mcodeUtil.setSelected(elements, resultsPanel.getNetwork());
+			}
+		}
+	}
+	
+	/**
+	 * Sets the network node attributes to the current result set's scores and clusters.
+	 * @return the maximal score in the network given the parameters that were used for scoring at the time
+	 */
+	private double setNodeAttributesAndGetMaxScore(MCODEResultsPanel resultsPanel) {
+		int resultId = resultsPanel.getResultId();
+		CyNetwork network = resultsPanel.getNetwork();
+		List<MCODECluster> clusters = resultsPanel.getClusters();
+		MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+		
+		for (CyNode n : network.getNodeList()) {
+			Long nId = n.getSUID();
+			CyTable netNodeTbl = network.getDefaultNodeTable();
+			
+			if (netNodeTbl.getColumn(CLUSTER_ATTR) == null)
+				netNodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
+			if (netNodeTbl.getColumn(NODE_STATUS_ATTR) == null)
+				netNodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
+			if (netNodeTbl.getColumn(SCORE_ATTR) == null)
+				netNodeTbl.createColumn(SCORE_ATTR, Double.class, false);
+
+			CyRow nodeRow = network.getRow(n);
+			nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
+			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
+
+			for (MCODECluster cluster : clusters) {
+				if (cluster.getNodes().contains(nId)) {
+					Set<String> clusterNameSet = new LinkedHashSet<>();
+
+					if (nodeRow.isSet(CLUSTER_ATTR))
+						clusterNameSet.addAll(nodeRow.getList(CLUSTER_ATTR, String.class));
+
+					clusterNameSet.add(cluster.getName());
+					nodeRow.set(CLUSTER_ATTR, new ArrayList<>(clusterNameSet));
+
+					if (cluster.getSeedNode() == nId)
+						nodeRow.set(NODE_STATUS_ATTR, "Seed");
+					else
+						nodeRow.set(NODE_STATUS_ATTR, "Clustered");
+				}
+			}
+		}
+
+		return alg.getMaxScore(resultId);
 	}
 	
 	private void showResultsPanel(int resultId) {

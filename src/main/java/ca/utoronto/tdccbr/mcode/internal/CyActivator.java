@@ -6,6 +6,7 @@ import static org.cytoscape.work.ServiceProperties.COMMAND_EXAMPLE_JSON;
 import static org.cytoscape.work.ServiceProperties.COMMAND_LONG_DESCRIPTION;
 import static org.cytoscape.work.ServiceProperties.COMMAND_NAMESPACE;
 import static org.cytoscape.work.ServiceProperties.COMMAND_SUPPORTS_JSON;
+import static org.cytoscape.work.ServiceProperties.INSERT_SEPARATOR_AFTER;
 import static org.cytoscape.work.ServiceProperties.MENU_GRAVITY;
 import static org.cytoscape.work.ServiceProperties.PREFERRED_MENU;
 import static org.cytoscape.work.ServiceProperties.TITLE;
@@ -38,7 +39,6 @@ import org.osgi.framework.BundleContext;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEAboutAction;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEHelpAction;
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEVisualStyleAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeCommandTaskFactory;
@@ -124,21 +124,18 @@ public class CyActivator extends AbstractCyActivator {
 		
 		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
 		MCODEHelpAction helpAction = new MCODEHelpAction("Help", openBrowser, registrar);
-		MCODEVisualStyleAction visualStyleAction = new MCODEVisualStyleAction("Apply MCODE style", registrar, mcodeUtil);
 		MCODEAboutAction aboutAction = new MCODEAboutAction("About", registrar, mcodeUtil);
 		
 		registerService(bc, helpAction, CyAction.class);
 		registerService(bc, aboutAction, CyAction.class);
 		registerAllServices(bc, analyzeAction);
-		registerService(bc, visualStyleAction, CyAction.class);
-		registerService(bc, visualStyleAction, CytoPanelComponentSelectedListener.class);
 		
 		{
 			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(swingApp, registrar, mcodeUtil, analyzeAction);
 			Properties props = new Properties();
 			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
 			props.setProperty(TITLE, "Open MCODE");
-			props.setProperty(MENU_GRAVITY,"1.0");
+			props.setProperty(MENU_GRAVITY, "1.0");
 			
 			registerService(bc, factory, TaskFactory.class, props);
 		}
@@ -147,7 +144,8 @@ public class CyActivator extends AbstractCyActivator {
 			Properties props = new Properties();
 			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
 			props.setProperty(TITLE, "Close MCODE");
-			props.setProperty(MENU_GRAVITY,"2.0");
+			props.setProperty(MENU_GRAVITY, "2.0");
+			props.setProperty(INSERT_SEPARATOR_AFTER, "true");
 			
 			registerService(bc, factory, TaskFactory.class, props);
 			registerService(bc, factory, NetworkAboutToBeDestroyedListener.class);
@@ -188,6 +186,7 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// View Mediators
 		MCODEResultsMediator resultsMediator = new MCODEResultsMediator(resultsMgr, mcodeUtil, registrar);
+		registerService(bc, resultsMediator, CytoPanelComponentSelectedListener.class);
 	}
 	
 	@Override

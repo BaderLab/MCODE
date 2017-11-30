@@ -28,12 +28,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
@@ -68,7 +66,6 @@ import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
-import org.cytoscape.model.CyTable;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
 import org.cytoscape.util.swing.LookAndFeelUtil;
@@ -127,10 +124,6 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 @SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
-	private static final String SCORE_ATTR = "MCODE_Score";
-	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
-	private static final String CLUSTER_ATTR = "MCODE_Cluster";
-	
 	private final int resultId;
 	private final MCODEAlgorithm alg;
 	private final List<MCODECluster> clusters;
@@ -435,50 +428,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		} catch (Exception ex) {
 			logger.error("Unexpected MCODE error", ex);
 		}
-	}
-	
-	/**
-	 * Sets the network node attributes to the current result set's scores and clusters.
-	 * This method is accessed from MCODEVisualStyleAction only when a results panel is selected in the east cytopanel.
-	 * 
-	 * @return the maximal score in the network given the parameters that were
-	 *         used for scoring at the time
-	 */
-	public double setNodeAttributesAndGetMaxScore() {
-		for (CyNode n : network.getNodeList()) {
-			Long nId = n.getSUID();
-			CyTable netNodeTbl = network.getDefaultNodeTable();
-			
-			if (netNodeTbl.getColumn(CLUSTER_ATTR) == null)
-				netNodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
-			if (netNodeTbl.getColumn(NODE_STATUS_ATTR) == null)
-				netNodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
-			if (netNodeTbl.getColumn(SCORE_ATTR) == null)
-				netNodeTbl.createColumn(SCORE_ATTR, Double.class, false);
-
-			CyRow nodeRow = network.getRow(n);
-			nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
-			nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
-
-			for (MCODECluster cluster : clusters) {
-				if (cluster.getNodes().contains(nId)) {
-					Set<String> clusterNameSet = new LinkedHashSet<>();
-
-					if (nodeRow.isSet(CLUSTER_ATTR))
-						clusterNameSet.addAll(nodeRow.getList(CLUSTER_ATTR, String.class));
-
-					clusterNameSet.add(cluster.getName());
-					nodeRow.set(CLUSTER_ATTR, new ArrayList<>(clusterNameSet));
-
-					if (cluster.getSeedNode() == nId)
-						nodeRow.set(NODE_STATUS_ATTR, "Seed");
-					else
-						nodeRow.set(NODE_STATUS_ATTR, "Clustered");
-				}
-			}
-		}
-
-		return alg.getMaxScore(resultId);
 	}
 	
 	/**
