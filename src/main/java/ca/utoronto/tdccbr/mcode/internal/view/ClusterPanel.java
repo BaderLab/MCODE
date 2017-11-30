@@ -100,10 +100,10 @@ public class ClusterPanel extends JPanel {
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 		
-		Font font = registrar.getService(IconManager.class).getIconFont(64.0f);
+		Font font = registrar.getService(IconManager.class).getIconFont(36.0f);
 		Color fg = UIManager.getColor("Label.disabledForeground");
 		fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
-		warnIcon = new TextIcon(IconManager.ICON_BAN, font, fg, GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
+		warnIcon = new TextIcon(IconManager.ICON_EXCLAMATION_TRIANGLE, font, fg, GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
 		
 		cluster.addPropertyChangeListener("image", evt -> updateImage());
 		init();
