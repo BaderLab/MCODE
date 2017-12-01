@@ -138,23 +138,25 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 		if (component instanceof MCODEResultsPanel) {
 			MCODEResultsPanel resultsPanel = (MCODEResultsPanel) component;
 
-			// To re-initialize the calculators we need the highest score of this particular result set
-			double maxScore = setNodeAttributesAndGetMaxScore(resultsPanel);
-			// Get the updated app's style
-			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
-			// Register the app's style but don't make it active by default
-			mcodeUtil.registerVisualStyle(appStyle);
-			
-			// Get selected cluster of this results panel and select its nodes/edges again
-			MCODECluster cluster = resultsPanel.getSelectedCluster();
-			
-			if (cluster != null) {
-				List elements = new ArrayList<>();
-				elements.addAll(cluster.getGraph().getEdgeList());
-				elements.addAll(cluster.getGraph().getNodeList());
+			new Thread(() -> { // So this doesn't freeze the UI...
+				// To re-initialize the calculators we need the highest score of this particular result set
+				double maxScore = setNodeAttributesAndGetMaxScore(resultsPanel);
+				// Get the updated app's style
+				VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
+				// Register the app's style but don't make it active by default
+				mcodeUtil.registerVisualStyle(appStyle);
 				
-				mcodeUtil.setSelected(elements, resultsPanel.getNetwork());
-			}
+				// Get selected cluster of this results panel and select its nodes/edges again
+				MCODECluster cluster = resultsPanel.getSelectedCluster();
+				
+				if (cluster != null) {
+					List elements = new ArrayList<>();
+					elements.addAll(cluster.getGraph().getEdgeList());
+					elements.addAll(cluster.getGraph().getNodeList());
+					
+					mcodeUtil.setSelected(elements, resultsPanel.getNetwork());
+				}
+			}).start();
 		}
 	}
 	
@@ -357,7 +359,6 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 
 				vs.apply(clusterView);
 				clusterView.fitContent();
-				clusterView.updateView();
 				window.pack();
 				window.repaint();
 

@@ -1,5 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
@@ -348,10 +349,12 @@ public class ClusterPanel extends JPanel {
 	}
 	
 	private void showIcon(Icon icon, boolean animated) {
-		getImageLabel().setIcon(icon);
-		
-		if (animated && icon instanceof ImageIcon)
-			((ImageIcon) icon).setImageObserver(getImageLabel());
+		invokeOnEDT(() -> {
+			getImageLabel().setIcon(icon);
+			
+			if (animated && icon instanceof ImageIcon)
+				((ImageIcon) icon).setImageObserver(getImageLabel());
+		});
 	}
 	
 	private JLabel createLabel(String txt) {
