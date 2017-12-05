@@ -93,30 +93,36 @@ public class MCODEResultsManager {
 	}
 	
 	/**
-	 * Fires a {@link PropertyChangeEvent} for property "networkResults", where the new values is the new
-	 * result ID (int).
 	 * @param network Target CyNetwork
 	 * @param clusters Clusters created as result of the analysis.
 	 */
-	public MCODEResult addResult(CyNetwork network, List<MCODECluster> clusters) {
+	public MCODEResult createResult(CyNetwork network, List<MCODECluster> clusters) {
 		MCODEResult res = null;
 		
 		synchronized (lock) {
-			Set<Integer> ids = networkResults.get(network.getSUID());
+			res = new MCODEResult(nextResultId, network, clusters);
+			nextResultId++; // Increment next available ID
+		}
+		
+		return res;
+	}
+	
+	/**
+	 * Fires a {@link PropertyChangeEvent} for property "newResult", where the new value is the added result.
+	 */
+	public void addResult(MCODEResult res) {
+		synchronized (lock) {
+			Set<Integer> ids = networkResults.get(res.getNetwork().getSUID());
 
 			if (ids == null) {
 				ids = new HashSet<>();
-				networkResults.put(network.getSUID(), ids);
+				networkResults.put(res.getNetwork().getSUID(), ids);
 			}
 
-			ids.add(nextResultId);
-			allResults.put(nextResultId, res = new MCODEResult(nextResultId, network, clusters));
+			allResults.put(res.getId(), res);
 		}
 		
-		pcs.firePropertyChange("networkResults", null, nextResultId);
-		nextResultId++; // Increment next available ID
-		
-		return res;
+		pcs.firePropertyChange("newResult", null, res);
 	}
 	
 	public boolean removeResult(int resultId) {

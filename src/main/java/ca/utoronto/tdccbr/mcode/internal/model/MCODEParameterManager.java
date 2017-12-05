@@ -115,7 +115,9 @@ public class MCODEParameterManager {
 	}
 
 	public MCODEParameters getResultParams(int resultId) {
-		return resultParams.get(resultId).copy();
+		MCODEParameters params = resultParams.get(resultId);
+		
+		return params != null ? params.copy() : null;
 	}
 
 	public void removeResultParams(int resultId) {

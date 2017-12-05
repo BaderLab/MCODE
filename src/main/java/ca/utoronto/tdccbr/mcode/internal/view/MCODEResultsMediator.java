@@ -21,10 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +33,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
@@ -54,6 +52,8 @@ import org.cytoscape.view.model.View;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.vizmap.VisualStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
@@ -110,16 +110,18 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
+	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
+	
 	public MCODEResultsMediator(MCODEResultsManager resultsMgr, MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
 		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 		
-		resultsMgr.addPropertyChangeListener("networkResults", evt -> {
-			Integer resultId = (Integer) evt.getNewValue();
+		resultsMgr.addPropertyChangeListener("newResult", evt -> {
+			MCODEResult res = (MCODEResult) evt.getNewValue();
 			
-			if (resultId != null)
-				showResultsPanel(resultId);
+			if (res != null)
+				showResultsPanel(res);
 		});
 	}
 	
@@ -206,84 +208,59 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 		return alg.getMaxScore(resultId);
 	}
 	
-	private void showResultsPanel(int resultId) {
-		MCODEResult res = resultsMgr.getResult(resultId);
+	private void showResultsPanel(MCODEResult res) {
 		List<MCODECluster> clusters = res != null ? res.getClusters() : null;
 		
 		if (clusters == null || clusters.isEmpty())
 			return;
 		
+		int resultId = res.getId();
 		CyNetwork network = res.getNetwork();
 		CyNetworkView currView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
 		
 		MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction("Discard Result", resultId,
 				resultsMgr, mcodeUtil, registrar);
 
-		invokeOnEDT(() -> {
-			CyNetworkView netView = currView != null && currView.getModel().equals(network) ? currView : null;
+		CyNetworkView netView = currView != null && currView.getModel().equals(network) ? currView : null;
 
-			if (netView == null) {
-				Collection<CyNetworkView> allViews = registrar.getService(CyNetworkViewManager.class)
-						.getNetworkViews(network);
+		if (netView == null) {
+			Collection<CyNetworkView> allViews = registrar.getService(CyNetworkViewManager.class)
+					.getNetworkViews(network);
 
-				if (allViews.isEmpty())
-					netView = allViews.iterator().next();
-			}
+			if (allViews.isEmpty())
+				netView = allViews.iterator().next();
+		}
+		
+		// Create Results panel
+		MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network, netView, resultId,
+				discardResultAction, registrar);
 			
-			// Create Results panel
-			MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network, netView, resultId,
-					discardResultAction, registrar);
-			
-			// Create all the images here for the clusters, since it can be a time consuming operation
-			new Thread(() -> {
-				final int cores = Runtime.getRuntime().availableProcessors();
-				final ExecutorService exec = Executors.newFixedThreadPool(cores);
-				final List<Callable<MCODECluster>> tasks = new ArrayList<>();
-				int rank = 0;
-				
-				for (MCODECluster c : clusters) {
-					c.setRank(++rank);
-					
-					if (c.isTooLargeToVisualize())
-						continue;
-					
-					final Callable<MCODECluster> callable = () -> {
-						createClusterImage(c, true);
-						
-						return c;
-					};
-					tasks.add(callable);
-				}
-				
-				try {
-					final List<Future<MCODECluster>> futureList = exec.invokeAll(tasks);
-					
-					for (Future<MCODECluster> future : futureList)
-						future.get();
-				} catch (Exception e) {
-					throw new RuntimeException("Cannot create cluster image(s).", e);
-				} finally {
-		            exec.shutdown();
-		        }
-			}).start();
-			
-			// Add required listeners to results components
-			List<ClusterPanel> clusterPanels = resultsPanel.getClusterBrowserPnl().getAllItems();
-			
-			for (ClusterPanel p : clusterPanels)
-				p.getSizeSlider().addChangeListener(new SizeAction(resultsPanel, p));
-			
-			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-			
-			// Focus the result panel
-			CytoPanel cytoPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
-			int index = cytoPanel.indexOfComponent(resultsPanel);
-			cytoPanel.setSelectedIndex(index);
+		// Add required listeners to results components
+		List<ClusterPanel> clusterPanels = resultsPanel.getClusterBrowserPnl().getAllItems();
+		
+		for (ClusterPanel p : clusterPanels)
+			p.getSizeSlider().addChangeListener(new SizeAction(resultsPanel, p));
+		
+		// Ask Cytoscape to display the Results panel
+		registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
+		
+		// Focus the result panel
+		CytoPanel cytoPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
+		int index = cytoPanel.indexOfComponent(resultsPanel);
+		cytoPanel.setSelectedIndex(index);
 
-			if (cytoPanel.getState() == CytoPanelState.HIDE)
-				cytoPanel.setState(CytoPanelState.DOCK);
+		if (cytoPanel.getState() == CytoPanelState.HIDE)
+			cytoPanel.setState(CytoPanelState.DOCK);
+		
+		// Create all the images for the clusters
+		int rank = 0;
+		
+		for (MCODECluster c : clusters) {
+			c.setRank(++rank);
 			
-		});
+			if (!c.isTooLargeToVisualize())
+				createClusterImage(c, true);
+		}
 	}
 	
 	/**
@@ -351,17 +328,18 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 				panel.setMinimumSize(size);
 				panel.setMaximumSize(size);
 				panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
-
+	
 				JWindow window = new JWindow();
 				window.getContentPane().add(panel, BorderLayout.CENTER);
-
+	
 				RenderingEngine<CyNetwork> re = mcodeUtil.createRenderingEngine(panel, clusterView);
-
+	
 				vs.apply(clusterView);
+				
 				clusterView.fitContent();
 				window.pack();
 				window.repaint();
-
+	
 				re.createImage(width, height);
 				re.printCanvas(g);
 				g.dispose();
@@ -371,7 +349,7 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 				
 				cluster.setImage(image);
 			} catch (Exception ex) {
-				throw new RuntimeException(ex);
+				logger.error("Cannot update cluster image.", ex);
 			}
 		});
 	}

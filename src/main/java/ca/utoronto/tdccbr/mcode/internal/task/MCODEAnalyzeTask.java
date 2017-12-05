@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.util.Arrays;
 import java.util.List;
 
+import org.cytoscape.application.CyUserLog;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.util.swing.LookAndFeelUtil;
 import org.cytoscape.work.ObservableTask;
@@ -73,7 +74,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	
 	private MCODEResult result;
 	
-	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeTask.class);
+	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 
 	/**
 	 * Scores and finds clusters in a given network
@@ -137,9 +138,12 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			mcodeUtil.sortClusters(clusters);
 			
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");
-
-			result = resultsMgr.addResult(network, clusters);
-			mcodeUtil.disposeUnusedNetworks(clusters);
+			result = resultsMgr.createResult(network, clusters);
+			
+			new Thread(() -> {
+				resultsMgr.addResult(result);
+				mcodeUtil.disposeUnusedNetworks(clusters);
+			}).start();
 			
 			tm.setProgress(1.0);
 		} catch (Exception e) {

@@ -277,7 +277,8 @@ public class ClusterPanel extends JPanel {
 		if (sizeSlider == null) {
 			// (goes to 1000 so that we get a more precise double variable out of it)
 			sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000, (int) (params.getNodeScoreCutoff() * 1000));
-
+			sizeSlider.setOpaque(false);
+			
 			// Turn on ticks and labels at major and minor intervals.
 			sizeSlider.setMajorTickSpacing(200);
 			sizeSlider.setMinorTickSpacing(50);

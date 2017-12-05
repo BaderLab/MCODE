@@ -11,6 +11,7 @@ import org.cytoscape.model.CyNode;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -73,8 +74,10 @@ public abstract class AbstractMCODETest {
 		alg.scoreGraph(net, resultId);
 		List<MCODECluster> clusters = alg.findClusters(net, resultId);
 		
-		if (!clusters.isEmpty())
-			resultsMgr.addResult(net, clusters);
+		if (!clusters.isEmpty()) {
+			MCODEResult res = resultsMgr.createResult(net, clusters);
+			resultsMgr.addResult(res);
+		}
 		
 		return clusters;
 	}

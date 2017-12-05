@@ -142,9 +142,12 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 		TaskObserver taskObserver = new TaskObserver() {
 			
+			MCODEResult result = null;
+			
 			@Override
 			public void taskFinished(ObservableTask task) {
-				// Nothing to do here...
+				if (task.getResultClasses().contains(MCODEResult.class))
+					result = task.getResults(MCODEResult.class);
 			}
 			
 			@Override
@@ -154,9 +157,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
-					MCODEResult result = resultsMgr.getResult(resultId);
-					
-					if (result == null)
+					if (result == null || result.getClusters().isEmpty())
 						invokeOnEDT(() -> {
 							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 														  "No clusters were found.\n"
