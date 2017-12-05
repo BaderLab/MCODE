@@ -6,7 +6,6 @@ import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -79,6 +78,7 @@ import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTask;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
@@ -124,15 +124,13 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 @SuppressWarnings("serial")
 public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
-	private final int resultId;
+	private final MCODEResult result;
 	private final MCODEAlgorithm alg;
-	private final List<MCODECluster> clusters;
 	private MCODEParameters currentParamsCopy;
 	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
 	private int enumerationSelection = -1;
 	
 	// Actual cluster data
-	private final CyNetwork network;
 	private CyNetworkView networkView;
 	private final MCODEUtil mcodeUtil;
 	private final MCODEDiscardResultAction discardResultAction;
@@ -161,33 +159,23 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	 * @param resultId Title of this result as determined by MCODESCoreAndFindAction
 	 */
 	public MCODEResultsPanel(
-			final List<MCODECluster> clusters,
-			final MCODEUtil mcodeUtil,
-			final CyNetwork network,
+			final MCODEResult result,
 			final CyNetworkView networkView,
-			final int resultId,
 			final MCODEDiscardResultAction discardResultAction,
+			final MCODEUtil mcodeUtil,
 			final CyServiceRegistrar registrar
 	) {
-		this.registrar = registrar;
-		
-		if (isAquaLAF())
-			setOpaque(false);
-		
-		setLayout(new BorderLayout());
-		
-		this.alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+		this.result = result;
+		this.alg = mcodeUtil.getNetworkAlgorithm(result.getNetwork().getSUID());
 		this.mcodeUtil = mcodeUtil;
-		this.resultId = resultId;
-		this.clusters = Collections.synchronizedList(clusters);
-		this.network = network;
 		// The view may not exist, but we only test for that when we need to (in the TableRowSelectionHandler below)
 		this.networkView = networkView;
 		this.discardResultAction = discardResultAction;
-		this.currentParamsCopy = mcodeUtil.getParameterManager().getResultParams(resultId);
+		this.currentParamsCopy = mcodeUtil.getParameterManager().getResultParams(result.getId());
+		this.registrar = registrar;
 		
 		clusterBrowserScroll = new JScrollPane();
-		clusterBrowserPnl = new ClusterBrowserPanel(clusters);
+		clusterBrowserPnl = new ClusterBrowserPanel(result.getClusters());
 		
 		clusterBrowserScroll.setViewportView(clusterBrowserPnl);
 		clusterBrowserScroll.addComponentListener(new ComponentAdapter() {
@@ -196,6 +184,9 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				clusterBrowserPnl.updateScrollableTracksViewportHeight();
 			}
 		});
+		
+		if (isAquaLAF())
+			setOpaque(false);
 		
 		final GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
@@ -235,7 +226,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 
 	public int getResultId() {
-		return this.resultId;
+		return result.getId();
 	}
 
 	public CyNetworkView getNetworkView() {
@@ -243,7 +234,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 	
 	public CyNetwork getNetwork() {
-		return network;
+		return result.getNetwork();
 	}
 
 	public int getSelectedClusterRow() {
@@ -251,11 +242,11 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	}
 	
 	public List<MCODECluster> getClusters() {
-		return new ArrayList<>(clusters);
+		return new ArrayList<>(result.getClusters());
 	}
 	
 	public MCODECluster getCluster(int index) {
-		return clusters.get(index);
+		return result.getClusters().get(index);
 	}
 	
 	public MCODECluster getSelectedCluster() {
@@ -264,10 +255,6 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 		return p != null ? p.getCluster() : null;
 	}
 	
-	public void replaceCluster(int index, MCODECluster newCluster) {
-		clusters.set(index, newCluster);
-	}
-
 	public void discard(final boolean requestUserConfirmation) {
 		invokeOnEDT(() -> {
 			boolean oldRequestUserConfirmation = Boolean.valueOf(discardResultAction
@@ -358,7 +345,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			createSubNetButton = new JButton("Create Cluster Network");
 			createSubNetButton.addActionListener(new CreateSubNetworkAction(MCODEResultsPanel.this));
 			
-			createSubNetButton.setEnabled(clusterBrowserPnl.getSelectedIndex() >= 0);
+			createSubNetButton.setEnabled(clusterBrowserPnl.getSelectedItem() != null);
 		}
 		
 		return createSubNetButton;
@@ -973,7 +960,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			mcodeUtil.exportMCODEResults(alg, getClusters(), network);
+			mcodeUtil.exportMCODEResults(alg, getClusters(), result.getNetwork());
 		}
 	}
 
@@ -987,7 +974,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			// Only do this if a view has been created on this network
 			// start with no selected nodes
 			//				mcodeUtil.setSelected(network.getNodeList(), false, networkView);
-			mcodeUtil.setSelected(custerNetwork.getNodeList(), network);
+			mcodeUtil.setSelected(custerNetwork.getNodeList(), result.getNetwork());
 
 			// TODO: is it still necessary?
 			// We want the focus to switch to the appropriate network view but only if the cytopanel is docked
@@ -997,7 +984,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			//					 Cytoscape.getDesktop().setFocus(networkView.getSUID());
 			//				}
 		} else {
-			mcodeUtil.setSelected(new ArrayList<>(), network); // deselect all
+			mcodeUtil.setSelected(new ArrayList<>(), result.getNetwork()); // deselect all
 		}
 	}
 }

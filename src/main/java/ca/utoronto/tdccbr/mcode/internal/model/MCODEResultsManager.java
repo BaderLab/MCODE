@@ -3,9 +3,11 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -90,6 +92,10 @@ public class MCODEResultsManager {
 		synchronized (lock) {
 			return allResults.get(resultId);
 		}
+	}
+	
+	public Collection<MCODEResult> getAllResults() {
+		return allResults.isEmpty() ? Collections.emptySet() : new LinkedHashSet<>(allResults.values());
 	}
 	
 	/**

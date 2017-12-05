@@ -2,6 +2,7 @@ package org.cytoscape.mcode.internal.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.cytoscape.application.CyApplicationManager;
@@ -24,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -101,7 +103,8 @@ public class MCODEUtilTest extends AbstractMCODETest {
 		final List<MCODECluster> clusters = findClusters(net);
 		assertEquals(1, clusters.size());
 		
-		mcodeUtil.disposeUnusedNetworks(clusters);
+		MCODEResult res = resultsMgr.createResult(net, clusters);
+		mcodeUtil.disposeUnusedNetworks(Collections.singleton(res));
 		
 		assertEquals(originalNetCount + clusters.size(), rn.getSubNetworkList().size());
 	}

@@ -232,8 +232,7 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 		}
 		
 		// Create Results panel
-		MCODEResultsPanel resultsPanel = new MCODEResultsPanel(clusters, mcodeUtil, network, netView, resultId,
-				discardResultAction, registrar);
+		MCODEResultsPanel resultsPanel = new MCODEResultsPanel(res, netView, discardResultAction, mcodeUtil, registrar);
 			
 		// Add required listeners to results components
 		List<ClusterPanel> clusterPanels = resultsPanel.getClusterBrowserPnl().getAllItems();
@@ -418,7 +417,7 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 					
 					// If the cluster has changed, then we conduct all non-rate-limiting steps...
 					// Update the cluster array
-					resultsPanel.replaceCluster(index, newCluster);
+					res.replaceCluster(index, newCluster);
 					// Update the cluster details
 					clusterPanel.setCluster(newCluster);
 					

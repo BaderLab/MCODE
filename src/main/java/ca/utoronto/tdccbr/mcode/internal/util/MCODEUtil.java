@@ -93,6 +93,7 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEGraph;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterManager;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
@@ -161,6 +162,8 @@ public class MCODEUtil {
 	
 	private Set<CySubNetwork> createdSubNetworks;
 	
+	private final Object lock = new Object();
+	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 	
 	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
@@ -189,7 +192,7 @@ public class MCODEUtil {
 		this.fileUtil = fileUtil;
 		this.props = loadProperties("/mcode.properties");
 		
-		this.reset();
+		reset();
 	}
 
 	public String getProperty(String key) {
@@ -197,33 +200,39 @@ public class MCODEUtil {
 	}
 
 	public void reset() {
-		paramMgr = new MCODEParameterManager();
-		networkAlgorithms = new HashMap<>();
-		createdSubNetworks = new HashSet<>();
+		synchronized (lock) {
+			paramMgr = new MCODEParameterManager();
+			networkAlgorithms = new HashMap<>();
+			createdSubNetworks = new HashSet<>();
+		}
 	}
 	
-	public synchronized void disposeUnusedNetworks(List<MCODECluster> clusters) {
-		if (clusters == null || clusters.isEmpty())
-			return;
+	public void disposeUnusedNetworks(Collection<MCODEResult> allResults) {
+		Set<MCODECluster> clusters = new HashSet<>();
+		
+		for (MCODEResult res : allResults)
+			clusters.addAll(res.getClusters());
 		
 		// Create an index of cluster networks
-		final Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<>();
+		Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<>();
 		
 		for (MCODECluster c : clusters)
 			clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		
-		final Iterator<CySubNetwork> iterator = createdSubNetworks.iterator();
-		
-		while (iterator.hasNext()) {
-			final CySubNetwork sn = iterator.next();
+		synchronized (lock) {
+			Iterator<CySubNetwork> iterator = createdSubNetworks.iterator();
 			
-			// Only remove the subnetwork if it is not registered and does not belong to a cluster
-			if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
-				try {
-					iterator.remove();
-					destroy(sn);
-				} catch (Exception e) {
-					logger.error("Error disposing: " + sn, e);
+			while (iterator.hasNext()) {
+				CySubNetwork sn = iterator.next();
+				
+				// Only remove the subnetwork if it is not registered and does not belong to a cluster
+				if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
+					try {
+						iterator.remove();
+						destroy(sn);
+					} catch (Exception e) {
+						logger.error("Error disposing: " + sn, e);
+					}
 				}
 			}
 		}

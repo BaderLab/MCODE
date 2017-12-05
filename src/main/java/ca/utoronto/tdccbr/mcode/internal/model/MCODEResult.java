@@ -47,6 +47,8 @@ public class MCODEResult {
 	private final transient CyNetwork network;
 	private final List<MCODECluster> clusters = new ArrayList<>();
 	
+	private final Object lock = new Object();
+	
 	public MCODEResult(int id, CyNetwork network, List<MCODECluster> clusters) {
 		this.id = id;
 		this.network = network;
@@ -64,6 +66,14 @@ public class MCODEResult {
 	}
 	
 	public List<MCODECluster> getClusters() {
-		return new ArrayList<>(clusters);
+		synchronized (lock) {
+			return new ArrayList<>(clusters);
+		}
+	}
+	
+	public void replaceCluster(int index, MCODECluster newCluster) {
+		synchronized (lock) {
+			clusters.set(index, newCluster);
+		}
 	}
 }

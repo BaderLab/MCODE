@@ -142,7 +142,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			
 			new Thread(() -> {
 				resultsMgr.addResult(result);
-				mcodeUtil.disposeUnusedNetworks(clusters);
+				mcodeUtil.disposeUnusedNetworks(resultsMgr.getAllResults());
 			}).start();
 			
 			tm.setProgress(1.0);
