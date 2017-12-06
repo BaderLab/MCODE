@@ -195,6 +195,15 @@ public class MCODEUtil {
 		reset();
 	}
 
+	public String abbreviate(String s, int maxLength) {
+		s = String.valueOf(s); // null check
+		
+		if (s.length() > maxLength)
+			s = s.substring(0, maxLength) + "...";
+		
+		return s;
+	}
+	
 	public String getProperty(String key) {
 		return props.getProperty(key);
 	}

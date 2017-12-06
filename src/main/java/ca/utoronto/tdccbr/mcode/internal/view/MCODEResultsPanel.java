@@ -738,7 +738,14 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 				public Component getListCellRendererComponent(JList<?> list, Object value, int index,
 						boolean isSelected, boolean cellHasFocus) {
 					super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-					if (value == null) this.setText("Please select...");
+					
+					if (value == null) {
+						this.setText("Please select...");
+						this.setToolTipText(null);
+					} else {
+						this.setText(mcodeUtil.abbreviate((String) value, 40));
+						this.setToolTipText((String) value);
+					}
 					
 					return this;
 				}
@@ -774,7 +781,7 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.LEADING, true)
 					.addGroup(layout.createSequentialGroup()
 							.addComponent(attrEnumLbl)
-							.addComponent(nodeAttributesComboBox, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+							.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 					)
 					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 			);
