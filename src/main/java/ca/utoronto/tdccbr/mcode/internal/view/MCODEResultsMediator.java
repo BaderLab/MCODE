@@ -269,88 +269,92 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
 	 */
 	private void createClusterImage(MCODECluster cluster, boolean layoutNecessary) {
-		final CyNetwork net = cluster.getNetwork();
-		final VisualStyle vs = mcodeUtil.getClusterStyle();
-		final CyNetworkView clusterView = mcodeUtil.createNetworkView(net, vs);
-
-		int width = ClusterPanel.GRAPH_IMG_SIZE;
-		int height = ClusterPanel.GRAPH_IMG_SIZE;
-		
-		clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
-		clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
-
-		for (View<CyNode> nv : clusterView.getNodeViews()) {
-			// Node position
-			final double x;
-			final double y;
-
-			// First we check if the MCODECluster already has a node view of this node (posing the more generic condition
-			// first prevents the program from throwing a null pointer exception in the second condition)
-			if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
-				// If it does, then we take the layout position that was already generated for it
-				x = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_X_LOCATION);
-				y = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_Y_LOCATION);
-			} else {
-				// Otherwise, randomize node positions before layout so that they don't all layout in a line
-				// (so they don't fall into a local minimum for the SpringEmbedder)
-				// If the SpringEmbedder implementation changes, this code may need to be removed
-				// size is small for many default drawn graphs, thus +100
-				x = (clusterView.getVisualProperty(NETWORK_WIDTH) + 100) * Math.random();
-				y = (clusterView.getVisualProperty(NETWORK_HEIGHT) + 100) * Math.random();
-				layoutNecessary = true;
+		try {
+			final CyNetwork net = cluster.getNetwork();
+			final VisualStyle vs = mcodeUtil.getClusterStyle();
+			final CyNetworkView clusterView = mcodeUtil.createNetworkView(net, vs);
+	
+			int width = ClusterPanel.GRAPH_IMG_SIZE;
+			int height = ClusterPanel.GRAPH_IMG_SIZE;
+			
+			clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
+			clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
+	
+			for (View<CyNode> nv : clusterView.getNodeViews()) {
+				// Node position
+				final double x;
+				final double y;
+	
+				// First we check if the MCODECluster already has a node view of this node (posing the more generic condition
+				// first prevents the program from throwing a null pointer exception in the second condition)
+				if (cluster.getView() != null && cluster.getView().getNodeView(nv.getModel()) != null) {
+					// If it does, then we take the layout position that was already generated for it
+					x = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_X_LOCATION);
+					y = cluster.getView().getNodeView(nv.getModel()).getVisualProperty(NODE_Y_LOCATION);
+				} else {
+					// Otherwise, randomize node positions before layout so that they don't all layout in a line
+					// (so they don't fall into a local minimum for the SpringEmbedder)
+					// If the SpringEmbedder implementation changes, this code may need to be removed
+					// size is small for many default drawn graphs, thus +100
+					x = (clusterView.getVisualProperty(NETWORK_WIDTH) + 100) * Math.random();
+					y = (clusterView.getVisualProperty(NETWORK_HEIGHT) + 100) * Math.random();
+					layoutNecessary = true;
+				}
+	
+				nv.setVisualProperty(NODE_X_LOCATION, x);
+				nv.setVisualProperty(NODE_Y_LOCATION, y);
+	
+				// Node shape
+				if (cluster.getSeedNode() == nv.getModel().getSUID())
+					nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
+				else
+					nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
 			}
-
-			nv.setVisualProperty(NODE_X_LOCATION, x);
-			nv.setVisualProperty(NODE_Y_LOCATION, y);
-
-			// Node shape
-			if (cluster.getSeedNode() == nv.getModel().getSUID())
-				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
-			else
-				nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
-		}
-
-		if (layoutNecessary) {
-			SpringEmbeddedLayouter layouter = new SpringEmbeddedLayouter(clusterView);
-			layouter.doLayout();
-		}
-		
-		final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D g = (Graphics2D) image.getGraphics();
-		final Dimension size = new Dimension(width, height);
-
-		invokeOnEDT(() -> {
-			try {
-				JPanel panel = new JPanel();
-				panel.setPreferredSize(size);
-				panel.setSize(size);
-				panel.setMinimumSize(size);
-				panel.setMaximumSize(size);
-				panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
 	
-				JWindow window = new JWindow();
-				window.getContentPane().add(panel, BorderLayout.CENTER);
-	
-				RenderingEngine<CyNetwork> re = mcodeUtil.createRenderingEngine(panel, clusterView);
-	
-				vs.apply(clusterView);
-				
-				clusterView.fitContent();
-				window.pack();
-				window.repaint();
-	
-				re.createImage(width, height);
-				re.printCanvas(g);
-				g.dispose();
-				
-				if (!clusterView.getNodeViews().isEmpty())
-					cluster.setView(clusterView);
-				
-				cluster.setImage(image);
-			} catch (Exception ex) {
-				logger.error("Cannot update cluster image.", ex);
+			if (layoutNecessary) {
+				SpringEmbeddedLayouter layouter = new SpringEmbeddedLayouter(clusterView);
+				layouter.doLayout();
 			}
-		});
+			
+			final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			final Graphics2D g = (Graphics2D) image.getGraphics();
+			final Dimension size = new Dimension(width, height);
+	
+			invokeOnEDT(() -> {
+				try {
+					JPanel panel = new JPanel();
+					panel.setPreferredSize(size);
+					panel.setSize(size);
+					panel.setMinimumSize(size);
+					panel.setMaximumSize(size);
+					panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
+		
+					JWindow window = new JWindow();
+					window.getContentPane().add(panel, BorderLayout.CENTER);
+		
+					RenderingEngine<CyNetwork> re = mcodeUtil.createRenderingEngine(panel, clusterView);
+		
+					vs.apply(clusterView);
+					
+					clusterView.fitContent();
+					window.pack();
+					window.repaint();
+		
+					re.createImage(width, height);
+					re.printCanvas(g);
+					g.dispose();
+					
+					if (!clusterView.getNodeViews().isEmpty())
+						cluster.setView(clusterView);
+					
+					cluster.setImage(image);
+				} catch (Exception ex) {
+					logger.error("Cannot update cluster image.", ex);
+				}
+			});
+		} catch (Exception ex) {
+			logger.error("Cannot create cluster image.", ex);
+		}
 	}
 	
 	/**
