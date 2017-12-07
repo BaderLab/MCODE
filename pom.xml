@@ -8,7 +8,7 @@
 		<bundle.symbolicName>org.cytoscape.mcode</bundle.symbolicName>
 		<bundle.namespace>ca.utoronto.tdccbr.mcode.internal</bundle.namespace>
 		<cytoscape.api.version>3.6.0</cytoscape.api.version>
-		<cytoscape.impl.version>3.4.0</cytoscape.impl.version>
+		<cytoscape.impl.version>3.6.0</cytoscape.impl.version>
 		<maven.build.timestamp.format>MMMM yyyy</maven.build.timestamp.format>
 		<buildDate>${maven.build.timestamp}</buildDate>
 	</properties>
@@ -284,7 +284,7 @@
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-all</artifactId>
-			<version>1.9.0</version>
+			<version>1.10.19</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
