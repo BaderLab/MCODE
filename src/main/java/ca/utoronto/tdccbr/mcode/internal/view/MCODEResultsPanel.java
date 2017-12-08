@@ -224,6 +224,10 @@ public class MCODEResultsPanel extends JPanel implements CytoPanelComponent {
 	public String getTitle() {
 		return "Result " + getResultId();
 	}
+	
+	public MCODEResult getResult() {
+		return result;
+	}
 
 	public int getResultId() {
 		return result.getId();
