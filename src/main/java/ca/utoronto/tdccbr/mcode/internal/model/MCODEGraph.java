@@ -23,6 +23,8 @@ public class MCODEGraph {
 	private CySubNetwork subNetwork;
 	private MCODEUtil mcodeUtil;
 	private boolean disposed;
+	
+	private final Object lock = new Object();
 
 	public MCODEGraph(CyNetwork parentNetwork, Collection<CyNode> nodes, Collection<CyEdge> edges,
 			MCODEUtil mcodeUtil) {
@@ -82,23 +84,23 @@ public class MCODEGraph {
 		return edgeMap.values();
 	}
 
-	public boolean containsNode(final CyNode node) {
+	public boolean containsNode(CyNode node) {
 		return nodeMap.containsKey(node.getSUID());
 	}
 
-	public boolean containsEdge(final CyEdge edge) {
+	public boolean containsEdge(CyEdge edge) {
 		return edgeMap.containsKey(edge.getSUID());
 	}
 
-	public CyNode getNode(final Long suid) {
+	public CyNode getNode(Long suid) {
 		return nodeMap.get(suid);
 	}
 
-	public CyEdge getEdge(final Long suid) {
+	public CyEdge getEdge(Long suid) {
 		return edgeMap.get(suid);
 	}
 
-	public List<CyEdge> getAdjacentEdgeList(final CyNode node, final Type edgeType) {
+	public List<CyEdge> getAdjacentEdgeList(CyNode node, Type edgeType) {
 		List<CyEdge> rootList = parentNetwork.getAdjacentEdgeList(node, edgeType);
 		List<CyEdge> list = new ArrayList<>(rootList.size());
 
@@ -110,7 +112,7 @@ public class MCODEGraph {
 		return list;
 	}
 
-	public List<CyEdge> getConnectingEdgeList(final CyNode source, final CyNode target, final Type edgeType) {
+	public List<CyEdge> getConnectingEdgeList(CyNode source, CyNode target, Type edgeType) {
 		List<CyEdge> rootList = parentNetwork.getConnectingEdgeList(source, target, edgeType);
 		List<CyEdge> list = new ArrayList<>(rootList.size());
 
@@ -126,28 +128,36 @@ public class MCODEGraph {
 		return parentNetwork;
 	}
 
-	public synchronized CySubNetwork getSubNetwork() {
-		if (!disposed && subNetwork == null)
-			subNetwork = mcodeUtil.createSubNetwork(parentNetwork, getNodeList(), getEdgeList(), SavePolicy.DO_NOT_SAVE);
-
-		return subNetwork;
+	public CySubNetwork getSubNetwork() {
+		synchronized (lock) {
+			if (!disposed && subNetwork == null)
+				subNetwork = mcodeUtil.createSubNetwork(parentNetwork, getNodeList(), getEdgeList(),
+						SavePolicy.DO_NOT_SAVE);
+	
+			return subNetwork;
+		}
 	}
 
-	public synchronized boolean isDisposed() {
-		return disposed;
+	public boolean isDisposed() {
+		synchronized (lock) {
+			return disposed;
+		}
 	}
 	
-	public synchronized void dispose() {
-		if (disposed) return;
-		
-		if (subNetwork != null) {
-			mcodeUtil.destroy(subNetwork);
-			subNetwork = null;
+	public void dispose() {
+		synchronized (lock) {
+			if (disposed)
+				return;
+
+			if (subNetwork != null) {
+				mcodeUtil.destroy(subNetwork);
+				subNetwork = null;
+			}
+
+			nodeMap.clear();
+			edgeMap.clear();
+
+			disposed = true;
 		}
-		
-		nodeMap.clear();
-		edgeMap.clear();
-		
-		disposed = true;
 	}
 }

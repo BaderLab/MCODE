@@ -166,18 +166,20 @@ public class MCODEUtil {
 	
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 	
-	public MCODEUtil(final RenderingEngineFactory<CyNetwork> renderingEngineFactory,
-					 final CyNetworkViewFactory networkViewFactory,
-					 final CyRootNetworkManager rootNetworkMgr,
-					 final CyApplicationManager applicationMgr,
-					 final CyNetworkManager networkMgr,
-					 final CyNetworkViewManager networkViewMgr,
-					 final VisualStyleFactory visualStyleFactory,
-					 final VisualMappingManager visualMappingMgr,
-					 final CySwingApplication swingApplication,
-					 final VisualMappingFunctionFactory discreteMappingFactory,
-					 final VisualMappingFunctionFactory continuousMappingFactory,
-					 final FileUtil fileUtil) {
+	public MCODEUtil(
+			RenderingEngineFactory<CyNetwork> renderingEngineFactory,
+			CyNetworkViewFactory networkViewFactory,
+			CyRootNetworkManager rootNetworkMgr,
+			CyApplicationManager applicationMgr,
+			CyNetworkManager networkMgr,
+			CyNetworkViewManager networkViewMgr,
+			VisualStyleFactory visualStyleFactory,
+			VisualMappingManager visualMappingMgr,
+			CySwingApplication swingApplication,
+			VisualMappingFunctionFactory discreteMappingFactory,
+			VisualMappingFunctionFactory continuousMappingFactory,
+			FileUtil fileUtil
+	) {
 		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
 		this.rootNetworkMgr = rootNetworkMgr;
@@ -247,7 +249,7 @@ public class MCODEUtil {
 		}
 	}
 
-	public void destroy(final CySubNetwork net) {
+	public void destroy(CySubNetwork net) {
 		if (net != null) {
 			final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(net);
 			
@@ -262,30 +264,38 @@ public class MCODEUtil {
 		return paramMgr;
 	}
 
-	public boolean containsNetworkAlgorithm(final Long suid) {
-		return networkAlgorithms.containsKey(suid);
+	public boolean containsNetworkAlgorithm(Long suid) {
+		synchronized (lock) {
+			return networkAlgorithms.containsKey(suid);
+		}
 	}
 
-	public MCODEAlgorithm getNetworkAlgorithm(final Long suid) {
-		return networkAlgorithms.get(suid);
+	public MCODEAlgorithm getNetworkAlgorithm(Long suid) {
+		synchronized (lock) {
+			return networkAlgorithms.get(suid);
+		}
 	}
 
-	public void addNetworkAlgorithm(final Long suid, final MCODEAlgorithm alg) {
-		networkAlgorithms.put(suid, alg);
+	public void addNetworkAlgorithm(Long suid, MCODEAlgorithm alg) {
+		synchronized (lock) {
+			networkAlgorithms.put(suid, alg);
+		}
 	}
 	
-	public void removeNetworkAlgorithm(final Long suid) {
-		networkAlgorithms.remove(suid);
+	public void removeNetworkAlgorithm(Long suid) {
+		synchronized (lock) {
+			networkAlgorithms.remove(suid);
+		}
 	}
 
-	public MCODEGraph createGraph(final CyNetwork net, final Collection<CyNode> nodes, final boolean includeLoops) {
+	public MCODEGraph createGraph(CyNetwork net, Collection<CyNode> nodes, boolean includeLoops) {
 		final Set<CyEdge> edges = new HashSet<>();
 
-		for (final CyNode n : nodes) {
+		for (CyNode n : nodes) {
 			final Set<CyEdge> adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
-			for (final CyEdge e : adjacentEdges) {
+			for (CyEdge e : adjacentEdges) {
 				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
 					continue;
 				
@@ -299,20 +309,21 @@ public class MCODEUtil {
 		return graph;
 	}
 	
-	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes,
-			final Collection<CyEdge> edges, SavePolicy policy) {
+	public CySubNetwork createSubNetwork(CyNetwork net, Collection<CyNode> nodes, Collection<CyEdge> edges,
+			SavePolicy policy) {
 		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
 		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
 		
-		// Save it for later disposal
-		createdSubNetworks.add(subNet);
+		synchronized (lock) {
+			// Save it for later disposal
+			createdSubNetworks.add(subNet);
+		}
 		
 		return subNet;
 	}
 	
-	public CySubNetwork createSubNetwork(final CyNetwork net, final Collection<CyNode> nodes,
-			final boolean includeLoops, SavePolicy policy) {
-		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
+	public CySubNetwork createSubNetwork(CyNetwork net, Collection<CyNode> nodes, boolean includeLoops,
+			SavePolicy policy) {
 		final Set<CyEdge> edges = new HashSet<>();
 
 		for (CyNode n : nodes) {
@@ -328,12 +339,7 @@ public class MCODEUtil {
 			}
 		}
 		
-		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
-		
-		// Save it for later disposal
-		createdSubNetworks.add(subNet);
-		
-		return subNet;
+		return createSubNetwork(net, nodes, edges, policy);
 	}
 
 	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
@@ -518,7 +524,7 @@ public class MCODEUtil {
 	 *
 	 * @param clusters   List of MCODE generated clusters
 	 */
-	public void sortClusters(final List<MCODECluster> clusters) {
+	public void sortClusters(List<MCODECluster> clusters) {
 		Collections.sort(clusters, (c1, c2) -> {
 			//sorting clusters by decreasing score
 			double d1 = c1.getScore();
@@ -565,10 +571,9 @@ public class MCODEUtil {
 	 * @param fileName  The file name to write to
 	 * @return True if the file was written, false otherwise
 	 */
-	public boolean exportMCODEResults(final MCODEAlgorithm alg, final List<MCODECluster> clusters, CyNetwork network) {
-		if (alg == null || clusters == null || network == null) {
+	public boolean exportMCODEResults(MCODEAlgorithm alg, List<MCODECluster> clusters, CyNetwork network) {
+		if (alg == null || clusters == null || network == null)
 			return false;
-		}
 
 		final String lineSep = System.getProperty("line.separator");
 		String fileName = null;
@@ -675,12 +680,19 @@ public class MCODEUtil {
 		return panels;
 	}
 
-	public MCODEResultsPanel getResultPanel(final int resultId) {
+	public MCODEResultsPanel getResultPanel(int resultId) {
 		for (MCODEResultsPanel panel : getResultPanels()) {
 			if (panel.getResultId() == resultId) return panel;
 		}
 
 		return null;
+	}
+	
+	public MCODEResultsPanel getSelectedResultPanel() {
+		CytoPanel cytoPanel = getResultsCytoPanel();
+		Component comp = cytoPanel.getSelectedComponent();
+
+		return comp instanceof MCODEResultsPanel ? (MCODEResultsPanel) comp : null;
 	}
 
 	/**
@@ -710,18 +722,18 @@ public class MCODEUtil {
 	 * Utility method that invokes the code in Runnable.run on the AWT Event Dispatch Thread.
 	 * @param runnable
 	 */
-	public static void invokeOnEDT(final Runnable runnable) {
+	public static void invokeOnEDT(Runnable runnable) {
 		if (SwingUtilities.isEventDispatchThread())
 			runnable.run();
 		else
 			SwingUtilities.invokeLater(runnable);
 	}
 	
-	public static void invokeOnEDTAndWait(final Runnable runnable) {
+	public static void invokeOnEDTAndWait(Runnable runnable) {
 		invokeOnEDTAndWait(runnable, null);
 	}
 	
-	public static void invokeOnEDTAndWait(final Runnable runnable, final Logger logger) {
+	public static void invokeOnEDTAndWait(Runnable runnable, Logger logger) {
 		if (SwingUtilities.isEventDispatchThread()) {
 			runnable.run();
 		} else {
