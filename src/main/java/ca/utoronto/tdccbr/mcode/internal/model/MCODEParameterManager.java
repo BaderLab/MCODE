@@ -48,14 +48,58 @@ import org.cytoscape.model.CyNetwork;
  */
 public class MCODEParameterManager {
 
-	private Map<Long, MCODEParameters> currentParams = new HashMap<>();
-	private Map<Integer, MCODEParameters> resultParams = new HashMap<>();
+	/** Parameters being used by the UI right now. */
+	private MCODEParameters liveParams;
+	private Map<Long, MCODEParameters> networkParamsMap = new HashMap<>();
+	private Map<Integer, MCODEParameters> resultParamsMap = new HashMap<>();
 
 	/**
-	 * Get a copy of the current parameters for a particular network. Only a copy of the current param object is
-	 * returned to avoid side effects.  The user should use the following code to get their
-	 * own copy of the current parameters:
-	 * MCODECurrentParameters.getInstance().getParamsCopy();
+	 * Current parameters can only be updated using this method.
+	 * This method is called by AnalysisAction after comparisons have been conducted
+	 * between the last saved version of the parameters and the current user's version.
+	 *
+	 * @param params The new current parameters to set
+	 * @param resultId Id of the result set
+	 * @param network The target network
+	 */
+	public void setParams(MCODEParameters params, int resultId, CyNetwork network) {
+		// Cannot simply equate the passed params and new params classes since that creates a permanent reference
+		// and prevents us from keeping 2 sets of the class such that the saved version is not altered
+		// until this method is called
+		MCODEParameters netParams = new MCODEParameters(
+				network,
+				params.getScope(),
+				params.getSelectedNodes(),
+				params.getIncludeLoops(),
+				params.getDegreeCutoff(),
+				params.getKCore(),
+				params.getMaxDepthFromStart(),
+				params.getNodeScoreCutoff(),
+				params.getFluff(),
+				params.getHaircut(),
+				params.getFluffNodeDensityCutoff());
+
+		networkParamsMap.put(network.getSUID(), netParams);
+
+		MCODEParameters resultParams = new MCODEParameters(
+				network,
+				params.getScope(),
+				params.getSelectedNodes(),
+				params.getIncludeLoops(),
+				params.getDegreeCutoff(),
+				params.getKCore(),
+				params.getMaxDepthFromStart(),
+				params.getNodeScoreCutoff(),
+				params.getFluff(),
+				params.getHaircut(),
+				params.getFluffNodeDensityCutoff());
+
+		resultParamsMap.put(resultId, resultParams);
+	}
+
+	/**
+	 * Get a copy of the last parameters for a particular network. Only a copy of the current param object is
+	 * returned to avoid side effects.
 	 * <p/>
 	 * Note: parameters can be changed by the user after you have your own copy,
 	 * so if you always need the latest, you should get the updated parameters again.                                                    
@@ -63,64 +107,27 @@ public class MCODEParameterManager {
 	 * @param networkID Id of the network
 	 * @return A copy of the parameters
 	 */
-	public MCODEParameters getParamsCopy(Long networkID) {
-		if (networkID != null && currentParams.get(networkID) != null)
-			return currentParams.get(networkID).copy();
-			
-		return new MCODEParameters();
+	public MCODEParameters getNetworkParams(Long networkID) {
+		MCODEParameters params = networkID != null ? networkParamsMap.get(networkID) : null;
+		
+		return params != null ? params.copy() : new MCODEParameters();
 	}
-
-	/**
-	 * Current parameters can only be updated using this method.
-	 * This method is called by AnalysisAction after comparisons have been conducted
-	 * between the last saved version of the parameters and the current user's version.
-	 *
-	 * @param newParams The new current parameters to set
-	 * @param resultId Id of the result set
-	 * @param network The target network
-	 */
-	public void setParams(MCODEParameters newParams, int resultId, CyNetwork network) {
-		//cannot simply equate the params and newParams classes since that creates a permanent reference
-		//and prevents us from keeping 2 sets of the class such that the saved version is not altered
-		//until this method is called
-		MCODEParameters currentParamSet = new MCODEParameters(
-				network,
-				newParams.getScope(),
-				newParams.getSelectedNodes(),
-				newParams.getIncludeLoops(),
-				newParams.getDegreeCutoff(),
-				newParams.getKCore(),
-				newParams.getMaxDepthFromStart(),
-				newParams.getNodeScoreCutoff(),
-				newParams.getFluff(),
-				newParams.getHaircut(),
-				newParams.getFluffNodeDensityCutoff());
-
-		currentParams.put(network.getSUID(), currentParamSet);
-
-		MCODEParameters resultParamSet = new MCODEParameters(
-				network,
-				newParams.getScope(),
-				newParams.getSelectedNodes(),
-				newParams.getIncludeLoops(),
-				newParams.getDegreeCutoff(),
-				newParams.getKCore(),
-				newParams.getMaxDepthFromStart(),
-				newParams.getNodeScoreCutoff(),
-				newParams.getFluff(),
-				newParams.getHaircut(),
-				newParams.getFluffNodeDensityCutoff());
-
-		resultParams.put(resultId, resultParamSet);
-	}
-
+	
 	public MCODEParameters getResultParams(int resultId) {
-		MCODEParameters params = resultParams.get(resultId);
+		MCODEParameters params = resultParamsMap.get(resultId);
 		
 		return params != null ? params.copy() : null;
 	}
 
 	public void removeResultParams(int resultId) {
-		resultParams.remove(resultId);
+		resultParamsMap.remove(resultId);
+	}
+	
+	public MCODEParameters getLiveParams() {
+		return liveParams != null ? liveParams.copy() : new MCODEParameters();
+	}
+	
+	public void setLiveParams(MCODEParameters liveParams) {
+		this.liveParams = liveParams;
 	}
 }

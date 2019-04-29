@@ -142,7 +142,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	
 	private final CardLayout cardLayout = new CardLayout();
 	
-	private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>(); // TODO
+	private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>();
 	
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;

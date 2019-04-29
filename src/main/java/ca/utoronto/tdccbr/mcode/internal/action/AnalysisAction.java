@@ -113,10 +113,10 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 	/**
 	 * This method is called when the user clicks Analyze.
 	 *
-	 * @param event Click of the analyzeButton on the NewAnalysisPanel.
+	 * @param evt Click of the analyzeButton on the NewAnalysisPanel.
 	 */
 	@Override
-	public void actionPerformed(final ActionEvent event) {
+	public void actionPerformed(ActionEvent evt) {
 		// Get the selected network
 		final CyNetwork network = applicationManager.getCurrentNetwork();
 
@@ -137,8 +137,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		}
 		
 		final int resultId = resultsMgr.getNextResultId();
-		final MCODEParameters params =
-				getMainPanel() != null ? getMainPanel().getCurrentParamsCopy() : new MCODEParameters();
+		MCODEParameters params = mcodeUtil.getParameterManager().getLiveParams();
 
 		TaskObserver taskObserver = new TaskObserver() {
 			
@@ -152,7 +151,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 			
 			@Override
 			public void allFinished(FinishStatus finishStatus) {
-				// Callbak that should be executed after the analysis is done...
+				// Callback that should be executed after the analysis is done...
 				setDirty(network, false);
 
 				// Display clusters in a new modal dialog box
@@ -222,10 +221,10 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		if (mcodeUtil.containsNetworkAlgorithm(network.getSUID())) {
 			alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 			// Get a copy of the last saved parameters for comparison with the current ones
-			savedParams = mcodeUtil.getParameterManager().getParamsCopy(network.getSUID());
+			savedParams = mcodeUtil.getParameterManager().getNetworkParams(network.getSUID());
 		} else {
 			alg = new MCODEAlgorithm(null, mcodeUtil);
-			savedParams = mcodeUtil.getParameterManager().getParamsCopy(null);
+			savedParams = mcodeUtil.getParameterManager().getNetworkParams(null);
 			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
 			mode = FIRST_TIME;
 		}
