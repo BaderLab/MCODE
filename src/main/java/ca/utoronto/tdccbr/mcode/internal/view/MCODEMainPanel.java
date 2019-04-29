@@ -450,6 +450,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		
 		getResultsCombo().setEnabled(getResultsCombo().getItemCount() > 0);
 		getDiscardButton().setEnabled(getSelectedResult() != null);
+		getOptionsButton().setEnabled(getSelectedResult() != null);
 		getInfoPanel().update();
 		
 		if (getSelectedResult() == null) {
