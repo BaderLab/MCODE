@@ -84,6 +84,7 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 			MCODECluster cluster,
 			int resultId,
 			MCODEAlgorithm alg,
+			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
@@ -91,7 +92,7 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		this.id = resultId;
 		this.alg = alg;
 		this.mcodeUtil = mcodeUtil;
-		this.resultsMgr = null;
+		this.resultsMgr = resultsMgr;
 		this.registrar = registrar;
 	}
 	
@@ -102,27 +103,26 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		
 		CyNetworkView view = null;
 		
-		if (cluster == null && resultsMgr != null) {
-			// From commands
+		if (cluster == null) // From commands
 			cluster = resultsMgr.getCluster(id, rank);
-			MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
-			MCODEResult res = resultsMgr.getResult(id);
 		
-			if (cluster == null || params == null || res == null) {
-				throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
+		MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
+		MCODEResult res = resultsMgr.getResult(id);
+		
+		if (cluster == null || params == null || res == null) {
+			throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
+		} else {
+			alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
+			CyNetworkView currentView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
+			
+			if (currentView != null && currentView.getModel().equals(res.getNetwork())) {
+				view = currentView;
 			} else {
-				alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
-				CyNetworkView currentView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
+				Collection<CyNetworkView> viewSet = registrar.getService(CyNetworkViewManager.class)
+						.getNetworkViews(res.getNetwork());
 				
-				if (currentView != null && currentView.getModel().equals(res.getNetwork())) {
-					view = currentView;
-				} else {
-					Collection<CyNetworkView> viewSet = registrar.getService(CyNetworkViewManager.class)
-							.getNetworkViews(res.getNetwork());
-					
-					if (!viewSet.isEmpty())
-						view = viewSet.iterator().next();
-				}
+				if (!viewSet.isEmpty())
+					view = viewSet.iterator().next();
 			}
 		}
 		

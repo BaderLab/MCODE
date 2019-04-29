@@ -124,7 +124,8 @@ public class MCODEResultsManager {
 				ids = new HashSet<>();
 				networkResults.put(res.getNetwork().getSUID(), ids);
 			}
-
+			
+			ids.add(res.getId());
 			allResults.put(res.getId(), res);
 		}
 		

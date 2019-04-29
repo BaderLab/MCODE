@@ -446,7 +446,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener {
 				MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(res.getNetwork().getSUID());
 
 				CreateClusterNetworkViewTask task = new CreateClusterNetworkViewTask(cluster, res.getId(), alg,
-						mcodeUtil, registrar);
+						resultsMgr, mcodeUtil, registrar);
 				registrar.getService(DialogTaskManager.class).execute(new TaskIterator(task));
 			});
 			mi.setEnabled(res != null && cluster != null);

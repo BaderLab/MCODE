@@ -248,8 +248,12 @@ public class MCODEUtil {
 			final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(net);
 			
 			if (rootNet.containsNetwork(net)) {
-				rootNet.removeSubNetwork(net);
-				net.dispose();
+				try {
+					rootNet.removeSubNetwork(net);
+					net.dispose();
+				} catch (Exception e) {
+					logger.error("Cannot destroy network: " + net, e);
+				}
 			}
 		}
 	}
