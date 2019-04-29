@@ -2,6 +2,7 @@ package ca.utoronto.tdccbr.mcode.internal.task;
 
 import java.util.Properties;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.Task;
@@ -42,7 +43,8 @@ public class MCODEOpenTask implements Task {
 
 			mediator.selectMainPanel();
 			
-			if (mainPanel.getResultsCount() == 0)
+			if (mainPanel.getResultsCount() == 0
+					&& registrar.getService(CyApplicationManager.class).getCurrentNetwork() != null)
 				mediator.showNewAnalysisDialog();
 		}
 	}

@@ -50,6 +50,8 @@ import javax.swing.event.ChangeListener;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.CyUserLog;
+import org.cytoscape.application.events.SetCurrentNetworkEvent;
+import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -123,7 +125,7 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel.ExploreContentPanel
  * * Description: Utilities for MCODE
  */
 
-public class MainPanelMediator implements NetworkAboutToBeDestroyedListener {
+public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, SetCurrentNetworkListener {
 	
 	private static final String SCORE_ATTR = "MCODE_Score";
 	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
@@ -184,14 +186,20 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener {
 	}
 	
 	@Override
-	public void handleEvent(final NetworkAboutToBeDestroyedEvent e) {
+	public void handleEvent(NetworkAboutToBeDestroyedEvent evt) {
 		if (isMainPanelOpen()) {
-			CyNetwork network = e.getNetwork();
+			CyNetwork network = evt.getNetwork();
 			Set<Integer> resultIds = resultsMgr.getNetworkResults(network.getSUID());
 
 			for (int id : resultIds)
 				resultsMgr.removeResult(id);
 		}
+	}
+	
+	@Override
+	public void handleEvent(SetCurrentNetworkEvent evt) {
+		if (isMainPanelOpen())
+			getMainPanel().updateNewAnalysisButton();
 	}
 
 	private void onResultSelected() {

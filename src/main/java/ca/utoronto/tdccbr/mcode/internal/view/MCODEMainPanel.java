@@ -68,6 +68,7 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.table.AbstractTableModel;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -445,6 +446,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	}
 	
 	void update() {
+		updateNewAnalysisButton();
+		
 		getResultsCombo().setEnabled(getResultsCombo().getItemCount() > 0);
 		getDiscardButton().setEnabled(getSelectedResult() != null);
 		getInfoPanel().update();
@@ -456,6 +459,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		} else {
 			cardLayout.show(getClustersPanel(), getSelectedResult().toString());
 		}
+	}
+
+	void updateNewAnalysisButton() {
+		getNewAnalysisButton().setEnabled(registrar.getService(CyApplicationManager.class).getCurrentNetwork() != null);
 	}
 	
 	class InfoPanel extends JPanel {

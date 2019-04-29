@@ -15,6 +15,7 @@ import java.awt.Component;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
+import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
@@ -133,6 +134,7 @@ public class CyActivator extends AbstractCyActivator {
 		// View Mediators
 		mainPanelMediator = new MainPanelMediator(analysisAction, resultsMgr, mcodeUtil, registrar);
 		registerService(bc, mainPanelMediator, NetworkAboutToBeDestroyedListener.class);
+		registerService(bc, mainPanelMediator, SetCurrentNetworkListener.class);
 		
 		// Tasks
 		{
