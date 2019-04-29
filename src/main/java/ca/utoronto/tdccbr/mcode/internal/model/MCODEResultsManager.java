@@ -98,15 +98,15 @@ public class MCODEResultsManager {
 		return allResults.isEmpty() ? Collections.emptySet() : new LinkedHashSet<>(allResults.values());
 	}
 	
-	/**
-	 * @param network Target CyNetwork
-	 * @param clusters Clusters created as result of the analysis.
-	 */
-	public MCODEResult createResult(CyNetwork network, List<MCODECluster> clusters) {
+	public int getResultsCount() {
+		return allResults.size();
+	}
+	
+	public MCODEResult createResult(CyNetwork network, MCODEParameters params, List<MCODECluster> clusters) {
 		MCODEResult res = null;
 		
 		synchronized (lock) {
-			res = new MCODEResult(nextResultId, network, clusters);
+			res = new MCODEResult(nextResultId, network, params, clusters);
 			nextResultId++; // Increment next available ID
 		}
 		
@@ -114,7 +114,7 @@ public class MCODEResultsManager {
 	}
 	
 	/**
-	 * Fires a {@link PropertyChangeEvent} for property "newResult", where the new value is the added result.
+	 * Fires a {@link PropertyChangeEvent} for property "resultAdded", where the new value is the added result.
 	 */
 	public void addResult(MCODEResult res) {
 		synchronized (lock) {
@@ -128,9 +128,12 @@ public class MCODEResultsManager {
 			allResults.put(res.getId(), res);
 		}
 		
-		pcs.firePropertyChange("newResult", null, res);
+		pcs.firePropertyChange("resultAdded", null, res);
 	}
 	
+	/**
+	 * Fires a {@link PropertyChangeEvent} for property "resultRemoved", where the new value is the removed result.
+	 */
 	public boolean removeResult(int resultId) {
 		boolean removed = false;
 		mcodeUtil.getParameterManager().removeResultParams(resultId);
@@ -158,6 +161,8 @@ public class MCODEResultsManager {
 			if (res != null) {
 				for (MCODECluster c : res.getClusters())
 					c.dispose();
+				
+				pcs.firePropertyChange("resultRemoved", null, res);
 			}
 		}
 		
@@ -198,6 +203,7 @@ public class MCODEResultsManager {
 			nextResultId = 1;
 			networkResults.clear();
 			allResults.clear();
+			pcs.firePropertyChange("reset", false, true);
 		}
 	}
 }

@@ -178,7 +178,7 @@ public class MCODEAlgorithm {
 	}
 
 	/**
-	 * Gets the calculated node score of a node from a given result.  Used in MCODEResultsPanel
+	 * Gets the calculated node score of a node from a given result.  Used in MCODEMainPanel
 	 * during the attribute setting method.
 	 *
 	 * @param nodeId Number which is used to identify the nodes in the score-sorted tree map

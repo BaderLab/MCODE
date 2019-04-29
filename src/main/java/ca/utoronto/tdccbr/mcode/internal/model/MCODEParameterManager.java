@@ -42,8 +42,8 @@ import org.cytoscape.model.CyNetwork;
  **/
 
 /**
- * Stores the current parameters for MCODE.  Parameters are entered in the MCODEMainPanel and
- * stored in a hash map for the particular network being analyzed by the MCODEAnalyzeAction
+ * Stores the current parameters for MCODE.  Parameters are entered in the NewAnalysisPanel and
+ * stored in a hash map for the particular network being analyzed by the AnalysisAction
  * if the analysis produced a result.
  */
 public class MCODEParameterManager {
@@ -72,7 +72,7 @@ public class MCODEParameterManager {
 
 	/**
 	 * Current parameters can only be updated using this method.
-	 * This method is called by MCODEAnalyzeAction after comparisons have been conducted
+	 * This method is called by AnalysisAction after comparisons have been conducted
 	 * between the last saved version of the parameters and the current user's version.
 	 *
 	 * @param newParams The new current parameters to set

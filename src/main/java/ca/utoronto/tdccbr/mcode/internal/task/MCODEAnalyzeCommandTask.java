@@ -1,7 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import static ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction.INTERRUPTION;
-import static ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction.RESCORE;
+import static ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction.INTERRUPTION;
+import static ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction.RESCORE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.ContainsTunables;
 import org.cytoscape.work.TaskMonitor;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
@@ -65,13 +65,13 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 	
 	private int resultId = -1;
 	
-	private final MCODEAnalyzeAction action;
+	private final AnalysisAction action;
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODEAnalyzeCommandTask(
-			MCODEAnalyzeAction action,
+			AnalysisAction action,
 			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar

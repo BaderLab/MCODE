@@ -19,8 +19,6 @@ import javax.swing.text.html.HTMLEditorKit;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.util.swing.OpenBrowser;
 
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -62,9 +60,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * An about dialog box for MCODE
  */
-public class MCODEAboutDialog extends JDialog {
+public class AboutDialog extends JDialog {
 
 	private static final long serialVersionUID = 635333288924094273L;
+	private static final String LOGO = "/img/logo.png";
 
 	private final OpenBrowser openBrowser;
 	private final String version;
@@ -75,9 +74,11 @@ public class MCODEAboutDialog extends JDialog {
 	private JPanel buttonPanel;
 
 
-	public MCODEAboutDialog(final CySwingApplication swingApplication,
-							final OpenBrowser openBrowser,
-							final MCODEUtil mcodeUtil) {
+	public AboutDialog(
+			CySwingApplication swingApplication,
+			OpenBrowser openBrowser,
+			MCODEUtil mcodeUtil
+	) {
 		super(swingApplication.getJFrame(), "About MCODE", false);
 		this.openBrowser = openBrowser;
 		version = mcodeUtil.getProperty("project.version");
@@ -97,12 +98,11 @@ public class MCODEAboutDialog extends JDialog {
 			mainContainer.setEditorKit(new HTMLEditorKit());
 			mainContainer.addHyperlinkListener(new HyperlinkAction());
 
-			URL logoURL = MCODEResources.getUrl(ImageName.LOGO);
+			URL logoURL = getClass().getResource(LOGO);
 			String logoCode = "";
 
-			if (logoURL != null) {
+			if (logoURL != null)
 				logoCode = "<center><img src='" + logoURL + "'></center>";
-			}
 
 			String text = "<html><body>" +
 						  logoCode +

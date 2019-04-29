@@ -7,7 +7,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.OpenBrowser;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEAboutDialog;
+import ca.utoronto.tdccbr.mcode.internal.view.AboutDialog;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -48,14 +48,14 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEAboutDialog;
 /**
  * The action to show the About dialog box
  */
-public class MCODEAboutAction extends AbstractMCODEAction {
+public class AboutAction extends AbstractMCODEAction {
 
 	private static final long serialVersionUID = -8445425993916988045L;
 
 	private final MCODEUtil mcodeUtil;
-	private MCODEAboutDialog aboutDialog;
+	private AboutDialog aboutDialog;
 
-	public MCODEAboutAction(String name, CyServiceRegistrar serviceRegistrar, MCODEUtil mcodeUtil) {
+	public AboutAction(String name, CyServiceRegistrar serviceRegistrar, MCODEUtil mcodeUtil) {
 		super(name, ActionEnableSupport.ENABLE_FOR_ALWAYS, serviceRegistrar);
 		this.mcodeUtil = mcodeUtil;
 		setPreferredMenu("Apps.MCODE");
@@ -66,7 +66,7 @@ public class MCODEAboutAction extends AbstractMCODEAction {
 		//display about box
 		synchronized (this) {
 			if (aboutDialog == null)
-				aboutDialog = new MCODEAboutDialog(swingApplication, serviceRegistrar.getService(OpenBrowser.class),
+				aboutDialog = new AboutDialog(swingApplication, serviceRegistrar.getService(OpenBrowser.class),
 						mcodeUtil);
 
 			if (!aboutDialog.isVisible()) {

@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.cytoscape.model.CyNetwork;
 
+import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
  * *
@@ -45,13 +47,15 @@ public class MCODEResult {
 	
 	private final int id;
 	private final transient CyNetwork network;
+	private final MCODEParameters parameters;
 	private final List<MCODECluster> clusters = new ArrayList<>();
 	
 	private final Object lock = new Object();
 	
-	public MCODEResult(int id, CyNetwork network, List<MCODECluster> clusters) {
+	public MCODEResult(int id, CyNetwork network, MCODEParameters parameters, List<MCODECluster> clusters) {
 		this.id = id;
 		this.network = network;
+		this.parameters = parameters;
 		
 		if (clusters != null)
 			this.clusters.addAll(clusters);
@@ -65,6 +69,10 @@ public class MCODEResult {
 		return network;
 	}
 	
+	public MCODEParameters getParameters() {
+		return parameters;
+	}
+	
 	public List<MCODECluster> getClusters() {
 		synchronized (lock) {
 			return new ArrayList<>(clusters);
@@ -75,5 +83,10 @@ public class MCODEResult {
 		synchronized (lock) {
 			clusters.set(index, newCluster);
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return id + " - " + MCODEUtil.getName(network);
 	}
 }

@@ -9,8 +9,10 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y
 
 import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.SavePolicy;
@@ -18,6 +20,7 @@ import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.json.CyJSONUtil;
 import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.View;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.ObservableTask;
@@ -28,10 +31,10 @@ import org.cytoscape.work.json.JSONResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 public class CreateClusterNetworkViewTask implements ObservableTask {
 	
@@ -53,7 +56,6 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 	)
 	public int rank;
 	
-	private CyNetworkView networkView;
 	private MCODECluster cluster;
 	private MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
@@ -80,13 +82,11 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 	
 	public CreateClusterNetworkViewTask(
 			MCODECluster cluster,
-			CyNetworkView networkView,
 			int resultId,
 			MCODEAlgorithm alg,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
-		this.networkView = networkView;
 		this.cluster = cluster;
 		this.id = resultId;
 		this.alg = alg;
@@ -100,17 +100,29 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		tm.setTitle("Create Cluster Network");
 		tm.setStatusMessage("Creating Network...");
 		
+		CyNetworkView view = null;
+		
 		if (cluster == null && resultsMgr != null) {
 			// From commands
 			cluster = resultsMgr.getCluster(id, rank);
 			MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
-			MCODEResultsPanel resultsPanel = mcodeUtil.getResultPanel(id);
+			MCODEResult res = resultsMgr.getResult(id);
 		
-			if (cluster == null || params == null || resultsPanel == null) {
+			if (cluster == null || params == null || res == null) {
 				throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
 			} else {
 				alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
-				networkView = resultsPanel.getNetworkView();
+				CyNetworkView currentView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
+				
+				if (currentView != null && currentView.getModel().equals(res.getNetwork())) {
+					view = currentView;
+				} else {
+					Collection<CyNetworkView> viewSet = registrar.getService(CyNetworkViewManager.class)
+							.getNetworkViews(res.getNetwork());
+					
+					if (!viewSet.isEmpty())
+						view = viewSet.iterator().next();
+				}
 			}
 		}
 		
@@ -129,7 +141,7 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		if (interrupted)
 			return;
 		
-		VisualStyle vs = mcodeUtil.getNetworkViewStyle(networkView);
+		VisualStyle vs = mcodeUtil.getNetworkViewStyle(view);
 		newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
 	
 		newNetworkView.setVisualProperty(NETWORK_CENTER_X_LOCATION, 0.0);

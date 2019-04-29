@@ -18,7 +18,7 @@ import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
-import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
+import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
@@ -36,8 +36,8 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.work.TaskFactory;
 import org.osgi.framework.BundleContext;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAboutAction;
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AboutAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.action.MCODEHelpAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTaskFactory;
@@ -46,8 +46,7 @@ import ca.utoronto.tdccbr.mcode.internal.task.MCODECloseTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsMediator;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -89,6 +88,7 @@ public class CyActivator extends AbstractCyActivator {
 
 	private CyServiceRegistrar registrar;
 	private MCODEUtil mcodeUtil;
+	private MainPanelMediator mainPanelMediator;
 	
 	@Override
 	@SuppressWarnings("unchecked")
@@ -119,19 +119,24 @@ public class CyActivator extends AbstractCyActivator {
 								  continuousMappingFactory, fileUtil);
 		
 		MCODEResultsManager resultsMgr = new MCODEResultsManager(mcodeUtil);
-		
+
 		closeMCODEPanels();
 		
-		MCODEAnalyzeAction analyzeAction = new MCODEAnalyzeAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
+		AnalysisAction analysisAction = new AnalysisAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
 		MCODEHelpAction helpAction = new MCODEHelpAction("Help", openBrowser, registrar);
-		MCODEAboutAction aboutAction = new MCODEAboutAction("About", registrar, mcodeUtil);
+		AboutAction aboutAction = new AboutAction("About", registrar, mcodeUtil);
 		
 		registerService(bc, helpAction, CyAction.class);
 		registerService(bc, aboutAction, CyAction.class);
-		registerAllServices(bc, analyzeAction);
+		registerAllServices(bc, analysisAction);
 		
+		// View Mediators
+		mainPanelMediator = new MainPanelMediator(analysisAction, resultsMgr, mcodeUtil, registrar);
+		registerService(bc, mainPanelMediator, NetworkAboutToBeDestroyedListener.class);
+		
+		// Tasks
 		{
-			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(swingApp, registrar, mcodeUtil, analyzeAction);
+			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(mainPanelMediator, analysisAction, registrar);
 			Properties props = new Properties();
 			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
 			props.setProperty(TITLE, "Open MCODE");
@@ -140,7 +145,7 @@ public class CyActivator extends AbstractCyActivator {
 			registerService(bc, factory, TaskFactory.class, props);
 		}
 		{
-			MCODECloseTaskFactory factory = new MCODECloseTaskFactory(swingApp, resultsMgr, mcodeUtil, registrar);
+			MCODECloseTaskFactory factory = new MCODECloseTaskFactory(mainPanelMediator, resultsMgr, mcodeUtil, registrar);
 			Properties props = new Properties();
 			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
 			props.setProperty(TITLE, "Close MCODE");
@@ -148,12 +153,11 @@ public class CyActivator extends AbstractCyActivator {
 			props.setProperty(INSERT_SEPARATOR_AFTER, "true");
 			
 			registerService(bc, factory, TaskFactory.class, props);
-			registerService(bc, factory, NetworkAboutToBeDestroyedListener.class);
 		}
 		
 		// Commands
 		{
-			MCODEAnalyzeCommandTaskFactory factory = new MCODEAnalyzeCommandTaskFactory(analyzeAction, resultsMgr, mcodeUtil, registrar);
+			MCODEAnalyzeCommandTaskFactory factory = new MCODEAnalyzeCommandTaskFactory(analysisAction, resultsMgr, mcodeUtil, registrar);
 			Properties props = new Properties();
 			props.setProperty(COMMAND, "cluster");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");
@@ -183,21 +187,18 @@ public class CyActivator extends AbstractCyActivator {
 			
 			registerService(bc, factory, TaskFactory.class, props);
 		}
-		
-		// View Mediators
-		MCODEResultsMediator resultsMediator = new MCODEResultsMediator(resultsMgr, mcodeUtil, registrar);
-		registerService(bc, resultsMediator, CytoPanelComponentSelectedListener.class);
 	}
 	
 	@Override
 	public void shutDown() {
+		mainPanelMediator.disposeNewAnalysisDialog();
 		closeMCODEPanels();
 		super.shutDown();
 	}
 	
 	private void closeMCODEPanels() {
-		// First, unregister result panels...
-		final CytoPanel resPanel = mcodeUtil.getResultsCytoPanel();
+		// First, unregister result panels from old versions of MCODE
+		CytoPanel resPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
 		
 		if (resPanel != null) {
 			int count = resPanel.getCytoPanelComponentCount();
@@ -207,25 +208,26 @@ public class CyActivator extends AbstractCyActivator {
 					final Component comp = resPanel.getComponentAt(i);
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
-					if (comp.getClass().getName().equals(MCODEResultsPanel.class.getName()))
+					if (comp.getClass().getName().equals("ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel"))
 						registrar.unregisterAllServices(comp);
 				}
 			} catch (Exception e) {
 			}
 		}
 		
-		// Now, unregister main panels...
-		final CytoPanel ctrlPanel = mcodeUtil.getControlCytoPanel();
+		// Then unregister the main panel...
+		CytoPanel ctrlPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.WEST);
 		
 		if (ctrlPanel != null) {
 			int count = ctrlPanel.getCytoPanelComponentCount();
 	
 			for (int i = 0; i < count; i++) {
 				try {
-					final Component comp = ctrlPanel.getComponentAt(i);
+					Component comp = ctrlPanel.getComponentAt(i);
+					String name = comp.getClass().getName();
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
-					if (comp.getClass().getName().equals(MCODEMainPanel.class.getName()))
+					if (name.equals(MCODEMainPanel.class.getName()))
 						registrar.unregisterAllServices(comp);
 				} catch (Exception e) {
 				}

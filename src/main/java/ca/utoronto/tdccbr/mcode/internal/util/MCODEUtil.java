@@ -15,8 +15,6 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_S
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_WIDTH;
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Container;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -28,7 +26,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -42,19 +39,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
 
-import javax.swing.ImageIcon;
-import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.NetworkViewRenderer;
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.swing.CytoPanel;
-import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
@@ -94,8 +85,6 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEGraph;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameterManager;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -138,6 +127,11 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
  * Utilities for MCODE
  */
 public class MCODEUtil {
+	
+	// 6-class RdYlBu
+	public static final Color CLUSTER_NODE_COLOR = new Color(178, 24, 43);
+	public static final Color CLUSTER_EDGE_COLOR = new Color(103, 169, 207);
+	public static final Color CLUSTER_ARROW_COLOR = new Color(33, 102, 172);
 
 	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
 	private final CyNetworkViewFactory networkViewFactory;
@@ -374,17 +368,17 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(NODE_SIZE, 40.0);
 			clusterStyle.setDefaultValue(NODE_WIDTH, 40.0);
 			clusterStyle.setDefaultValue(NODE_HEIGHT, 40.0);
-			clusterStyle.setDefaultValue(NODE_PAINT, Color.RED);
-			clusterStyle.setDefaultValue(NODE_FILL_COLOR, Color.RED);
+			clusterStyle.setDefaultValue(NODE_PAINT, CLUSTER_NODE_COLOR);
+			clusterStyle.setDefaultValue(NODE_FILL_COLOR, CLUSTER_NODE_COLOR);
 			clusterStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
 
 			clusterStyle.setDefaultValue(EDGE_WIDTH, 5.0);
-			clusterStyle.setDefaultValue(EDGE_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(EDGE_SELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
-			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, Color.BLUE);
+			clusterStyle.setDefaultValue(EDGE_PAINT, CLUSTER_EDGE_COLOR);
+			clusterStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterStyle.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 
 			NetworkViewRenderer viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
 			
@@ -393,13 +387,28 @@ public class MCODEUtil {
 			
 			VisualLexicon lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
 					.getVisualLexicon();
-			VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
-
-			if (vp != null) {
-				Object arrowValue = vp.parseSerializableString("ARROW");
+			
+			{
+				VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
+	
+				if (vp != null) {
+					Object value = vp.parseSerializableString("ARROW");
+					
+					if (value != null)
+						clusterStyle.setDefaultValue(vp, value);
+				}
+			}
+			{
+				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_SOURCE_ARROW_UNSELECTED_PAINT");
 				
-				if (arrowValue != null)
-					clusterStyle.setDefaultValue(vp, arrowValue);
+				if (vp != null)
+					clusterStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+			}
+			{
+				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_TARGET_ARROW_UNSELECTED_PAINT");
+				
+				if (vp != null)
+					clusterStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
 			}
 		}
 
@@ -633,121 +642,6 @@ public class MCODEUtil {
 		return false;
 	}
 	
-	/**
-	 * @return Cytoscape's control panel
-	 */
-	public CytoPanel getControlCytoPanel() {
-		return swingApplication.getCytoPanel(CytoPanelName.WEST);
-	}
-
-	/**
-	 * @return Cytoscape's results panel
-	 */
-	public CytoPanel getResultsCytoPanel() {
-		return swingApplication.getCytoPanel(CytoPanelName.EAST);
-	}
-
-	/**
-	 * @return The main panel of the app if it is opened, and null otherwise
-	 */
-	public MCODEMainPanel getMainPanel() {
-		CytoPanel cytoPanel = getControlCytoPanel();
-		int count = cytoPanel.getCytoPanelComponentCount();
-
-		for (int i = 0; i < count; i++) {
-			final Component comp = cytoPanel.getComponentAt(i);
-			
-			if (comp instanceof MCODEMainPanel)
-				return (MCODEMainPanel) comp;
-		}
-
-		return null;
-	}
-
-	/**
-	 * @return The result panels of the app if it is opened, or an empty collection otherwise
-	 */
-	public Collection<MCODEResultsPanel> getResultPanels() {
-		Collection<MCODEResultsPanel> panels = new ArrayList<>();
-		CytoPanel cytoPanel = getResultsCytoPanel();
-		int count = cytoPanel.getCytoPanelComponentCount();
-
-		for (int i = 0; i < count; i++) {
-			if (cytoPanel.getComponentAt(i) instanceof MCODEResultsPanel)
-				panels.add((MCODEResultsPanel) cytoPanel.getComponentAt(i));
-		}
-
-		return panels;
-	}
-
-	public MCODEResultsPanel getResultPanel(int resultId) {
-		for (MCODEResultsPanel panel : getResultPanels()) {
-			if (panel.getResultId() == resultId) return panel;
-		}
-
-		return null;
-	}
-	
-	public MCODEResultsPanel getSelectedResultPanel() {
-		CytoPanel cytoPanel = getResultsCytoPanel();
-		Component comp = cytoPanel.getSelectedComponent();
-
-		return comp instanceof MCODEResultsPanel ? (MCODEResultsPanel) comp : null;
-	}
-
-	/**
-	 * @return true if the app is opened and false otherwise
-	 */
-	public boolean isOpened() {
-		return getMainPanel() != null;
-	}
-	
-	public ImageIcon createSpinnerIcon() {
-		URL url = MCODEUtil.class.getClassLoader().getResource("img/lines-spinner-32.gif");
-		
-		return new ImageIcon(url);
-	}
-	
-	public void recursiveDo(Component component, Consumer<JComponent> c) {
-		if (component instanceof JComponent)
-			c.accept((JComponent) component);
-		
-		if (component instanceof Container) {
-			for (Component child : ((Container) component).getComponents())
-				recursiveDo(child, c);
-		}
-	}
-	
-	/**
-	 * Utility method that invokes the code in Runnable.run on the AWT Event Dispatch Thread.
-	 * @param runnable
-	 */
-	public static void invokeOnEDT(Runnable runnable) {
-		if (SwingUtilities.isEventDispatchThread())
-			runnable.run();
-		else
-			SwingUtilities.invokeLater(runnable);
-	}
-	
-	public static void invokeOnEDTAndWait(Runnable runnable) {
-		invokeOnEDTAndWait(runnable, null);
-	}
-	
-	public static void invokeOnEDTAndWait(Runnable runnable, Logger logger) {
-		if (SwingUtilities.isEventDispatchThread()) {
-			runnable.run();
-		} else {
-			try {
-				SwingUtilities.invokeAndWait(runnable);
-			} catch (Exception e) {
-				if (logger != null)
-					logger.error("Unexpected error", e);
-				else
-					e.printStackTrace();
-			}
-		}
-	}
-	
 	private static Properties loadProperties(String name) {
 		Properties props = new Properties();
 
@@ -763,5 +657,19 @@ public class MCODEUtil {
 		}
 
 		return props;
+	}
+	
+	public static String getName(final CyNetwork network) {
+		String name = "";
+		
+		try {
+			name = network.getRow(network).get(CyNetwork.NAME, String.class);
+		} catch (Exception e) {
+		}
+		
+		if (name == null || name.trim().isEmpty())
+			name = "? (SUID: " + network.getSUID() + ")";
+		
+		return name;
 	}
 }

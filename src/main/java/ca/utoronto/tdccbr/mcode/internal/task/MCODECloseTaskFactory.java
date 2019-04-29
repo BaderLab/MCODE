@@ -1,19 +1,12 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import java.util.Collection;
-import java.util.Set;
-
-import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
-import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.TaskIterator;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -51,20 +44,20 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
  * * Description: Utilities for MCODE
  */
 
-public class MCODECloseTaskFactory implements TaskFactory, NetworkAboutToBeDestroyedListener {
+public class MCODECloseTaskFactory implements TaskFactory {
 	
-	private final CySwingApplication swingApplication;
+	private final MainPanelMediator mediator;
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODECloseTaskFactory(
-			CySwingApplication swingApplication,
+			MainPanelMediator mediator,
 			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
-		this.swingApplication = swingApplication;
+		this.mediator = mediator;
 		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
@@ -72,33 +65,18 @@ public class MCODECloseTaskFactory implements TaskFactory, NetworkAboutToBeDestr
 
 	@Override
 	public TaskIterator createTaskIterator() {
-		final TaskIterator taskIterator = new TaskIterator();
-		final Collection<MCODEResultsPanel> resultPanels = mcodeUtil.getResultPanels();
-		final MCODECloseAllResultsTask closeResultsTask = new MCODECloseAllResultsTask(swingApplication, mcodeUtil);
+		TaskIterator taskIterator = new TaskIterator();
 
-		if (resultPanels.size() > 0)
-			taskIterator.append(closeResultsTask);
+		if (resultsMgr.getResultsCount() > 0)
+			taskIterator.append(new MCODECloseAllResultsTask(mediator, resultsMgr, mcodeUtil));
 		
-		taskIterator.append(new MCODECloseTask(closeResultsTask, resultsMgr, mcodeUtil, registrar));
+		taskIterator.append(new MCODECloseTask(mediator, resultsMgr, mcodeUtil, registrar));
 		
 		return taskIterator;
 	}
 
 	@Override
 	public boolean isReady() {
-		return mcodeUtil.isOpened();
-	}
-	
-	@Override
-	public void handleEvent(final NetworkAboutToBeDestroyedEvent e) {
-		if (mcodeUtil.isOpened()) {
-			CyNetwork network = e.getNetwork();
-			Set<Integer> resultIds = resultsMgr.getNetworkResults(network.getSUID());
-
-			for (int id : resultIds) {
-				MCODEResultsPanel panel = mcodeUtil.getResultPanel(id);
-				if (panel != null) panel.discard(false);
-			}
-		}
+		return mediator.isMainPanelOpen();
 	}
 }

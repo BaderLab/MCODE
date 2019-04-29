@@ -1,6 +1,7 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.createSpinnerIcon;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
@@ -28,11 +29,10 @@ import javax.swing.UIManager;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.IconManager;
 import org.cytoscape.util.swing.LookAndFeelUtil;
+import org.cytoscape.util.swing.TextIcon;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.util.TextIcon;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -90,15 +90,12 @@ public class ClusterPanel extends JPanel {
 	private final int index;
 	private MCODECluster cluster;
 	private final MCODEParameters params;
-	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
-	public ClusterPanel(int index, MCODECluster cluster, MCODEParameters params, MCODEUtil mcodeUtil,
-			CyServiceRegistrar registrar) {
+	public ClusterPanel(int index, MCODECluster cluster, MCODEParameters params, CyServiceRegistrar registrar) {
 		this.index = index;
 		this.cluster = cluster;
 		this.params = params;
-		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 		
 		Font font = registrar.getService(IconManager.class).getIconFont(36.0f);
@@ -208,7 +205,7 @@ public class ClusterPanel extends JPanel {
 			rankLabel = createLabel("" + cluster.getRank());
 			rankLabel.setToolTipText("Rank");
 			rankLabel.setFont(rankLabel.getFont().deriveFont(Font.BOLD));
-			rankLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+			rankLabel.setForeground(UIManager.getColor("Label.infoForeground"));
 			rankLabel.setHorizontalAlignment(JLabel.RIGHT);
 			rankLabel.setPreferredSize(new Dimension(32, rankLabel.getPreferredSize().height));
 			rankLabel.setMinimumSize(rankLabel.getPreferredSize());
@@ -256,6 +253,7 @@ public class ClusterPanel extends JPanel {
 		if (nodesLabel == null) {
 			nodesLabel = createLabel("");
 			nodesLabel.setHorizontalAlignment(JLabel.RIGHT);
+			nodesLabel.setForeground(UIManager.getColor("Label.infoForeground"));
 		}
 		
 		return nodesLabel;
@@ -265,6 +263,7 @@ public class ClusterPanel extends JPanel {
 		if (edgesLabel == null) {
 			edgesLabel = createLabel("");
 			edgesLabel.setHorizontalAlignment(JLabel.RIGHT);
+			edgesLabel.setForeground(UIManager.getColor("Label.infoForeground"));
 		}
 		
 		return edgesLabel;
@@ -340,7 +339,7 @@ public class ClusterPanel extends JPanel {
 				showIcon(warnIcon, false);
 				getImageLabel().setToolTipText("Cluster is too big to show");
 			} else {
-				showIcon(mcodeUtil.createSpinnerIcon(), true);
+				showIcon(createSpinnerIcon(), true);
 				getImageLabel().setToolTipText("Loading...");
 			}
 		} else {

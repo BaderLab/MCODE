@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
@@ -115,7 +115,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			alg.setTaskMonitor(tm, network.getSUID());
 
 			// Only (re)score the graph if the scoring parameters have been changed
-			if (mode == MCODEAnalyzeAction.RESCORE) {
+			if (mode == AnalysisAction.RESCORE) {
 				tm.setProgress(0.001);
 				tm.setStatusMessage("Scoring Network (Step 1 of 3)");
 				
@@ -138,7 +138,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			mcodeUtil.sortClusters(clusters);
 			
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");
-			result = resultsMgr.createResult(network, clusters);
+			result = resultsMgr.createResult(network, alg.getParams().copy(), clusters);
 			
 			new Thread(() -> {
 				resultsMgr.addResult(result);

@@ -1,37 +1,35 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.TaskIterator;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 public class MCODEOpenTaskFactory implements TaskFactory {
 
-	private final CySwingApplication swingApplication;
+	private final MainPanelMediator mediator;
+	private final AnalysisAction analysisAction;
 	private final CyServiceRegistrar registrar;
-	private final MCODEUtil mcodeUtil;
-	private final MCODEAnalyzeAction analyzeAction;
 	
-	public MCODEOpenTaskFactory(final CySwingApplication swingApplication,
-			 					final CyServiceRegistrar registrar,
-			 					final MCODEUtil mcodeUtil,
-			 					final MCODEAnalyzeAction analyzeAction) {
-		this.swingApplication = swingApplication;
+	public MCODEOpenTaskFactory(
+			MainPanelMediator mediator,
+			AnalysisAction analysisAction,
+			CyServiceRegistrar registrar
+	) {
+		this.mediator = mediator;
+		this.analysisAction = analysisAction;
 		this.registrar = registrar;
-		this.mcodeUtil = mcodeUtil;
-		this.analyzeAction = analyzeAction;
 	}
 	
 	@Override
 	public TaskIterator createTaskIterator() {
-		return new TaskIterator(new MCODEOpenTask(swingApplication, registrar, mcodeUtil, analyzeAction));
+		return new TaskIterator(new MCODEOpenTask(mediator, analysisAction, registrar));
 	}
 
 	@Override
 	public boolean isReady() {
-		return !mcodeUtil.isOpened();
+		return !mediator.isMainPanelOpen();
 	}
 }

@@ -75,7 +75,7 @@ public abstract class AbstractMCODETest {
 		List<MCODECluster> clusters = alg.findClusters(net, resultId);
 		
 		if (!clusters.isEmpty()) {
-			MCODEResult res = resultsMgr.createResult(net, clusters);
+			MCODEResult res = resultsMgr.createResult(net, params.copy(), clusters);
 			resultsMgr.addResult(res);
 		}
 		
@@ -106,5 +106,4 @@ public abstract class AbstractMCODETest {
 		
 		return net;
 	}
-
 }

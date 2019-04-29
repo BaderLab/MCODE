@@ -4,7 +4,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.TaskIterator;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -46,13 +46,13 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 public class MCODEAnalyzeCommandTaskFactory implements TaskFactory {
 
-	private final MCODEAnalyzeAction action;
+	private final AnalysisAction action;
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODEAnalyzeCommandTaskFactory(
-			MCODEAnalyzeAction action,
+			AnalysisAction action,
 			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar

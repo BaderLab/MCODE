@@ -1,6 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal.action;
 
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
@@ -78,7 +78,7 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * Simple score and find action for MCODE. This should be the default for general users.
  */
-public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurrentNetworkListener, AddedNodesListener,
+public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNetworkListener, AddedNodesListener,
 		AddedEdgesListener, RemovedNodesListener, RemovedEdgesListener {
 
 	private static final long serialVersionUID = 87924889404093104L;
@@ -95,9 +95,9 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
-	private static final Logger logger = LoggerFactory.getLogger(MCODEAnalyzeAction.class);
+	private static final Logger logger = LoggerFactory.getLogger(AnalysisAction.class);
 
-	public MCODEAnalyzeAction(
+	public AnalysisAction(
 			String title,
 			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
@@ -113,7 +113,7 @@ public class MCODEAnalyzeAction extends AbstractMCODEAction implements SetCurren
 	/**
 	 * This method is called when the user clicks Analyze.
 	 *
-	 * @param event Click of the analyzeButton on the MCODEMainPanel.
+	 * @param event Click of the analyzeButton on the NewAnalysisPanel.
 	 */
 	@Override
 	public void actionPerformed(final ActionEvent event) {

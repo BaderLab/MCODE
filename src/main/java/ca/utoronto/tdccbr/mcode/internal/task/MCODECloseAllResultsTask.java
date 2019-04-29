@@ -1,18 +1,13 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import java.util.Collection;
-
-import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.swing.CytoPanel;
-import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.application.swing.CytoPanelState;
 import org.cytoscape.work.ProvidesTitle;
 import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
 
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * Closes the result panels.
@@ -22,12 +17,13 @@ public class MCODECloseAllResultsTask implements Task {
 	@Tunable(description = "<html>You are about to close the MCODE app.<br />Do you want to continue?</html>", params="ForceSetDirectly=true")
 	public boolean close = true;
 	
-	private final CySwingApplication swingApplication;
+	private final MainPanelMediator mediator;
+	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	
-	public MCODECloseAllResultsTask(final CySwingApplication swingApplication,
-						  			final MCODEUtil mcodeUtil) {
-		this.swingApplication = swingApplication;
+	public MCODECloseAllResultsTask(MainPanelMediator mediator, MCODEResultsManager resultsMgr, MCODEUtil mcodeUtil) {
+		this.mediator = mediator;
+		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 	}
 
@@ -37,19 +33,18 @@ public class MCODECloseAllResultsTask implements Task {
 	}
 
 	@Override
-	public void run(final TaskMonitor taskMonitor) throws Exception {
+	public void run(final TaskMonitor tm) throws Exception {
+		tm.setTitle(getTitle());
+		tm.setProgress(-1);
+		
 		if (close) {
-			final Collection<MCODEResultsPanel> resultPanels = mcodeUtil.getResultPanels();
-			
-			for (MCODEResultsPanel panel : resultPanels) {
-				panel.discard(false);
-			}
-
-			CytoPanel cytoPanel = swingApplication.getCytoPanel(CytoPanelName.WEST);
-
-			if (cytoPanel.getCytoPanelComponentCount() == 0)
-				cytoPanel.setState(CytoPanelState.HIDE);
+			tm.setStatusMessage("Discarding Results...");
+			mediator.discardAllResults(false);
+			resultsMgr.reset();
+			mcodeUtil.reset();
 		}
+		
+		tm.setProgress(1.0);
 	}
 
 	@Override

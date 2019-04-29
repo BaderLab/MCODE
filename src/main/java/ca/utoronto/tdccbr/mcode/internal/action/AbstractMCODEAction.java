@@ -11,8 +11,8 @@ import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkViewManager;
 
+import ca.utoronto.tdccbr.mcode.internal.view.NewAnalysisPanel;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel;
 
 public abstract class AbstractMCODEAction extends AbstractCyAction {
 
@@ -50,13 +50,13 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	/**
 	 * @return The main panel of the app if it is opened, and null otherwise
 	 */
-	protected MCODEMainPanel getMainPanel() {
+	protected NewAnalysisPanel getMainPanel() {
 		CytoPanel cytoPanel = getControlCytoPanel();
 		int count = cytoPanel.getCytoPanelComponentCount();
 
 		for (int i = 0; i < count; i++) {
-			if (cytoPanel.getComponentAt(i) instanceof MCODEMainPanel)
-				return (MCODEMainPanel) cytoPanel.getComponentAt(i);
+			if (cytoPanel.getComponentAt(i) instanceof NewAnalysisPanel)
+				return (NewAnalysisPanel) cytoPanel.getComponentAt(i);
 		}
 
 		return null;
@@ -65,22 +65,23 @@ public abstract class AbstractMCODEAction extends AbstractCyAction {
 	/**
 	 * @return The result panels of the app if it is opened, or an empty collection otherwise
 	 */
-	protected Collection<MCODEResultsPanel> getResultPanels() {
-		Collection<MCODEResultsPanel> panels = new ArrayList<>();
+	protected Collection<MCODEMainPanel> getResultPanels() {
+		Collection<MCODEMainPanel> panels = new ArrayList<>();
 		CytoPanel cytoPanel = getResultsCytoPanel();
 		int count = cytoPanel.getCytoPanelComponentCount();
 
 		for (int i = 0; i < count; i++) {
-			if (cytoPanel.getComponentAt(i) instanceof MCODEResultsPanel)
-				panels.add((MCODEResultsPanel) cytoPanel.getComponentAt(i));
+			if (cytoPanel.getComponentAt(i) instanceof MCODEMainPanel)
+				panels.add((MCODEMainPanel) cytoPanel.getComponentAt(i));
 		}
 
 		return panels;
 	}
 
-	protected MCODEResultsPanel getResultPanel(final int resultId) {
-		for (MCODEResultsPanel panel : getResultPanels()) {
-			if (panel.getResultId() == resultId) return panel;
+	protected MCODEMainPanel getResultPanel(final int resultId) {
+		for (MCODEMainPanel panel : getResultPanels()) {
+			if (panel.getSelectedResult() != null && panel.getSelectedResult().getId() == resultId)
+				return panel;
 		}
 
 		return null;

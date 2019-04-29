@@ -1,47 +1,91 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.IconUtil.LAYERED_MCODE_ICON;
+import static ca.utoronto.tdccbr.mcode.internal.util.IconUtil.MCODE_ICON_COLORS;
+import static ca.utoronto.tdccbr.mcode.internal.util.IconUtil.getIconFont;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.recursiveDo;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.styleHeaderButton;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
-import static org.cytoscape.util.swing.LookAndFeelUtil.createTitledBorder;
+import static org.cytoscape.util.swing.IconManager.ICON_BARS;
+import static org.cytoscape.util.swing.IconManager.ICON_PLUS;
+import static org.cytoscape.util.swing.IconManager.ICON_TRASH_O;
+import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
+import static org.cytoscape.util.swing.LookAndFeelUtil.isWinLAF;
+import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 
+import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.net.URL;
-import java.text.DecimalFormat;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.swing.AbstractAction;
-import javax.swing.Box;
-import javax.swing.ButtonGroup;
+import javax.swing.ActionMap;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
+import javax.swing.GroupLayout.ParallelGroup;
+import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JFormattedTextField;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JTable;
+import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
 import javax.swing.LayoutStyle.ComponentPlacement;
+import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.table.AbstractTableModel;
 
-import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.model.CyColumn;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.model.CyRow;
+import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
+import org.cytoscape.util.swing.IconManager;
+import org.cytoscape.util.swing.LookAndFeelUtil;
+import org.cytoscape.util.swing.TextIcon;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEResources.ImageName;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
 /**
@@ -75,79 +119,83 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
  * * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
  * *
  * * User: Vuk Pavlovic
- * * Description: The Main Panel allowing user to choose scope and other parameters
+ * * Description: The Results Panel displaying found clusters
  */
 
 /**
- * The parameter change cytpanel which the user can use to select scope and change the scoring and finding parameters
+ * Reports the results of MCODE cluster finding. This class sets up the UI.
  */
+@SuppressWarnings("serial")
 public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
-	private static final long serialVersionUID = -4442491309881609088L;
+	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
+	private int enumerationSelection = -1;
 	
-	private final CySwingApplication swingApplication;
+	private JComboBox<MCODEResult> resultsCombo;
+	private JButton newAnalysisButton;
+	private JToggleButton discardButton;
+	private JButton optionsButton;
+	private InfoPanel infoPanel;
+	private JPanel clustersPanel;
+	private Map<MCODEResult, JScrollPane> clusterBrowserPanes = new HashMap<>();
+	private BasicCollapsiblePanel explorePanel;
+	
+	private final CardLayout cardLayout = new CardLayout();
+	
+	private final Map<Integer, ExploreContentPanel> exploreContentPanels = new HashMap<>(); // TODO
+	
+	private final MCODEUtil mcodeUtil;
+	private final CyServiceRegistrar registrar;
 
-	private JPanel scopePnl;
-	private BasicCollapsiblePanel advancedOptionsPnl;
-	private JPanel networkScoringPnl;
-	private JPanel clusterFindingPnl;
-	private JLabel densityCutoffLabel;
-	private JCheckBox includeLoopsCkb;
-	private JFormattedTextField degreeCutoffTxt;
-	private JFormattedTextField kCoreTxt;
-	private JFormattedTextField scoreCutoffTxt;
-	private JCheckBox haircutCkb;
-	private JCheckBox fluffCkb;
-	private JFormattedTextField densityCutoffTxt;
-	private JFormattedTextField maxDepthTxt;
-
-	private MCODEParameters currentParamsCopy; // stores current parameters - populates panel fields
-	private DecimalFormat decFormat; // used in the formatted text fields
+	private final Icon compIcon = new TextIcon(LAYERED_MCODE_ICON, getIconFont(14.0f), MCODE_ICON_COLORS, 16, 16);
+	
+	private final Object lock = new Object();
+	
+	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 
 	/**
-	 * The actual parameter change panel that builds the UI
-	 * @param analyzeAction 
+	 * Constructor for the Results Panel which displays the clusters in a
+	 * browser table and explore panels for each cluster.
 	 */
-	public MCODEMainPanel(CySwingApplication swingApplication, MCODEAnalyzeAction analyzeAction, MCODEUtil mcodeUtil) {
-		this.swingApplication = swingApplication;
+	public MCODEMainPanel(MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
+		this.mcodeUtil = mcodeUtil;
+		this.registrar = registrar;
 		
 		if (isAquaLAF())
 			setOpaque(false);
-
-		setMinimumSize(new Dimension(340, 400));
-		setPreferredSize(new Dimension(380, 400));
 		
-		// get the current parameters
-		currentParamsCopy = mcodeUtil.getParameterManager().getParamsCopy(null);
-		currentParamsCopy.setDefaultParams();
-
-		decFormat = new DecimalFormat();
-		decFormat.setParseIntegerOnly(true);
-
-		densityCutoffLabel = new JLabel("Node Density Cutoff:");
-		densityCutoffLabel.setMinimumSize(getDensityCutoffTxt().getMinimumSize());
-		densityCutoffLabel.setToolTipText(getDensityCutoffTxt().getToolTipText());
-		
-		final JButton analyzeBtn = new JButton(analyzeAction);
-		
-		// Create the three main panels: scope, advanced options, and bottom
-		// Add all the vertically aligned components to the main panel
-		final GroupLayout layout = new GroupLayout(this);
+		GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
-		layout.setAutoCreateContainerGaps(false);
-		layout.setAutoCreateGaps(true);
+		layout.setAutoCreateContainerGaps(!isAquaLAF());
+		layout.setAutoCreateGaps(isWinLAF());
 		
 		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
-				.addComponent(getScopePnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-				.addComponent(getAdvancedOptionsPnl(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
-				.addComponent(analyzeBtn)
+				.addGroup(layout.createSequentialGroup()
+						.addComponent(getResultsCombo(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+						.addPreferredGap(ComponentPlacement.RELATED)
+   						.addComponent(getNewAnalysisButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addPreferredGap(ComponentPlacement.RELATED)
+						.addComponent(getDiscardButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addPreferredGap(ComponentPlacement.RELATED)
+						.addComponent(getOptionsButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				)
+				.addComponent(getInfoPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getClustersPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getExplorePanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 		);
 		layout.setVerticalGroup(layout.createSequentialGroup()
-				.addComponent(getScopePnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-				.addComponent(getAdvancedOptionsPnl(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-				.addGap(0, 1, Short.MAX_VALUE)
-				.addComponent(analyzeBtn)
+				.addGroup(layout.createParallelGroup(Alignment.CENTER)
+						.addComponent(getResultsCombo(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addComponent(getNewAnalysisButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addComponent(getDiscardButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+						.addComponent(getOptionsButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				)
+				.addComponent(getInfoPanel(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				.addComponent(getClustersPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addComponent(getExplorePanel(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 		);
+		
+		update();
 	}
 
 	@Override
@@ -162,483 +210,895 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 
 	@Override
 	public Icon getIcon() {
-		URL iconURL = MCODEResources.getUrl(ImageName.LOGO_SMALL);
-		return new ImageIcon(iconURL);
+		return compIcon;
 	}
 
 	@Override
 	public String getTitle() {
-		return "";
+		return "MCODE";
+	}
+	
+	public MCODEResult getSelectedResult() {
+		return (MCODEResult) getResultsCombo().getSelectedItem();
 	}
 
-	public MCODEParameters getCurrentParamsCopy() {
-		return currentParamsCopy;
+	public int getSelectedClusterRow() {
+		ClusterBrowser clusterBrowser = getSelectedClusterBrowser();
+		
+		return clusterBrowser != null ? clusterBrowser.getSelectedIndex() : -1;
 	}
+	
+	public List<MCODECluster> getClusters() {
+		return getSelectedResult() != null ? new ArrayList<>(getSelectedResult().getClusters()) : Collections.emptyList();
+	}
+	
+	public MCODECluster getCluster(int index) {
+		return getSelectedResult() != null ? getSelectedResult().getClusters().get(index) : null;
+	}
+	
+	public MCODECluster getSelectedCluster() {
+		ClusterPanel p = getSelectedClusterPanel();
+		
+		return p != null ? p.getCluster() : null;
+	}
+	
+	public int getResultsCount() {
+		return getResultsCombo().getItemCount();
+	}
+	
+	public void addResult(MCODEResult res) {
+		getResultsCombo().addItem(res);
+		getResultsCombo().setSelectedItem(res);
+		
+		ClusterBrowser clusterBrowser = new ClusterBrowser(res);
+		
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setBorder(BorderFactory.createEmptyBorder());
+		scrollPane.setViewportView(clusterBrowser);
+		scrollPane.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentResized(ComponentEvent evt) {
+				clusterBrowser.updateScrollableTracksViewportHeight();
+			}
+		});
+		
+		getClustersPanel().add(scrollPane, res.toString());
+		
+		synchronized (lock) {
+			clusterBrowserPanes.put(res, scrollPane);
+		}
 
-	/**
-	 * @return panel containing the scope option buttons
-	 */
-	private JPanel getScopePnl() {
-		if (scopePnl == null) {
-			scopePnl = new JPanel();
-			scopePnl.setBorder(createTitledBorder(""));
+		update();
+	}
+	
+	public void removeResult(MCODEResult res) {
+		getResultsCombo().removeItem(res);
+		
+		synchronized (lock) {
+			JScrollPane scrollPane = clusterBrowserPanes.remove(res);
+			
+			if (scrollPane != null)
+				getClustersPanel().remove(scrollPane);
+		}
+		
+		update();
+	}
+	
+	public ExploreContentPanel getExploreContentPanel(int index) {
+		return exploreContentPanels.get(index);
+	}
+	
+	ClusterBrowser getClusterBrowser(MCODEResult res) {
+		synchronized (lock) {
+			JScrollPane scrollPane = clusterBrowserPanes.get(res);
+			
+			return scrollPane != null ? (ClusterBrowser) scrollPane.getViewport().getView() : null;
+		}
+	}
+	
+	ClusterBrowser getSelectedClusterBrowser() {
+		MCODEResult res = getSelectedResult();
+		
+		synchronized (lock) {
+			JScrollPane scrollPane = res != null ? clusterBrowserPanes.get(res) : null;
+			
+			return scrollPane != null ? (ClusterBrowser) scrollPane.getViewport().getView() : null;
+		}
+	}
+	
+	ClusterPanel getSelectedClusterPanel() {
+		ClusterBrowser clusterBrowser = getSelectedClusterBrowser();
+				
+		return clusterBrowser != null ? clusterBrowser.getSelectedItem() : null;
+	}
+	
+	JComboBox<MCODEResult> getResultsCombo() {
+		if (resultsCombo == null) {
+			resultsCombo = new JComboBox<>();
+			resultsCombo.setRenderer(new DefaultListCellRenderer() {
+				@Override
+				public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+						boolean isSelected, boolean cellHasFocus) {
+					super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+					
+					if (value instanceof MCODEResult == false)
+						setText("-- Select Analysis Result --");
+					
+					return this;
+				}
+			});
+		}
+		
+		return resultsCombo;
+	}
+	
+	JButton getNewAnalysisButton() {
+		if (newAnalysisButton == null) {
+			newAnalysisButton = new JButton(ICON_PLUS);
+			newAnalysisButton.setToolTipText("New Analysis...");
+			styleHeaderButton(newAnalysisButton, registrar.getService(IconManager.class).getIconFont(16.0f));
+		}
+		
+		return newAnalysisButton;
+	}
+	
+	public JToggleButton getDiscardButton() {
+		if (discardButton == null) {
+			discardButton = new JToggleButton(ICON_TRASH_O);
+			discardButton.setToolTipText("Discard Selected Result");
+			styleHeaderButton(discardButton, registrar.getService(IconManager.class).getIconFont(16.0f));
+		}
+		
+		return discardButton;
+	}
+	
+	JButton getOptionsButton() {
+		if (optionsButton == null) {
+			optionsButton = new JButton(ICON_BARS);
+			optionsButton.setToolTipText("Options...");
+			styleHeaderButton(optionsButton, registrar.getService(IconManager.class).getIconFont(18.0f));
+		}
+		
+		return optionsButton;
+	}
+	
+	InfoPanel getInfoPanel() {
+		if (infoPanel == null) {
+			infoPanel = new InfoPanel();
+			infoPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")));
+			infoPanel.setVisible(false);
+		}
+		
+		return infoPanel;
+	}
+	
+	JPanel getClustersPanel() {
+		if (clustersPanel == null) {
+			clustersPanel = new JPanel();
+			clustersPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")));
+			clustersPanel.setLayout(cardLayout);
+		}
+		
+		return clustersPanel;
+	}
+	
+	private BasicCollapsiblePanel getExplorePanel() {
+		if (explorePanel == null) {
+			explorePanel = new BasicCollapsiblePanel("Explore");
+			explorePanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")));
+			explorePanel.setCollapsed(false);
+			explorePanel.setVisible(false);
 			
 			if (isAquaLAF())
-				scopePnl.setOpaque(false);
-
-			final JRadioButton netScopeBtn = new JRadioButton("in whole network",
-					currentParamsCopy.getScope() == MCODEAnalysisScope.NETWORK);
-			final JRadioButton selScopeBtn = new JRadioButton("from selection",
-					currentParamsCopy.getScope() == MCODEAnalysisScope.SELECTION);
+				explorePanel.setOpaque(false);
+		}
+		
+		return explorePanel;
+	}
+	
+	void updateExploreControlPanel() {
+		try {
+			ClusterPanel item = getSelectedClusterPanel();
 			
-			netScopeBtn.setActionCommand(MCODEAnalysisScope.NETWORK.toString());
-			selScopeBtn.setActionCommand(MCODEAnalysisScope.SELECTION.toString());
+			if (item != null) {
+				final int index = getSelectedClusterRow();
+				final MCODECluster cluster = item.getCluster();
+				final CyNetwork net = cluster.getNetwork();
+				selectCluster(net);
 
-			netScopeBtn.addActionListener(new ScopeAction());
-			selScopeBtn.addActionListener(new ScopeAction());
+				// Upon selection of a cluster, we must show the corresponding explore panel content
+				// First we test if this cluster has been selected yet and if its content exists.
+				// If it does not, we create it.
+				ExploreContentPanel explorePanel = getExploreContentPanel(index);
+				
+				if (explorePanel == null)
+					exploreContentPanels.put(index, explorePanel = new ExploreContentPanel(index, net));
+				
+				getExplorePanel().getContentPane().removeAll();
+				getExplorePanel().getContentPane().add(explorePanel);
+				getExplorePanel().setVisible(true);
 
-			final ButtonGroup scopeOptions = new ButtonGroup();
-			scopeOptions.add(netScopeBtn);
-			scopeOptions.add(selScopeBtn);
+				// Finally the explore panel must be redrawn upon the selection
+				// event to display the new content with the name of the cluster, if it exists
+				String title = "Explore: " + cluster.getName();
+				getExplorePanel().setTitleComponentText(title);
+				getExplorePanel().updateUI();
+
+				// In order for the enumeration to be conducted for this cluster
+				// on the same attribute that might already have been selected
+				// we get a reference to the combo box within the explore content...
+				final JComboBox<String> nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
+				// ...and fire the enumeration action
+				nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
+
+				// TODO: it doesn't work from here
+				// This needs to be called when the explore panel shows up 
+				// so that any selection in the cluster browser is centered in the visible portion of the table
+				// table.scrollRectToVisible(table.getCellRect(selectedRow, 0, true));
+			} else {
+				getExplorePanel().getContentPane().removeAll();
+				getExplorePanel().setVisible(false);
+			}
+		} catch (Exception ex) {
+			logger.error("Unexpected MCODE error", ex);
+		}
+	}
+	
+	void update() {
+		getResultsCombo().setEnabled(getResultsCombo().getItemCount() > 0);
+		getDiscardButton().setEnabled(getSelectedResult() != null);
+		getInfoPanel().update();
+		
+		if (getSelectedResult() == null) {
+			getInfoPanel().setVisible(false);
+			getExplorePanel().setCollapsed(true);
+			getExplorePanel().setVisible(false);
+		} else {
+			cardLayout.show(getClustersPanel(), getSelectedResult().toString());
+		}
+	}
+	
+	class InfoPanel extends JPanel {
+		
+		private static final String TRUE = "Yes";
+		private static final String FALE = "No";
+		
+		private JLabel[] labels = new JLabel[] {
+				new JLabel("Find Clusters:"),
+				new JLabel("Include Loops:"),
+				new JLabel("Degree Cutoff:"),
+				new JLabel("Haircut:"),
+				new JLabel("Fluff:"),
+				new JLabel("Node Density Cutoff:"),
+				new JLabel("Node Score Cutoff:"),
+				new JLabel("K-Core:"),
+				new JLabel("Max. Depth:"),
+		};
+		private JLabel[] values = new JLabel[labels.length];
+		
+		InfoPanel() {
+			setBackground(UIManager.getColor("TableHeader.background"));
 			
-			final JLabel findLabel = new JLabel("Find Clusters:");
-			findLabel.setHorizontalAlignment(JLabel.RIGHT);
-			findLabel.setMinimumSize(new Dimension(findLabel.getMinimumSize().width, netScopeBtn.getMinimumSize().height));
-
-			final GroupLayout layout = new GroupLayout(scopePnl);
-			scopePnl.setLayout(layout);
+			GroupLayout layout = new GroupLayout(this);
+			setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(true);
+			
+			ParallelGroup hlGroup1 = null;
+			ParallelGroup hvGroup1 = null;
+			SequentialGroup vGroup1 = null;
+			
+			ParallelGroup hlGroup2 = null;
+			ParallelGroup hvGroup2 = null;
+			SequentialGroup vGroup2 = null;
+			
+			layout.setHorizontalGroup(layout.createSequentialGroup()
+					.addGap(0, 0, Short.MAX_VALUE)
+					.addGroup(layout.createSequentialGroup()
+							.addGroup(hlGroup1 = layout.createParallelGroup(Alignment.LEADING, true))
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addGroup(hvGroup1 = layout.createParallelGroup(Alignment.TRAILING, true))
+					)
+					.addGap(12, 24, 96)
+					.addGroup(layout.createSequentialGroup()
+							.addGroup(hlGroup2 = layout.createParallelGroup(Alignment.LEADING, true))
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addGroup(hvGroup2 = layout.createParallelGroup(Alignment.TRAILING, true))
+					)
+					.addGap(0, 0, Short.MAX_VALUE)
+			);
+			layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+					.addGroup(vGroup1 = layout.createSequentialGroup())
+					.addGroup(vGroup2 = layout.createSequentialGroup())
+			);
+			
+			float half = (labels.length - 1) / 2.0f;
+			
+			for (int i = 0; i < labels.length; i++) {
+				JLabel l = labels[i];
+				JLabel v = values[i] = new JLabel();
+				
+				Color fg = UIManager.getColor("Label.infoForeground");
+				l.setForeground(fg);
+				v.setForeground(fg);
+				
+				ParallelGroup hlg = i <= half ? hlGroup1 : hlGroup2;
+				ParallelGroup hvg = i <= half ? hvGroup1 : hvGroup2;
+				SequentialGroup vg = i <= half ? vGroup1 : vGroup2;
+				
+				hlg.addComponent(l);
+				hvg.addComponent(v);
+				
+				vg.addGroup(layout.createParallelGroup(Alignment.CENTER)
+						.addComponent(l)
+						.addComponent(v)
+				);
+			}
+			
+			makeSmall(labels);
+			makeSmall(values);
+		}
+		
+		void update() {
+			MCODEResult res = getSelectedResult();
+			MCODEParameters params = res != null ? res.getParameters() : null;
+			
+			if (params == null) {
+				for (JLabel v : values)
+					v.setText("");
+			} else {
+				int i = 0;
+				values[i++].setText(params.getScope().toString());
+				values[i++].setText(params.getIncludeLoops() ? TRUE : FALE);
+				values[i++].setText("" + params.getDegreeCutoff());
+				values[i++].setText(params.getHaircut() ? TRUE : FALE);
+				values[i++].setText(params.getFluff() ? TRUE : FALE);
+				values[i++].setText("" + params.getFluffNodeDensityCutoff());
+				values[i++].setText("" + params.getNodeScoreCutoff());
+				values[i++].setText("" + params.getKCore());
+				values[i++].setText("" + params.getMaxDepthFromStart());
+			}
+			
+			updateUI();
+		}
+	}
+	
+	/**
+	 * Panel that contains the browser table with a scroll bar.
+	 */
+	class ClusterBrowser extends JPanel implements Scrollable {
+		
+		private final JPanel filler = new JPanel();
+		
+		private final LinkedHashMap<MCODECluster, ClusterPanel> items = new LinkedHashMap<>();
+		private boolean scrollableTracksViewportHeight;
+
+		private final MCODEResult result;
+		
+		public ClusterBrowser(MCODEResult result) {
+			this.result = result;
+			
+			setName(result.toString());
+			setBackground(UIManager.getColor("Table.background"));
+			
+			Color fg = UIManager.getColor("Label.disabledForeground");
+			fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
+			
+			filler.setBorder(null);
+			filler.setAlignmentX(LEFT_ALIGNMENT);
+			filler.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
+			filler.setBackground(getBackground());
+			filler.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mousePressed(final MouseEvent e) {
+					if (!e.isPopupTrigger())
+						setSelectedItem(null);
+				}
+			});
+			
+			GroupLayout layout = new GroupLayout(this);
+			setLayout(layout);
+			layout.setAutoCreateContainerGaps(false);
 			layout.setAutoCreateGaps(false);
 			
-			layout.setHorizontalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(findLabel)
-					).addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(layout.createParallelGroup(Alignment.LEADING, true)
-							.addComponent(netScopeBtn)
-							.addComponent(selScopeBtn)
-					)
-			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.LEADING, false)
-					.addGroup(layout.createSequentialGroup()
-							.addComponent(findLabel)
-					).addGroup(layout.createSequentialGroup()
-							.addComponent(netScopeBtn)
-							.addComponent(selScopeBtn)
-					)
-			);
+			ParallelGroup hGroup = layout.createParallelGroup(Alignment.CENTER, true);
+			SequentialGroup vGroup = layout.createSequentialGroup();
+			layout.setHorizontalGroup(hGroup);
+			layout.setVerticalGroup(vGroup);
+			
+			int index = 0;
+			List<MCODECluster> clusters = getClusters();
+			
+			for (MCODECluster c : clusters) {
+				c.setRank(index + 1);
+				
+				ClusterPanel p = new ClusterPanel(index, c, getSelectedResult().getParameters(), registrar);
+				p.addComponentListener(new ComponentAdapter() {
+					@Override
+					public void componentResized(ComponentEvent e) {
+						updateScrollableTracksViewportHeight();
+					}
+				});
+				recursiveDo(p, comp -> addMouseListenersForSelection(p, comp));
+				setKeyBindings(p);
+				
+				items.put(c, p);
+				
+				hGroup.addComponent(p, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
+				vGroup.addComponent(p, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE);
+				
+				++index;
+			}
+			
+			hGroup.addComponent(filler, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
+			vGroup.addComponent(filler, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE);
+			
+			updateScrollableTracksViewportHeight();
 		}
 
-		return scopePnl;
-	}
-
-	private BasicCollapsiblePanel getAdvancedOptionsPnl() {
-		if (advancedOptionsPnl == null) {
-			advancedOptionsPnl = new BasicCollapsiblePanel("Advanced Options");
+		ClusterPanel getSelectedItem() {
+			for (ClusterPanel p : items.values()) {
+				if (p.isSelected())
+					return p;
+			}
 			
-			if (isAquaLAF())
-				advancedOptionsPnl.setOpaque(false);
-			
-			advancedOptionsPnl.getContentPane().add(getNetworkScoringPnl());
-			advancedOptionsPnl.getContentPane().add(getClusterFindingPnl());
-			advancedOptionsPnl.getContentPane().add(Box.createVerticalGlue());
-		}
-
-		return advancedOptionsPnl;
-	}
-
-	/**
-	 * Creates a panel that holds network scoring parameter inputs
-	 * @return panel containing the network scoring parameter inputs
-	 */
-	private JPanel getNetworkScoringPnl() {
-		if (networkScoringPnl == null) {
-			networkScoringPnl = new JPanel();
-			
-			if (isAquaLAF())
-				networkScoringPnl.setOpaque(false);
-			
-			networkScoringPnl.setBorder(createTitledBorder("Network Scoring"));
-			networkScoringPnl.setMaximumSize(
-					new Dimension(Short.MAX_VALUE, networkScoringPnl.getPreferredSize().height));
-
-			final JLabel degreeCutoffLabel = new JLabel("Degree Cutoff:");
-			degreeCutoffLabel.setMinimumSize(getDegreeCutoffTxt().getMinimumSize());
-			degreeCutoffLabel.setToolTipText(getDegreeCutoffTxt().getToolTipText());
-
-			final GroupLayout layout = new GroupLayout(networkScoringPnl);
-			networkScoringPnl.setLayout(layout);
-			layout.setAutoCreateContainerGaps(true);
-			layout.setAutoCreateGaps(true);
-			
-			layout.setHorizontalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(degreeCutoffLabel)
-					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
-							.addComponent(getIncludeLoopsCkb())
-							.addComponent(getDegreeCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-					)
-			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.TRAILING, false)
-					.addGroup(layout.createSequentialGroup()
-							.addComponent(degreeCutoffLabel)
-					).addGroup(layout.createSequentialGroup()
-							.addComponent(getIncludeLoopsCkb())
-							.addComponent(getDegreeCutoffTxt())
-					)
-			);
-		}
-
-		return networkScoringPnl;
-	}
-
-	/**
-	 * Creates a panel that holds 2 other panels for either customizing or optimized cluster finding parameters
-	 * @return Panel
-	 */
-	private JPanel getClusterFindingPnl() {
-		if (clusterFindingPnl == null) {
-			clusterFindingPnl = new JPanel();
-			
-			if (isAquaLAF())
-				clusterFindingPnl.setOpaque(false);
-			
-			clusterFindingPnl.setBorder(createTitledBorder("Cluster Finding"));
-			clusterFindingPnl.setMaximumSize(
-					new Dimension(Short.MAX_VALUE, clusterFindingPnl.getPreferredSize().height));
-
-			final JLabel scoreCutoffLabel = new JLabel("Node Score Cutoff:");
-			scoreCutoffLabel.setMinimumSize(getScoreCutoffTxt().getMinimumSize());
-			scoreCutoffLabel.setToolTipText(getScoreCutoffTxt().getToolTipText());
-			
-			final JLabel kCoreLabel = new JLabel("K-Core:");
-			kCoreLabel.setMinimumSize(getScoreCutoffTxt().getMinimumSize());
-			kCoreLabel.setToolTipText(getScoreCutoffTxt().getToolTipText());
-			
-			final JLabel maxDepthLabel = new JLabel("Max. Depth:");
-			maxDepthLabel.setMinimumSize(getMaxDepthTxt().getMinimumSize());
-			maxDepthLabel.setToolTipText(getMaxDepthTxt().getToolTipText());
-			
-			final GroupLayout layout = new GroupLayout(clusterFindingPnl);
-			clusterFindingPnl.setLayout(layout);
-			layout.setAutoCreateContainerGaps(true);
-			layout.setAutoCreateGaps(true);
-			
-			layout.setHorizontalGroup(layout.createSequentialGroup()
-					.addGroup(layout.createParallelGroup(Alignment.TRAILING, true)
-							.addComponent(densityCutoffLabel)
-							.addComponent(scoreCutoffLabel)
-							.addComponent(kCoreLabel)
-							.addComponent(maxDepthLabel)
-					).addGroup(layout.createParallelGroup(Alignment.LEADING, true)
-							.addComponent(getHaircutCkb())
-							.addComponent(getFluffCkb())
-							.addComponent(getDensityCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-							.addComponent(getScoreCutoffTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-							.addComponent(getkCoreTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-							.addComponent(getMaxDepthTxt(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
-					)
-			);
-			layout.setVerticalGroup(layout.createParallelGroup(Alignment.TRAILING, false)
-					.addGroup(layout.createSequentialGroup()
-							.addComponent(densityCutoffLabel)
-							.addComponent(scoreCutoffLabel)
-							.addComponent(kCoreLabel)
-							.addComponent(maxDepthLabel)
-					).addGroup(layout.createSequentialGroup()
-							.addComponent(getHaircutCkb())
-							.addComponent(getFluffCkb())
-							.addComponent(getDensityCutoffTxt())
-							.addComponent(getScoreCutoffTxt())
-							.addComponent(getkCoreTxt())
-							.addComponent(getMaxDepthTxt())
-					)
-			);
-			
-			updateClusterFindingPanel();
-		}
-
-		return clusterFindingPnl;
-	}
-	
-	private JCheckBox getIncludeLoopsCkb() {
-		if (includeLoopsCkb == null) {
-			includeLoopsCkb = new JCheckBox("Include Loops");
-			includeLoopsCkb.addItemListener(new IncludeLoopsCheckBoxAction());
-			includeLoopsCkb.setToolTipText("<html>Self-edges may increase a<br>node's score slightly.</html>");
-			includeLoopsCkb.setSelected(currentParamsCopy.getIncludeLoops());
+			return null;
 		}
 		
-		return includeLoopsCkb;
-	}
-	
-	private JFormattedTextField getDegreeCutoffTxt() {
-		if (degreeCutoffTxt == null) {
-			degreeCutoffTxt = new JFormattedTextField(decFormat);
-			degreeCutoffTxt.setColumns(3);
-			degreeCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			degreeCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
-			degreeCutoffTxt.setToolTipText(
-					"<html>Sets the minimum number of<br>edges for a node to be scored.</html>");
-			degreeCutoffTxt.setText(String.valueOf(currentParamsCopy.getDegreeCutoff()));
+		int getSelectedIndex() {
+			int idx = -1;
+			
+			for (ClusterPanel p : items.values()) {
+				idx++;
+				
+				if (p.isSelected())
+					break;
+			}
+			
+			return idx;
 		}
 		
-		return degreeCutoffTxt;
-	}
-	
-	private JCheckBox getHaircutCkb() {
-		if (haircutCkb == null) {
-			haircutCkb = new JCheckBox("Haircut");
-			haircutCkb.addItemListener(new MCODEMainPanel.HaircutCheckBoxAction());
-			haircutCkb.setToolTipText("<html>Remove singly connected<br>nodes from clusters.</html>");
-			haircutCkb.setSelected(currentParamsCopy.getHaircut());
+		void setSelectedIndex(int index) {
+			setSelectedItem(getItem(index));
 		}
 		
-		return haircutCkb;
-	}
-	
-	private JCheckBox getFluffCkb() {
-		if (fluffCkb == null) {
-			fluffCkb = new JCheckBox("Fluff");
-			fluffCkb.addItemListener(new MCODEMainPanel.FluffCheckBoxAction());
-			fluffCkb.setToolTipText(
-					"<html>Expand core cluster by one neighbour shell<br>" +
-					"(applied after the optional haircut).</html>");
-			fluffCkb.setSelected(currentParamsCopy.getFluff());
+		void setSelectedItem(ClusterPanel item) {
+			ClusterPanel previousItem = getSelectedItem();
+			
+			if (item != previousItem) {
+				int idx = previousItem != null ? previousItem.getIndex() : -1;
+				ExploreContentPanel expPnl = getExploreContentPanel(idx);
+				
+				if (expPnl != null)
+					enumerationSelection = expPnl.getNodeAttributesComboBox().getSelectedIndex();
+				
+				for (ClusterPanel p : items.values())
+					p.setSelected(p.equals(item));
+				
+				updateExploreControlPanel();
+			}
 		}
 		
-		return fluffCkb;
-	}
-	
-	private JFormattedTextField getDensityCutoffTxt() {
-		if (densityCutoffTxt == null) {
-			densityCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
-			densityCutoffTxt.setColumns(3);
-			densityCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			densityCutoffTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			densityCutoffTxt.setToolTipText(
-					"<html>Limits fluffing by setting the acceptable<br>"
-					+ "node density deviance from the core cluster<br>"
-					+ "density (allows clusters' edges to overlap).</html>");
-			densityCutoffTxt.setText((new Double(currentParamsCopy.getFluffNodeDensityCutoff())
-					.toString()));
+		public void scrollTo(ClusterPanel item) {
+			if (item != null)
+				((JComponent) item.getParent()).scrollRectToVisible(item.getBounds());
 		}
 		
-		return densityCutoffTxt;
-	}
-	
-	private JFormattedTextField getScoreCutoffTxt() {
-		if (scoreCutoffTxt == null) {
-			scoreCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
-			scoreCutoffTxt.setColumns(3);
-			scoreCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			scoreCutoffTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			scoreCutoffTxt.setToolTipText(
-					"<html>Sets the acceptable score deviance from<br>" +
-					"the seed node's score for expanding a cluster<br>" +
-					"(most influental parameter for cluster size).</html>");
-			scoreCutoffTxt.setText((new Double(currentParamsCopy.getNodeScoreCutoff()).toString()));
+		int getIndex(ClusterPanel item) {
+			return item == null ? -1 : new ArrayList<>(items.values()).indexOf(item);
 		}
 		
-		return scoreCutoffTxt;
-	}
-	
-	private JFormattedTextField getkCoreTxt() {
-		if (kCoreTxt == null) {
-			kCoreTxt = new JFormattedTextField(decFormat);
-			kCoreTxt.setColumns(3);
-			kCoreTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			kCoreTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			kCoreTxt.setToolTipText(
-					"<html>Filters out clusters lacking a<br>" +
-					"maximally inter-connected core<br>" +
-					"of at least k edges per node.</html>");
-			kCoreTxt.setText(String.valueOf(currentParamsCopy.getKCore()));
+		ClusterPanel getItem(int index) {
+			return index < 0 ? null : new ArrayList<>(items.values()).get(index);
 		}
 		
-		return kCoreTxt;
-	}
-	
-	private JFormattedTextField getMaxDepthTxt() {
-		if (maxDepthTxt == null) {
-			maxDepthTxt = new JFormattedTextField(decFormat);
-			maxDepthTxt.setColumns(3);
-			maxDepthTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			maxDepthTxt.addPropertyChangeListener("value", new MCODEMainPanel.FormattedTextFieldAction());
-			maxDepthTxt.setToolTipText(
-					"<html>Limits the cluster size by setting the<br>" +
-					"maximum search distance from a seed<br>" +
-					"node (100 virtually means no limit).</html>");
-			maxDepthTxt.setText(String.valueOf(currentParamsCopy.getMaxDepthFromStart()));
+		List<ClusterPanel> getAllItems() {
+			return new ArrayList<>(items.values());
 		}
 		
-		return maxDepthTxt;
-	}
+		public int getItemsSize() {
+			return items.size();
+		}
+		
+		boolean isEmpty() {
+			return items.isEmpty();
+		}
 
-	private void updateClusterFindingPanel() {
-		if (densityCutoffLabel != null) densityCutoffLabel.setEnabled(currentParamsCopy.getFluff());
-		getDensityCutoffTxt().setEnabled(currentParamsCopy.getFluff());
-	}
-
-	/**
-	 * Handles the press of a scope option. Makes sure that appropriate advanced options
-	 * inputs are added and removed depending on which scope is selected
-	 */
-	@SuppressWarnings("serial")
-	private class ScopeAction extends AbstractAction {
-		/*
-		//TODO: Uncomment this action event handler when benchmarking is implemented, and delete the one below
-		public void actionPerformed(ActionEvent e) {
-		    String scope = e.getActionCommand();
-		    if (scope.equals(MCODEParameterSet.NETWORK)) {
-		        //We want to have a layered structure such that when network scope is selected, the cluster finding
-		        //content allows the user to choose between optimize and customize.  When the other scopes are selected
-		        //the user should only see the customize cluster parameters content.
-		        //Here we ensured that these two contents are toggled depending on the scope selection.
-		        clusterFindingPnl.getContentPane().remove(customizeClusterFindingContent);
-		        //add content with 2 options
-		        clusterFindingPnl.getContentPane().add(clusterFindingContent, BorderLayout.NORTH);
-		        //need to re-add the customize content to its original container
-		        customizeClusterFindingPanel.getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
-		    } else {
-		        //since only one option will be left, it must be selected so that its content is visible
-		        customizeOption.setSelected(true);
-		        //remove content with 2 options
-		        clusterFindingPnl.getContentPane().remove(clusterFindingContent);
-		        //add customize content; this automatically removes it from its original container
-		        clusterFindingPnl.getContentPane().add(customizeClusterFindingContent, BorderLayout.NORTH);
-
-
-		    }
-		    currentParamsCopy.setScope(scope);
-		}
-		*/
-
-		//TODO: Delete this ({...}) when benchmarking is implemented
-		// TEMPORARY ACTION EVENT HANDLER {
 		@Override
-		public void actionPerformed(ActionEvent e) {
-			String scope = e.getActionCommand();
+		public Dimension getPreferredScrollableViewportSize() {
+			return getPreferredSize();
+		}
+
+		@Override
+		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return 10;
+		}
+
+		@Override
+		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+			return ((orientation == SwingConstants.VERTICAL) ? visibleRect.height : visibleRect.width) - 10;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportWidth() {
+			return true;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportHeight() {
+			return scrollableTracksViewportHeight;
+		}
+		
+		void updateScrollableTracksViewportHeight() {
+			final boolean oldValue = scrollableTracksViewportHeight;
 			
-			if (MCODEAnalysisScope.SELECTION.toString().equalsIgnoreCase(scope))
-				currentParamsCopy.setScope(MCODEAnalysisScope.SELECTION);
-			else
-				currentParamsCopy.setScope(MCODEAnalysisScope.NETWORK);
-		}
-		// }
-	}
-
-//	/**
-//	 * Sets the optimization parameter depending on which radio button is selected (cusomize/optimize)
-//	 */
-//	private class ClusterFindingAction extends AbstractAction {
-//		@Override
-//		public void actionPerformed(ActionEvent e) {
-//			currentParamsCopy.setOptimize(optimizeOption.isSelected());
-//		}
-//	}
-
-	/**
-	 * Handles setting of the include loops parameter
-	 */
-	private class IncludeLoopsCheckBoxAction implements ItemListener {
-		@Override
-		public void itemStateChanged(ItemEvent e) {
-			currentParamsCopy.setIncludeLoops(e.getStateChange() != ItemEvent.DESELECTED);
-		}
-	}
-
-	/**
-	 * Handles setting for the text field parameters that are numbers.
-	 * Makes sure that the numbers make sense.
-	 */
-	private class FormattedTextFieldAction implements PropertyChangeListener {
-		@Override
-		public void propertyChange(PropertyChangeEvent e) {
-			final JFormattedTextField source = (JFormattedTextField) e.getSource();
-
-			String message = "The value you have entered is invalid.\n";
-			boolean invalid = false;
-
-			if (source == degreeCutoffTxt) {
-				Number value = (Number) degreeCutoffTxt.getValue();
+			if (items == null || items.isEmpty()) {
+				scrollableTracksViewportHeight = true;
+			} else {
+				JScrollPane scrollPane = clusterBrowserPanes.get(result);
 				
-				if ((value != null) && (value.intValue() > 1)) {
-					currentParamsCopy.setDegreeCutoff(value.intValue());
-				} else {
-					source.setValue(2);
-					message += "The degree cutoff must be greater than 1.";
-					invalid = true;
-				}
-			} else if (source == getScoreCutoffTxt()) {
-				Number value = (Number) getScoreCutoffTxt().getValue();
-				
-				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
-					currentParamsCopy.setNodeScoreCutoff(value.doubleValue());
-				} else {
-					source.setValue(new Double(currentParamsCopy.getNodeScoreCutoff()));
-					message += "The node score cutoff must be between 0 and 1.";
-					invalid = true;
-				}
-			} else if (source == kCoreTxt) {
-				Number value = (Number) kCoreTxt.getValue();
-				
-				if ((value != null) && (value.intValue() > 1)) {
-					currentParamsCopy.setKCore(value.intValue());
-				} else {
-					source.setValue(2);
-					message += "The K-Core must be greater than 1.";
-					invalid = true;
-				}
-			} else if (source == maxDepthTxt) {
-				Number value = (Number) maxDepthTxt.getValue();
-				
-				if ((value != null) && (value.intValue() > 0)) {
-					currentParamsCopy.setMaxDepthFromStart(value.intValue());
-				} else {
-					source.setValue(1);
-					message += "The maximum depth must be greater than 0.";
-					invalid = true;
-				}
-			} else if (source == densityCutoffTxt) {
-				Number value = (Number) densityCutoffTxt.getValue();
-				
-				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
-					currentParamsCopy.setFluffNodeDensityCutoff(value.doubleValue());
-				} else {
-					source.setValue(new Double(currentParamsCopy.getFluffNodeDensityCutoff()));
-					message += "The fluff node density cutoff must be between 0 and 1.";
-					invalid = true;
+				if (scrollPane != null) {
+					int ih = 0; // Total items height
+					
+					// Watch out for ConcurrentModificationExceptions!
+					for (ClusterPanel p : new ArrayList<>(items.values()))
+						ih += p.getHeight();
+					
+					scrollableTracksViewportHeight = ih <= scrollPane.getViewport().getHeight();
 				}
 			}
 			
-			if (invalid) {
-				JOptionPane.showMessageDialog(swingApplication.getJFrame(),
-											  message,
-											  "Parameter out of bounds",
-											  JOptionPane.WARNING_MESSAGE);
+			if (oldValue != scrollableTracksViewportHeight)
+				updateUI();
+		}
+		
+		private void addMouseListenersForSelection(ClusterPanel item, JComponent... components) {
+			// This mouse listener listens for mouse pressed events to select the list items
+			final MouseListener selectionListener = new MouseAdapter() {
+				@Override
+				public void mousePressed(MouseEvent e) {
+					item.requestFocusInWindow();
+					final boolean isMac = LookAndFeelUtil.isMac();
+					
+					if ((isMac && e.isMetaDown()) || (!isMac && e.isControlDown())) {
+						// COMMAND button down on MacOS or CONTROL button down on another OS.
+						// Toggle this item's selection state
+						setSelectedItem(item.isSelected() ? null : item);
+					} else {
+						setSelectedItem(item);
+					}
+				}
+			};
+			
+			item.addMouseListener(selectionListener);
+			
+			for (JComponent c : components)
+				c.addMouseListener(selectionListener);
+		}
+		
+		private void setKeyBindings(final JComponent comp) {
+			final ActionMap actionMap = comp.getActionMap();
+			final InputMap inputMap = comp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+			final int CTRL = LookAndFeelUtil.isMac() ? InputEvent.META_DOWN_MASK :  InputEvent.CTRL_DOWN_MASK;
+
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), KeyAction.VK_UP);
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), KeyAction.VK_DOWN);
+			inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, CTRL + InputEvent.SHIFT_DOWN_MASK), KeyAction.VK_CTRL_SHIFT_A);
+			
+			actionMap.put(KeyAction.VK_UP, new KeyAction(KeyAction.VK_UP));
+			actionMap.put(KeyAction.VK_DOWN, new KeyAction(KeyAction.VK_DOWN));
+			actionMap.put(KeyAction.VK_CTRL_SHIFT_A, new KeyAction(KeyAction.VK_CTRL_SHIFT_A));
+		}
+		
+		private class KeyAction extends AbstractAction {
+
+			final static String VK_UP = "VK_UP";
+			final static String VK_DOWN = "VK_DOWN";
+			final static String VK_CTRL_SHIFT_A = "VK_CTRL_SHIFT_A";
+			
+			KeyAction(final String actionCommand) {
+				putValue(ACTION_COMMAND_KEY, actionCommand);
+			}
+
+			@Override
+			public void actionPerformed(final ActionEvent e) {
+				ClusterBrowser clusterBrowser = getSelectedClusterBrowser();
+				
+				if (clusterBrowser == null || clusterBrowser.isEmpty())
+					return;
+				
+				final String cmd = e.getActionCommand();
+				int idx = clusterBrowser.getSelectedIndex();
+				
+				if (cmd.equals(VK_UP)) {
+					if (idx > 0)  {
+						clusterBrowser.setSelectedIndex(idx - 1);
+						scrollTo(clusterBrowser.getSelectedItem());
+					}
+				} else if (cmd.equals(VK_DOWN)) {
+					if (idx >= 0 && idx < clusterBrowser.getItemsSize() - 1) {
+						clusterBrowser.setSelectedIndex(idx + 1);
+						scrollTo(clusterBrowser.getSelectedItem());
+					}
+				} else if (cmd.equals(VK_CTRL_SHIFT_A)) {
+					clusterBrowser.setSelectedItem(null);
+				}
 			}
 		}
 	}
+	
+	class ExploreContentPanel extends JPanel {
+		
+		private JComboBox<String> nodeAttributesComboBox;
+		private ResultsEnumeratorTableModel modelEnumerator;
+		
+		ExploreContentPanel(int index, CyNetwork clusterNet) {
+			if (isAquaLAF())
+				setOpaque(false);
+			
+			Collection<CyColumn> nodeColumns = clusterNet.getDefaultNodeTable().getColumns();
+			List<String> attributesList = new ArrayList<>(nodeColumns.size());
 
+			for (CyColumn column : nodeColumns) {
+				if (!column.getName().equals(CyNetwork.SUID) &&
+						!column.getName().equals(CyNetwork.SELECTED) &&
+						!column.getName().endsWith(".SUID"))
+					attributesList.add(column.getName());
+			}
+
+			// Node attributes enumerator
+			JLabel attrEnumLbl = new JLabel("Node Attribute:");
+			String ATTR_ENUM_TOOL_TIP = "Node Attribute Enumerator";
+			attrEnumLbl.setToolTipText(ATTR_ENUM_TOOL_TIP);
+			
+			Collator collator = Collator.getInstance(Locale.getDefault());
+			Collections.sort(attributesList, collator);
+
+			nodeAttributesComboBox = new JComboBox<>(attributesList.toArray(new String[attributesList.size()]));
+			nodeAttributesComboBox.setToolTipText(ATTR_ENUM_TOOL_TIP);
+			nodeAttributesComboBox.setRenderer(new DefaultListCellRenderer() {
+				@Override
+				public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+						boolean isSelected, boolean cellHasFocus) {
+					super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+					
+					if (value == null) {
+						this.setText("Please select...");
+						this.setToolTipText(null);
+					} else {
+						this.setText(mcodeUtil.abbreviate((String) value, 40));
+						this.setToolTipText((String) value);
+					}
+					
+					return this;
+				}
+			});
+
+			// Create a table listing the node attributes and their enumerations
+			modelEnumerator = new ResultsEnumeratorTableModel(new HashMap<>());
+
+			JTable enumerationsTable = new JTable(modelEnumerator);
+			JScrollPane tableScrollPane = new JScrollPane(enumerationsTable);
+			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, ClusterPanel.GRAPH_IMG_SIZE));
+			enumerationsTable.setGridColor(new JSeparator().getForeground());
+			enumerationsTable.setFont(new Font(enumerationsTable.getFont().getFontName(), Font.PLAIN,
+					(int) getSmallFontSize()));
+			enumerationsTable.setFocusable(false);
+			enumerationsTable.getColumnModel().getColumn(0).setPreferredWidth(180);
+
+			// Create a combo box that lists all the available node attributes for enumeration
+			nodeAttributesComboBox.addActionListener(evt -> updateEnumerationsTable(index));
+			nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
+
+			if (isAquaLAF()) {
+				attrEnumLbl.putClientProperty("JComponent.sizeVariant", "small");
+				nodeAttributesComboBox.putClientProperty("JComponent.sizeVariant", "small");
+				enumerationsTable.putClientProperty("JComponent.sizeVariant", "small");
+			}
+			
+			GroupLayout layout = new GroupLayout(this);
+			this.setLayout(layout);
+			layout.setAutoCreateContainerGaps(true);
+			layout.setAutoCreateGaps(!isAquaLAF());
+			
+			layout.setHorizontalGroup(layout.createParallelGroup(Alignment.LEADING, true)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(attrEnumLbl)
+							.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					)
+					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+			);
+			layout.setVerticalGroup(layout.createSequentialGroup()
+					.addGroup(layout.createParallelGroup(Alignment.CENTER, true)
+							.addComponent(attrEnumLbl)
+							.addComponent(nodeAttributesComboBox, PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+					)
+					.addComponent(tableScrollPane, DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+			);
+		}
+
+		@SuppressWarnings("unchecked")
+		void updateEnumerationsTable(int index) {
+			// The key is the attribute value and the value is the number of times that value appears in the cluster
+			final HashMap<Object, Integer> attributeEnumerations = new HashMap<>();
+
+			// First we want to see which attribute was selected in the combo box
+			final String attributeName = (String) nodeAttributesComboBox.getSelectedItem();
+			final int selectedIndex = nodeAttributesComboBox.getSelectedIndex();
+
+			// If its the generic 'please select' option then we don't do any enumeration
+			if (attributeName != null) {
+				final CyNetwork net = getCluster(index).getNetwork();
+				
+				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
+				for (CyNode node : net.getNodeList()) {
+					// The attribute value will be stored as a string no matter
+					// what it is but we need an array list because some attributes are maps or lists of any size
+					final ArrayList<Object> attributeValues = new ArrayList<>();
+					final CyRow row = net.getRow(node);
+					final CyColumn column = row.getTable().getColumn(attributeName);
+					
+					if (column == null) // This should never happen!
+						continue;
+					
+					final Class<?> type = column.getType();
+
+					if (Collection.class.isAssignableFrom(type)) {
+						final Collection<Object> valueList = (Collection<Object>) row.get(attributeName, type);
+
+						if (valueList != null) {
+							for (Object value : valueList)
+								attributeValues.add(value);
+						}
+					} else {
+						attributeValues.add(row.get(attributeName, type));
+					}
+
+					// Next we must make a non-repeating list with the attribute values and enumerate the repetitions
+					for (final Object aviElement : attributeValues) {
+						if (aviElement != null) {
+							final Object value = aviElement instanceof Number ? aviElement : aviElement.toString();
+
+							if (!attributeEnumerations.containsKey(value)) {
+								// If the attribute value appears for the first
+								// time, we give it an enumeration of 1 and add it to the enumerations
+								attributeEnumerations.put(value, 1);
+							} else {
+								// If it already appeared before, we want to add to the enumeration of the value
+								Integer enumeration = (Integer) attributeEnumerations.get(value);
+								enumeration = enumeration.intValue() + 1;
+								attributeEnumerations.put(value, enumeration);
+							}
+						}
+					}
+				}
+			}
+
+			modelEnumerator.listIt(attributeEnumerations);
+			// Finally we make sure that the selection is stored so that all the
+			// cluster explorations are looking at the already selected attribute
+			enumerationSelection = selectedIndex;
+		}
+
+		JComboBox<String> getNodeAttributesComboBox() {
+			return nodeAttributesComboBox;
+		}
+	}
+	
 	/**
-	 * Handles setting of the haircut parameter
+	 * Handles the data to be displayed in the node attribute enumeration table
 	 */
-	private class HaircutCheckBoxAction implements ItemListener {
+	private class ResultsEnumeratorTableModel extends AbstractTableModel {
+
+		String[] columnNames = { "Value", "Occurrence" };
+		Object[][] data = new Object[0][columnNames.length]; // the actual table
+
+		public ResultsEnumeratorTableModel(HashMap<Object, Integer> enumerations) {
+			listIt(enumerations);
+		}
+
+		public void listIt(final HashMap<Object, Integer> enumerations) {
+			// First we sort the hash map of attributes values and their occurrences
+			final List<Entry<Object, Integer>> enumerationsSorted = sortMap(enumerations);
+			// Then we put it into the data array in reverse order so that the
+			// most frequent attribute value is on top
+			final Object[][] newData = new Object[enumerationsSorted.size()][columnNames.length];
+			int c = enumerationsSorted.size() - 1;
+
+			for (Iterator<Map.Entry<Object, Integer>> i = enumerationsSorted.iterator(); i.hasNext();) {
+				final Map.Entry<Object, Integer> mp = i.next();
+				
+				newData[c][0] = mp.getKey();
+				newData[c][1] = mp.getValue();
+				c--;
+			}
+
+			// Finally we redraw the table, however, in order to prevent constant flickering
+			// we only fire the data change if the number or rows is altered.
+			// That way, when the number of rows stays the same, which is most of the
+			// time, there is no flicker.
+			if (getRowCount() == newData.length) {
+				data = new Object[newData.length][columnNames.length];
+				System.arraycopy(newData, 0, data, 0, data.length);
+				fireTableRowsUpdated(0, getRowCount());
+			} else {
+				data = new Object[newData.length][columnNames.length];
+				System.arraycopy(newData, 0, data, 0, data.length);
+				fireTableDataChanged();
+			}
+		}
+
 		@Override
-		public void itemStateChanged(ItemEvent e) {
-			currentParamsCopy.setHaircut(e.getStateChange() != ItemEvent.DESELECTED);
+		public String getColumnName(int col) {
+			return columnNames[col];
+		}
+
+		@Override
+		public int getRowCount() {
+			return data.length;
+		}
+
+		@Override
+		public int getColumnCount() {
+			return columnNames.length;
+		}
+
+		@Override
+		public Object getValueAt(int row, int col) {
+			return data[row][col];
+		}
+
+		@Override
+		public void setValueAt(Object object, int row, int col) {
+			data[row][col] = object;
+			fireTableCellUpdated(row, col);
+		}
+
+		@Override
+		public Class<?> getColumnClass(int c) {
+			return getValueAt(0, c).getClass();
+		}
+
+		@Override
+		public boolean isCellEditable(int row, int col) {
+			return false;
 		}
 	}
 
 	/**
-	 * Handles setting of the fluff parameter and showing or hiding of the fluff node density cutoff input
+	 * This method uses Arrays.sort for sorting a Map by the entries' values
+	 * 
+	 * @param map
+	 *            Has values mapped to keys
+	 * @return outputList of Map.Entries
 	 */
-	private class FluffCheckBoxAction implements ItemListener {
-		@Override
-		public void itemStateChanged(ItemEvent e) {
-			currentParamsCopy.setFluff(e.getStateChange() != ItemEvent.DESELECTED);
-			updateClusterFindingPanel();
+	private List<Map.Entry<Object, Integer>> sortMap(final Map<Object, Integer> map) {
+		final List<Map.Entry<Object, Integer>> outputList = new ArrayList<>(map.entrySet());
+
+		// Sort the entries with own comparator for the values:
+		Collections.sort(outputList, (o1, o2) -> {
+			return o1.getValue().compareTo(o2.getValue());
+		});
+
+		return outputList;
+	}
+
+	/**
+	 * Selects a cluster in the view that is selected by the user in the browser table
+	 * 
+	 * @param custerNetwork Cluster to be selected
+	 */
+	public void selectCluster(final CyNetwork custerNetwork) {
+		if (getSelectedResult() == null)
+			return;
+		
+		if (custerNetwork != null && getSelectedResult() != null) {
+			// Only do this if a view has been created on this network
+			// start with no selected nodes
+			// mcodeUtil.setSelected(network.getNodeList(), false, networkView);
+			mcodeUtil.setSelected(custerNetwork.getNodeList(), getSelectedResult().getNetwork());
+		} else {
+			mcodeUtil.setSelected(new ArrayList<>(), getSelectedResult().getNetwork()); // deselect all
 		}
 	}
 }

@@ -7,7 +7,7 @@ import org.cytoscape.work.TaskMonitor;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -50,33 +50,26 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
  */
 public class MCODECloseTask implements Task {
 
-	private final MCODECloseAllResultsTask closeAllResultsTask;
-	private final MCODEResultsManager resultsMgr;
-	private final MCODEUtil mcodeUtil;
+	private final MainPanelMediator mediator;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODECloseTask(
-			MCODECloseAllResultsTask closeAllResultsTask,
+			MainPanelMediator mediator,
 			MCODEResultsManager resultsMgr,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
-		this.closeAllResultsTask = closeAllResultsTask;
-		this.resultsMgr = resultsMgr;
-		this.mcodeUtil = mcodeUtil;
+		this.mediator = mediator;
 		this.registrar = registrar;
 	}
 
 	@Override
-	public void run(final TaskMonitor taskMonitor) throws Exception {
-		if (closeAllResultsTask == null || closeAllResultsTask.close) {
-			MCODEMainPanel mainPanel = mcodeUtil.getMainPanel();
+	public void run(TaskMonitor tm) throws Exception {
+		tm.setTitle("Close MCODE");
 
-			if (mainPanel != null)
-				registrar.unregisterService(mainPanel, CytoPanelComponent.class);
-
-			resultsMgr.reset();
-			mcodeUtil.reset();
+		if (mediator.isMainPanelOpen()) {
+			tm.setStatusMessage("Closing MCODE Panel...");
+			registrar.unregisterService(mediator.getMainPanel(), CytoPanelComponent.class);
 		}
 	}
 

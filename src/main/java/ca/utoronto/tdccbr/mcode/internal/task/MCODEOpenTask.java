@@ -2,58 +2,48 @@ package ca.utoronto.tdccbr.mcode.internal.task;
 
 import java.util.Properties;
 
-import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskMonitor;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEAnalyzeAction;
-import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * Open the MCODE panel in the Control panel.
  */
 public class MCODEOpenTask implements Task {
 
-	private final CySwingApplication swingApplication;
 	private final CyServiceRegistrar registrar;
-	private final MCODEUtil mcodeUtil;
-	private final MCODEAnalyzeAction analyzeAction;
+	private final MainPanelMediator mediator;
+	private final AnalysisAction analysisAction;
 	
-	public MCODEOpenTask(final CySwingApplication swingApplication,
-						 final CyServiceRegistrar registrar,
-						 final MCODEUtil mcodeUtil,
-						 final MCODEAnalyzeAction analyzeAction) {
-		this.swingApplication = swingApplication;
+	public MCODEOpenTask(MainPanelMediator mediator, AnalysisAction analysisAction, CyServiceRegistrar registrar) {
+		this.mediator = mediator;
 		this.registrar = registrar;
-		this.mcodeUtil = mcodeUtil;
-		this.analyzeAction = analyzeAction;
+		this.analysisAction = analysisAction;
 	}
 
 	@Override
-	public void run(TaskMonitor taskMonitor) throws Exception {
-		// Display MCODEMainPanel in left cytopanel
+	public void run(TaskMonitor tm) throws Exception {
+		tm.setTitle("Open MCODE");
+		
 		synchronized (this) {
-			MCODEMainPanel mainPanel = null;
+			MCODEMainPanel mainPanel = mediator.getMainPanel();
 			
 			// First we must make sure that the app is not already open
-			if (!mcodeUtil.isOpened()) {
-				mainPanel = new MCODEMainPanel(swingApplication, analyzeAction, mcodeUtil);
-
+			if (!mediator.isMainPanelOpen()) {
+				tm.setStatusMessage("Opening MCODE Panel...");
 				registrar.registerService(mainPanel, CytoPanelComponent.class, new Properties());
-				analyzeAction.updateEnableState();
-			} else {
-				mainPanel = mcodeUtil.getMainPanel();
+				analysisAction.updateEnableState();
 			}
 
-			if (mainPanel != null) {
-				CytoPanel cytoPanel = mcodeUtil.getControlCytoPanel();
-				int index = cytoPanel.indexOfComponent(mainPanel);
-				cytoPanel.setSelectedIndex(index);
-			}
+			mediator.selectMainPanel();
+			
+			if (mainPanel.getResultsCount() == 0)
+				mediator.showNewAnalysisDialog();
 		}
 	}
 

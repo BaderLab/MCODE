@@ -1,6 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.invokeOnEDT;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
+import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
@@ -11,24 +13,38 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JSlider;
 import javax.swing.JWindow;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -36,16 +52,17 @@ import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
-import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.application.swing.CytoPanelState;
-import org.cytoscape.application.swing.events.CytoPanelComponentSelectedEvent;
-import org.cytoscape.application.swing.events.CytoPanelComponentSelectedListener;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
+import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
+import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.util.swing.IconManager;
+import org.cytoscape.util.swing.LookAndFeelUtil;
+import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.View;
@@ -59,14 +76,16 @@ import org.cytoscape.work.swing.DialogTaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEDiscardResultAction;
+import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
+import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTask;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
-import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel.ExploreContentPanel;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel.ClusterBrowser;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel.ExploreContentPanel;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -104,15 +123,20 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel.ExploreContentPa
  * * Description: Utilities for MCODE
  */
 
-public class MCODEResultsMediator implements CytoPanelComponentSelectedListener {
+public class MainPanelMediator implements NetworkAboutToBeDestroyedListener {
 	
 	private static final String SCORE_ATTR = "MCODE_Score";
 	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
 	private static final String CLUSTER_ATTR = "MCODE_Cluster";
 	
 	private UpdateParentNetworkTask updateNetTask;
-	private boolean ignoreResultPanelSelected;
+	private boolean ignoreResultSelected;
 	
+	private MCODEMainPanel mainPanel;
+	private NewAnalysisPanel newAnalysisPanel;
+	private JDialog newAnalysisDialog;
+	
+	private final AnalysisAction analysisAction;
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
@@ -120,62 +144,99 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 	
 	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 	
-	public MCODEResultsMediator(MCODEResultsManager resultsMgr, MCODEUtil mcodeUtil, CyServiceRegistrar registrar) {
+	public MainPanelMediator(
+			AnalysisAction analysisAction,
+			MCODEResultsManager resultsMgr,
+			MCODEUtil mcodeUtil,
+			CyServiceRegistrar registrar
+	) {
+		this.analysisAction = analysisAction;
 		this.resultsMgr = resultsMgr;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 		
-		resultsMgr.addPropertyChangeListener("newResult", evt -> {
-			MCODEResult res = (MCODEResult) evt.getNewValue();
-			
-			if (res != null)
-				addResultsPanel(res);
+		resultsMgr.addPropertyChangeListener("resultAdded", evt -> {
+			invokeOnEDT(() -> {
+				MCODEResult res = (MCODEResult) evt.getNewValue();
+				
+				if (res != null) {
+					addResult(res);
+					disposeNewAnalysisDialog();
+				}
+			});
+		});
+		resultsMgr.addPropertyChangeListener("resultRemoved", evt -> {
+			invokeOnEDT(() -> {
+				MCODEResult res = (MCODEResult) evt.getNewValue();
+				
+				if (res != null) {
+					getMainPanel().removeResult(res);
+					
+					if (getMainPanel().getResultsCount() == 0) {
+						// TODO Move out from here
+						// Reset the results cache
+						resultsMgr.reset();
+						mcodeUtil.reset();
+					}
+				}
+			});
 		});
 	}
 	
-	/**
-	 * Whenever an MCODE result tab is selected in the east CytoPanel, the MCODE attributes
-	 * have to be rewritten to correspond to that particular result.
-	 */
 	@Override
-	public void handleEvent(CytoPanelComponentSelectedEvent evt) {
-		if (ignoreResultPanelSelected)
-			return;
-		
-		// When the user selects a tab in the east cytopanel we want to see if it is a results panel
-		// and if it is we want to re-draw the network with the MCODE visual style and reselect the
-		// cluster that may be selected in the results panel
-		Component component = evt.getCytoPanel().getSelectedComponent();
+	public void handleEvent(final NetworkAboutToBeDestroyedEvent e) {
+		if (isMainPanelOpen()) {
+			CyNetwork network = e.getNetwork();
+			Set<Integer> resultIds = resultsMgr.getNetworkResults(network.getSUID());
 
-		if (component instanceof MCODEResultsPanel)
-			onResultPanelSelected((MCODEResultsPanel) component);
+			for (int id : resultIds)
+				resultsMgr.removeResult(id);
+		}
 	}
 
-	private void onResultPanelSelected(MCODEResultsPanel resultsPanel) {
+	private void onResultSelected() {
 		synchronized (lock) {
+			if (ignoreResultSelected)
+				return;
+			
+			getMainPanel().update();
+			
 			if (updateNetTask != null) {
 				updateNetTask.cancel();
 				updateNetTask = null;
 			}
 		
-			updateNetTask = new UpdateParentNetworkTask(resultsPanel.getResult(), resultsPanel.getSelectedCluster());
-			registrar.getService(DialogTaskManager.class).execute(new TaskIterator(updateNetTask));
+			MCODEResult res = getMainPanel().getSelectedResult();
+			
+			if (res != null) {
+				updateNetTask = new UpdateParentNetworkTask(res, getMainPanel().getSelectedCluster());
+				registrar.getService(DialogTaskManager.class).execute(new TaskIterator(updateNetTask));
+			}
 		}
 	}
 	
-	private void addResultsPanel(MCODEResult res) {
+	private void addResult(MCODEResult res) {
 		List<MCODECluster> clusters = res != null ? res.getClusters() : null;
 		
 		if (clusters == null || clusters.isEmpty())
 			return;
 		
-		int resultId = res.getId();
+		ignoreResultSelected = true;
+		
+		try {
+			CytoPanel cytoPanel = getControlPanel();
+			int index = cytoPanel.indexOfComponent(getMainPanel());
+			
+			if (index >= 0)
+				cytoPanel.setSelectedIndex(index);
+			
+			getMainPanel().addResult(res);
+		} finally {
+			ignoreResultSelected = false;
+		}
+		
 		CyNetwork network = res.getNetwork();
 		CyNetworkView currView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
-		
-		MCODEDiscardResultAction discardResultAction = new MCODEDiscardResultAction("Discard Result", resultId,
-				resultsMgr, mcodeUtil, registrar);
-
 		CyNetworkView netView = currView != null && currView.getModel().equals(network) ? currView : null;
 
 		if (netView == null) {
@@ -186,31 +247,13 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 				netView = allViews.iterator().next();
 		}
 		
-		// Create Results panel
-		MCODEResultsPanel resultsPanel = new MCODEResultsPanel(res, netView, discardResultAction, mcodeUtil, registrar);
-		
 		// Add required listeners to results components
-		List<ClusterPanel> clusterPanels = resultsPanel.getClusterBrowserPnl().getAllItems();
+		ClusterBrowser clusterBrowser = getMainPanel().getClusterBrowser(res);
+		List<ClusterPanel> clusterPanels = clusterBrowser != null ? clusterBrowser.getAllItems()
+				: Collections.emptyList();
 		
 		for (ClusterPanel p : clusterPanels)
-			p.getSizeSlider().addChangeListener(new SizeAction(resultsPanel, p));
-		
-		ignoreResultPanelSelected = true;
-		
-		try {
-			// Ask Cytoscape to display the Results panel
-			registrar.registerService(resultsPanel, CytoPanelComponent.class, new Properties());
-			
-			// Focus the result panel
-			CytoPanel cytoPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
-			int index = cytoPanel.indexOfComponent(resultsPanel);
-			cytoPanel.setSelectedIndex(index);
-	
-			if (cytoPanel.getState() == CytoPanelState.HIDE)
-				cytoPanel.setState(CytoPanelState.DOCK);
-		} finally {
-			ignoreResultPanelSelected = false;
-		}
+			p.getSizeSlider().addChangeListener(new SizeAction(p));
 		
 		// Create all the images for the clusters
 		int rank = 0;
@@ -221,8 +264,229 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 			if (!c.isTooLargeToVisualize())
 				createClusterImage(c, true);
 		}
+	}
+
+	public MCODEMainPanel getMainPanel() {
+		if (mainPanel == null) {
+			invokeOnEDTAndWait(() -> {
+				mainPanel = new MCODEMainPanel(mcodeUtil, registrar);
+				mainPanel.getResultsCombo().addItemListener(evt -> onResultSelected());
+				mainPanel.getNewAnalysisButton().addActionListener(evt -> showNewAnalysisDialog());
+				mainPanel.getDiscardButton().addActionListener(evt -> discardSelectedResult());
+				mainPanel.getOptionsButton().addActionListener(evt -> getOptionsMenu()
+						.show(mainPanel.getOptionsButton(), 0, mainPanel.getOptionsButton().getHeight()));
+			});
+		}
 		
-		onResultPanelSelected(resultsPanel);
+		return mainPanel;
+	}
+	
+	private NewAnalysisPanel getNewAnalysisPanel() {
+		if (newAnalysisPanel == null) {
+			invokeOnEDTAndWait(() -> newAnalysisPanel = new NewAnalysisPanel(mcodeUtil));
+		}
+		
+		return newAnalysisPanel;
+	}
+	
+	public void disposeNewAnalysisDialog() {
+		if (newAnalysisDialog != null && newAnalysisDialog.isVisible()) {
+			newAnalysisDialog.dispose();
+			newAnalysisDialog = null;
+		}
+	}
+	
+	@SuppressWarnings("serial")
+	public void showNewAnalysisDialog() {
+		invokeOnEDT(() -> {
+			if (newAnalysisDialog == null) {
+				Window owner = SwingUtilities.getWindowAncestor(getControlPanel().getThisComponent());
+				
+				newAnalysisDialog = new JDialog(owner, ModalityType.APPLICATION_MODAL);
+				newAnalysisDialog.setTitle("MCODE");
+				newAnalysisDialog.setResizable(false);
+				newAnalysisDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+				
+				JButton okBtn = new JButton(analysisAction);
+				JButton cancelBtn = new JButton(new AbstractAction("Close") {
+					@Override
+					public void actionPerformed(ActionEvent evt) {
+						disposeNewAnalysisDialog();
+					}
+				});
+				
+				makeSmall(okBtn, cancelBtn);
+				
+				JPanel buttonPanel = LookAndFeelUtil.createOkCancelPanel(okBtn, cancelBtn);
+				buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+						BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")),
+						BorderFactory.createEmptyBorder(5, 5, 5, 5)
+				));
+				
+				newAnalysisDialog.getContentPane().add(getNewAnalysisPanel(), BorderLayout.CENTER);
+				newAnalysisDialog.getContentPane().add(buttonPanel, BorderLayout.SOUTH);
+				
+				LookAndFeelUtil.setDefaultOkCancelKeyStrokes(newAnalysisDialog.getRootPane(), analysisAction,
+						cancelBtn.getAction());
+				newAnalysisDialog.getRootPane().setDefaultButton(okBtn);
+			}
+			
+			newAnalysisDialog.pack();
+			newAnalysisDialog.setLocationRelativeTo(newAnalysisDialog.getParent());
+			newAnalysisDialog.setVisible(true);
+		});
+	}
+	
+	/**
+	 * @return true if the Main Panel is open and false otherwise
+	 */
+	public boolean isMainPanelOpen() {
+		CytoPanel cytoPanel = getControlPanel();
+		int count = cytoPanel.getCytoPanelComponentCount();
+
+		for (int i = 0; i < count; i++) {
+			final Component comp = cytoPanel.getComponentAt(i);
+			
+			if (comp instanceof MCODEMainPanel)
+				return true;
+		}
+		
+		return false;
+	}
+
+	public CytoPanel getControlPanel() {
+		return registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.WEST);
+	}
+	
+	public void selectMainPanel() {
+		invokeOnEDTAndWait(() -> {
+			if (mainPanel != null) {
+				CytoPanel cytoPanel = getControlPanel();
+				int index = cytoPanel.indexOfComponent(mainPanel);
+				
+				if (index >= 0)
+					cytoPanel.setSelectedIndex(index);
+			}
+		});
+	}
+	
+	public void discardAllResults(boolean requestUserConfirmation) {
+		Integer confirmed = JOptionPane.YES_OPTION;
+		
+		if (requestUserConfirmation) {
+			// Must make sure the user wants to close this results panel
+			String message = "You are about to dispose of all Results.\nDo you wish to continue?";
+			confirmed = JOptionPane.showOptionDialog(SwingUtilities.getWindowAncestor(getMainPanel()),
+													 new Object[] { message },
+													 "MCODE - Confirm",
+													 JOptionPane.YES_NO_OPTION,
+													 JOptionPane.QUESTION_MESSAGE,
+													 null,
+													 null,
+													 null);
+		}
+
+		if (confirmed == JOptionPane.YES_OPTION) {
+			for (MCODEResult res : resultsMgr.getAllResults())
+				discardResult(res.getId(), false);
+		}
+	}
+	
+	private void discardSelectedResult() {
+		MCODEResult res = getMainPanel().getSelectedResult();
+		
+		if (res != null)
+			discardResult(res.getId(), true);
+	}
+	
+	private void discardResult(int resultId, boolean requestUserConfirmation) {
+		Integer confirmed = JOptionPane.YES_OPTION;
+		
+		if (requestUserConfirmation) {
+			// Must make sure the user wants to close this results panel
+			String message = "You are about to dispose of Result " + resultId + ".\nDo you wish to continue?";
+			confirmed = JOptionPane.showOptionDialog(SwingUtilities.getWindowAncestor(getMainPanel()),
+													 new Object[] { message },
+													 "MCODE - Confirm",
+													 JOptionPane.YES_NO_OPTION,
+													 JOptionPane.QUESTION_MESSAGE,
+													 null,
+													 null,
+													 null);
+		}
+
+		if (confirmed == JOptionPane.YES_OPTION)
+			resultsMgr.removeResult(resultId);
+	}
+	
+	private JPopupMenu getOptionsMenu() {
+		JPopupMenu menu = new JPopupMenu();
+		MCODEResult res = getMainPanel().getSelectedResult();
+		MCODECluster cluster = getMainPanel().getSelectedCluster();
+		CyNetwork currentNet = registrar.getService(CyApplicationManager.class).getCurrentNetwork();
+		
+		{
+			JMenuItem mi = new JMenuItem("View Source Network");
+			mi.setToolTipText(res != null ? "Source Network: " + MCODEUtil.getName(res.getNetwork()) : null);
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_SHARE_ALT, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
+			mi.addActionListener(evt -> {
+				registrar.getService(CyApplicationManager.class).setCurrentNetwork(res.getNetwork());
+			});
+			mi.setEnabled(res != null && !res.getNetwork().equals(currentNet));
+			menu.add(mi);
+		}
+		menu.addSeparator();
+		{
+			JMenuItem mi = new JMenuItem("Create Cluster Network");
+			mi.setToolTipText("Create Network from Selected Cluster");
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_PLUS_CIRCLE, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
+			mi.addActionListener(evt -> {
+				MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(res.getNetwork().getSUID());
+
+				CreateClusterNetworkViewTask task = new CreateClusterNetworkViewTask(cluster, res.getId(), alg,
+						mcodeUtil, registrar);
+				registrar.getService(DialogTaskManager.class).execute(new TaskIterator(task));
+			});
+			mi.setEnabled(res != null && cluster != null);
+			menu.add(mi);
+		}
+		{
+			JMenuItem mi = new JMenuItem("Export Result...");
+			mi.setToolTipText("Export Selected Result to File");
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_SHARE_SQUARE_O, registrar.getService(IconManager.class).getIconFont(13), 16, 16));
+			mi.addActionListener(evt -> {
+				MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(res.getNetwork().getSUID());
+				mcodeUtil.exportMCODEResults(alg, res.getClusters(), res.getNetwork());
+			});
+			mi.setEnabled(res != null);
+			menu.add(mi);
+		}
+		menu.addSeparator();
+		{
+			JMenuItem mi = new JCheckBoxMenuItem("Show Analysis Parameters");
+			mi.setToolTipText("Show Analysis Parameters");
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_INFO_CIRCLE, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
+			mi.addActionListener(evt -> getMainPanel().getInfoPanel().setVisible(mi.isSelected()));
+			mi.setSelected(getMainPanel().getInfoPanel().isVisible());
+			mi.setEnabled(res != null);
+			menu.add(mi);
+		}
+		menu.addSeparator();
+		{
+			JMenuItem mi = new JMenuItem("Discard All");
+			mi.setToolTipText("Discard All Results");
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_TRASH_O, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
+			mi.addActionListener(evt -> discardAllResults(true));
+			mi.setEnabled(res != null);
+			menu.add(mi);
+		}
+		
+		return menu;
 	}
 	
 	/**
@@ -327,17 +591,9 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 
 		private final ScheduledExecutorService scheduler =  Executors.newScheduledThreadPool(3);
 		private ScheduledFuture<?> futureLoader;
-		
-		private final MCODEResultsPanel resultsPanel;
 		private final ClusterPanel clusterPanel;
 		
-		/**
-		 * @param resultsPanel 
-		 * @param p The selected cluster row
-		 * @param nodeAttributesComboBox Reference to the attribute enumeration picker
-		 */
-		SizeAction(MCODEResultsPanel resultsPanel, ClusterPanel clusterPanel) {
-			this.resultsPanel = resultsPanel;
+		SizeAction(ClusterPanel clusterPanel) {
 			this.clusterPanel = clusterPanel;
 		}
 
@@ -360,19 +616,22 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 			if (futureLoader != null && !futureLoader.isDone()) {
 				futureLoader.cancel(true);
 				
-				if (!oldCluster.equals(resultsPanel.getCluster(index)))
+				if (!oldCluster.equals(getMainPanel().getCluster(index)))
 					oldCluster.dispose();
 			}
 			
-			final int resultId = resultsPanel.getResultId();
-			final MCODEResult res = resultsMgr.getResult(resultId);
+			final MCODEResult res = getMainPanel().getSelectedResult();
+			
+			if (res == null)
+				return;
+			
 			final CyNetwork network = res.getNetwork();
 			final MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 			
 			final Runnable command = (() -> {
-	            	final List<Long> oldNodes = oldCluster.getNodes();
-	            	// Find the new cluster given the node score cutoff
-				final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, resultId);
+				final List<Long> oldNodes = oldCluster.getNodes();
+				// Find the new cluster given the node score cutoff
+				final MCODECluster newCluster = alg.exploreCluster(oldCluster, nodeScoreCutoff, network, res.getId());
 				// We only want to do the following work if the newly found cluster is actually different
 				// So we get the new cluster content
 				List<Long> newNodes = newCluster.getNodes();
@@ -389,7 +648,7 @@ public class MCODEResultsMediator implements CytoPanelComponentSelectedListener 
 					clusterPanel.setCluster(newCluster);
 					
 					// Update the node attributes table
-					ExploreContentPanel explorePanel = resultsPanel.getExploreContentPanel(index);
+					ExploreContentPanel explorePanel = mainPanel.getExploreContentPanel(index);
 					
 					if (explorePanel != null)
 						explorePanel.updateEnumerationsTable(index);
