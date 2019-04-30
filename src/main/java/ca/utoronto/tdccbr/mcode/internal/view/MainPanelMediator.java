@@ -754,12 +754,24 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				Long nId = n.getSUID();
 				CyTable nodeTbl = network.getDefaultNodeTable();
 				
-				if (nodeTbl.getColumn(CLUSTER_ATTR) == null)
-					nodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
-				if (nodeTbl.getColumn(NODE_STATUS_ATTR) == null)
-					nodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
-				if (nodeTbl.getColumn(SCORE_ATTR) == null)
-					nodeTbl.createColumn(SCORE_ATTR, Double.class, false);
+				try {
+					if (nodeTbl.getColumn(CLUSTER_ATTR) == null)
+						nodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
+				} catch (IllegalArgumentException e) {
+					logger.error("MCODE", e);
+				}
+				try {
+					if (nodeTbl.getColumn(NODE_STATUS_ATTR) == null)
+						nodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
+				} catch (IllegalArgumentException e) {
+					logger.error("MCODE", e);
+				}
+				try {
+					if (nodeTbl.getColumn(SCORE_ATTR) == null)
+						nodeTbl.createColumn(SCORE_ATTR, Double.class, false);
+				} catch (IllegalArgumentException e) {
+					logger.error("MCODE", e);
+				}
 
 				CyRow nodeRow = network.getRow(n);
 				

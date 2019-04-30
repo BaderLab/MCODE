@@ -322,8 +322,12 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 						boolean isSelected, boolean cellHasFocus) {
 					super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 					
-					if (value instanceof MCODEResult == false)
+					if (value instanceof MCODEResult == false) {
 						setText("-- Select Analysis Result --");
+						setToolTipText(null);
+					} else {
+						setToolTipText(((MCODEResult) value).toString());
+					}
 					
 					return this;
 				}
@@ -343,7 +347,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		return newAnalysisButton;
 	}
 	
-	public JToggleButton getDiscardButton() {
+	JToggleButton getDiscardButton() {
 		if (discardButton == null) {
 			discardButton = new JToggleButton(ICON_TRASH_O);
 			discardButton.setToolTipText("Discard Selected Result");
@@ -449,6 +453,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		updateNewAnalysisButton();
 		
 		getResultsCombo().setEnabled(getResultsCombo().getItemCount() > 0);
+		getResultsCombo().setToolTipText(getSelectedResult() != null ? getSelectedResult().toString() : null);
 		getDiscardButton().setEnabled(getSelectedResult() != null);
 		getOptionsButton().setEnabled(getSelectedResult() != null);
 		getInfoPanel().update();
@@ -643,7 +648,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 			
 			updateScrollableTracksViewportHeight();
 		}
-
+		
 		ClusterPanel getSelectedItem() {
 			for (ClusterPanel p : items.values()) {
 				if (p.isSelected())
@@ -684,6 +689,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 					p.setSelected(p.equals(item));
 				
 				updateExploreControlPanel();
+				updateScrollableTracksViewportHeight();
 			}
 		}
 		

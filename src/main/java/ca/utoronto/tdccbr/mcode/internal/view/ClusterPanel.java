@@ -6,6 +6,7 @@ import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
 import static org.cytoscape.util.swing.LookAndFeelUtil.getSmallFontSize;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isAquaLAF;
+import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -275,7 +276,19 @@ public class ClusterPanel extends JPanel {
 	protected JSlider getSizeSlider() {
 		if (sizeSlider == null) {
 			// (goes to 1000 so that we get a more precise double variable out of it)
-			sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000, (int) (params.getNodeScoreCutoff() * 1000));
+			sizeSlider = new JSlider(JSlider.HORIZONTAL, 0, 1000, (int) (params.getNodeScoreCutoff() * 1000)) {
+				@Override
+				public void addNotify() {
+					super.addNotify();
+					// We have to do this here (after the slider is added to its parent container),
+					// otherwise the cluster panel will show a glitch on macOS,
+					// where it's resized when selected for the first time
+					makeSmall(this);
+					
+					if (isAquaLAF())
+						putClientProperty("JComponent.sizeVariant", "mini");
+				}
+			};
 			sizeSlider.setOpaque(false);
 			
 			// Turn on ticks and labels at major and minor intervals.
@@ -296,9 +309,6 @@ public class ClusterPanel extends JPanel {
 					new Font("Arial", Font.PLAIN, (int) getSmallFontSize())
 			);
 			sizeSlider.setToolTipText("Size Threshold (Node Score Cutoff)");
-			
-			if (isAquaLAF())
-				sizeSlider.putClientProperty("JComponent.sizeVariant", "mini");
 		}
 		
 		return sizeSlider;
