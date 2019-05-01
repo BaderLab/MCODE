@@ -6,8 +6,6 @@ import static org.cytoscape.work.ServiceProperties.COMMAND_EXAMPLE_JSON;
 import static org.cytoscape.work.ServiceProperties.COMMAND_LONG_DESCRIPTION;
 import static org.cytoscape.work.ServiceProperties.COMMAND_NAMESPACE;
 import static org.cytoscape.work.ServiceProperties.COMMAND_SUPPORTS_JSON;
-import static org.cytoscape.work.ServiceProperties.INSERT_SEPARATOR_AFTER;
-import static org.cytoscape.work.ServiceProperties.MENU_GRAVITY;
 import static org.cytoscape.work.ServiceProperties.PREFERRED_MENU;
 import static org.cytoscape.work.ServiceProperties.TITLE;
 
@@ -16,7 +14,6 @@ import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
-import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -27,7 +24,6 @@ import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.FileUtil;
-import org.cytoscape.util.swing.OpenBrowser;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
@@ -37,13 +33,10 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.work.TaskFactory;
 import org.osgi.framework.BundleContext;
 
-import ca.utoronto.tdccbr.mcode.internal.action.AboutAction;
 import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
-import ca.utoronto.tdccbr.mcode.internal.action.MCODEHelpAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeCommandTaskFactory;
-import ca.utoronto.tdccbr.mcode.internal.task.MCODECloseTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
@@ -112,7 +105,6 @@ public class CyActivator extends AbstractCyActivator {
 		VisualMappingFunctionFactory continuousMappingFactory = getService(bc, VisualMappingFunctionFactory.class, "(mapping.type=continuous)");
 		
 		FileUtil fileUtil = getService(bc, FileUtil.class);
-		OpenBrowser openBrowser = getService(bc, OpenBrowser.class);
 		
 		mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
 								  appMgr, netMgr, netViewMgr, visualStyleFactory,
@@ -124,11 +116,6 @@ public class CyActivator extends AbstractCyActivator {
 		closeMCODEPanels();
 		
 		AnalysisAction analysisAction = new AnalysisAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
-		MCODEHelpAction helpAction = new MCODEHelpAction("Help", openBrowser, registrar);
-		AboutAction aboutAction = new AboutAction("About", registrar, mcodeUtil);
-		
-		registerService(bc, helpAction, CyAction.class);
-		registerService(bc, aboutAction, CyAction.class);
 		registerAllServices(bc, analysisAction);
 		
 		// View Mediators
@@ -138,21 +125,10 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// Tasks
 		{
-			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(mainPanelMediator, analysisAction, registrar);
+			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(mainPanelMediator);
 			Properties props = new Properties();
-			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
-			props.setProperty(TITLE, "Open MCODE");
-			props.setProperty(MENU_GRAVITY, "1.0");
-			
-			registerService(bc, factory, TaskFactory.class, props);
-		}
-		{
-			MCODECloseTaskFactory factory = new MCODECloseTaskFactory(mainPanelMediator, resultsMgr, mcodeUtil, registrar);
-			Properties props = new Properties();
-			props.setProperty(PREFERRED_MENU, "Apps.MCODE");
-			props.setProperty(TITLE, "Close MCODE");
-			props.setProperty(MENU_GRAVITY, "2.0");
-			props.setProperty(INSERT_SEPARATOR_AFTER, "true");
+			props.setProperty(PREFERRED_MENU, "Apps");
+			props.setProperty(TITLE, "MCODE");
 			
 			registerService(bc, factory, TaskFactory.class, props);
 		}

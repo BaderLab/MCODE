@@ -2,6 +2,7 @@ package ca.utoronto.tdccbr.mcode.internal.view;
 
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
+import static org.cytoscape.util.swing.LookAndFeelUtil.isMac;
 import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
@@ -19,12 +20,15 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -54,6 +58,7 @@ import org.cytoscape.application.events.SetCurrentNetworkEvent;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
+import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
@@ -133,10 +138,12 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	
 	private UpdateParentNetworkTask updateNetTask;
 	private boolean ignoreResultSelected;
+	private boolean firstTime = true;
 	
 	private MCODEMainPanel mainPanel;
 	private NewAnalysisPanel newAnalysisPanel;
 	private JDialog newAnalysisDialog;
+	private AboutDialog aboutDialog;
 	
 	private final AnalysisAction analysisAction;
 	private final MCODEResultsManager resultsMgr;
@@ -283,6 +290,8 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				mainPanel.getDiscardButton().addActionListener(evt -> discardSelectedResult());
 				mainPanel.getOptionsButton().addActionListener(evt -> getOptionsMenu()
 						.show(mainPanel.getOptionsButton(), 0, mainPanel.getOptionsButton().getHeight()));
+				mainPanel.getAboutButton().addActionListener(evt -> showAboutDialog());
+				mainPanel.getClosePanelButton().addActionListener(evt -> closeMainPanel());
 			});
 		}
 		
@@ -302,6 +311,65 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			newAnalysisDialog.dispose();
 			newAnalysisDialog = null;
 		}
+	}
+	
+	public void showMainPanel() {
+		invokeOnEDT(() -> {
+			CytoPanelComponent panel = null;
+			
+			try {
+				panel = registrar.getService(CytoPanelComponent.class, "(id=" + MCODEMainPanel.ID + ")");
+			} catch (Exception ex) {
+			}
+			
+			if (panel == null) {
+				panel = getMainPanel();
+				
+				Properties props = new Properties();
+				props.setProperty("id", MCODEMainPanel.ID);
+				registrar.registerService(panel, CytoPanelComponent.class, props);
+				
+				if (firstTime && getMainPanel().getResultsCount() == 0
+						&& registrar.getService(CyApplicationManager.class).getCurrentNetwork() != null) {
+					firstTime = false;
+					showNewAnalysisDialog();
+					analysisAction.updateEnableState();
+				}
+			}
+			
+			selectMainPanel();
+		});
+	}
+	
+	public void showAboutDialog() {
+		invokeOnEDT(() -> {
+			if (aboutDialog == null) {
+				aboutDialog = new AboutDialog(SwingUtilities.getWindowAncestor(getMainPanel()), mcodeUtil, registrar);
+				
+				if (isMac()) // Workaround for bug: https://bugs.openjdk.java.net/browse/JDK-8182638
+					aboutDialog.addWindowListener(new WindowAdapter() {
+						@Override
+						public void windowActivated(WindowEvent evt) {
+							evt.getWindow().toFront();
+						}
+					});
+			}
+	
+			if (!aboutDialog.isVisible()) {
+				aboutDialog.setLocationRelativeTo(null);
+				aboutDialog.setVisible(true);
+			}
+		});
+	}
+	
+	public void closeMainPanel() {
+		boolean confirmed = true;
+		
+		if (!resultsMgr.getAllResults().isEmpty())
+			confirmed = discardAllResults(true);
+		
+		if (confirmed && isMainPanelOpen())
+			registrar.unregisterService(getMainPanel(), CytoPanelComponent.class);
 	}
 	
 	@SuppressWarnings("serial")
@@ -337,6 +405,14 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				LookAndFeelUtil.setDefaultOkCancelKeyStrokes(newAnalysisDialog.getRootPane(), analysisAction,
 						cancelBtn.getAction());
 				newAnalysisDialog.getRootPane().setDefaultButton(okBtn);
+				
+				if (isMac()) // Workaround for bug: https://bugs.openjdk.java.net/browse/JDK-8182638
+					newAnalysisDialog.addWindowListener(new WindowAdapter() {
+						@Override
+						public void windowActivated(WindowEvent evt) {
+							evt.getWindow().toFront();
+						}
+					});
 			}
 			
 			newAnalysisDialog.pack();
@@ -367,7 +443,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	}
 	
 	public void selectMainPanel() {
-		invokeOnEDTAndWait(() -> {
+		invokeOnEDT(() -> {
 			if (mainPanel != null) {
 				CytoPanel cytoPanel = getControlPanel();
 				int index = cytoPanel.indexOfComponent(mainPanel);
@@ -378,7 +454,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		});
 	}
 	
-	public void discardAllResults(boolean requestUserConfirmation) {
+	public boolean discardAllResults(boolean requestUserConfirmation) {
 		Integer confirmed = JOptionPane.YES_OPTION;
 		
 		if (requestUserConfirmation) {
@@ -397,7 +473,11 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		if (confirmed == JOptionPane.YES_OPTION) {
 			for (MCODEResult res : resultsMgr.getAllResults())
 				discardResult(res.getId(), false);
+			
+			return true;
 		}
+		
+		return false;
 	}
 	
 	private void discardSelectedResult() {

@@ -7,6 +7,7 @@ import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.recursiveDo;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.styleHeaderButton;
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 import static javax.swing.GroupLayout.PREFERRED_SIZE;
+import static javax.swing.GroupLayout.Alignment.CENTER;
 import static org.cytoscape.util.swing.IconManager.ICON_BARS;
 import static org.cytoscape.util.swing.IconManager.ICON_PLUS;
 import static org.cytoscape.util.swing.IconManager.ICON_TRASH_O;
@@ -70,7 +71,7 @@ import javax.swing.table.AbstractTableModel;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.CyUserLog;
-import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.application.swing.CytoPanelComponent2;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
@@ -127,8 +128,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
  * Reports the results of MCODE cluster finding. This class sets up the UI.
  */
 @SuppressWarnings("serial")
-public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
+public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 
+	public static final String ID = "mcode.view.ControlPanel";
+	
 	/** Keep track of selected attribute for enumeration so it stays selected for all cluster explorations */
 	private int enumerationSelection = -1;
 	
@@ -140,6 +143,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private JPanel clustersPanel;
 	private Map<MCODEResult, JScrollPane> clusterBrowserPanes = new HashMap<>();
 	private BasicCollapsiblePanel explorePanel;
+	private JButton helpButton;
+	private JButton aboutButton;
+	private JButton closePanelButton;
 	
 	private final CardLayout cardLayout = new CardLayout();
 	
@@ -183,6 +189,12 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				.addComponent(getInfoPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getClustersPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getExplorePanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
+				.addGroup(layout.createSequentialGroup()
+   						.addComponent(getHelpButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addComponent(getAboutButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addGap(0, 0, Short.MAX_VALUE)
+   						.addComponent(getClosePanelButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   				)
 		);
 		layout.setVerticalGroup(layout.createSequentialGroup()
 				.addGroup(layout.createParallelGroup(Alignment.CENTER)
@@ -194,6 +206,11 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 				.addComponent(getInfoPanel(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
 				.addComponent(getClustersPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getExplorePanel(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+				.addGroup(layout.createParallelGroup(CENTER, false)
+   						.addComponent(getHelpButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addComponent(getAboutButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addComponent(getClosePanelButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   				)
 		);
 		
 		update();
@@ -217,6 +234,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	@Override
 	public String getTitle() {
 		return "MCODE";
+	}
+	@Override
+	public String getIdentifier() {
+		return ID;
 	}
 	
 	public MCODEResult getSelectedResult() {
@@ -380,7 +401,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	JPanel getClustersPanel() {
 		if (clustersPanel == null) {
 			clustersPanel = new JPanel();
-			clustersPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")));
+			clustersPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, UIManager.getColor("Separator.foreground")));
 			clustersPanel.setLayout(cardLayout);
 		}
 		
@@ -390,7 +411,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 	private BasicCollapsiblePanel getExplorePanel() {
 		if (explorePanel == null) {
 			explorePanel = new BasicCollapsiblePanel("Explore");
-			explorePanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIManager.getColor("Separator.foreground")));
+			explorePanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Separator.foreground")));
 			explorePanel.setCollapsed(false);
 			explorePanel.setVisible(false);
 			
@@ -399,6 +420,33 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent {
 		}
 		
 		return explorePanel;
+	}
+	
+	private JButton getHelpButton() {
+		if (helpButton == null) {
+			helpButton = LookAndFeelUtil.createHelpButton("http://baderlab.org/Software/MCODE/UsersManual/");
+			helpButton.setToolTipText("Online Help...");
+		}
+		
+		return helpButton;
+	}
+	
+	JButton getAboutButton() {
+		if (aboutButton == null) {
+			aboutButton = new JButton("About");
+			makeSmall(aboutButton);
+		}
+		
+		return aboutButton;
+	}
+	
+	JButton getClosePanelButton() {
+		if (closePanelButton == null) {
+			closePanelButton = new JButton("Close");
+			makeSmall(closePanelButton);
+		}
+		
+		return closePanelButton;
 	}
 	
 	void updateExploreControlPanel() {

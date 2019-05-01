@@ -78,10 +78,9 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * Simple score and find action for MCODE. This should be the default for general users.
  */
+@SuppressWarnings("serial")
 public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNetworkListener, AddedNodesListener,
 		AddedEdgesListener, RemovedNodesListener, RemovedEdgesListener {
-
-	private static final long serialVersionUID = 87924889404093104L;
 
 	public final static int FIRST_TIME = 0;
 	public final static int RESCORE = 1;
