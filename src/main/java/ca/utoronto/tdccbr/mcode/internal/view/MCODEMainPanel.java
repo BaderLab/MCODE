@@ -173,7 +173,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 		
 		GroupLayout layout = new GroupLayout(this);
 		setLayout(layout);
-		layout.setAutoCreateContainerGaps(!isAquaLAF());
+		layout.setAutoCreateContainerGaps(false);
 		layout.setAutoCreateGaps(isWinLAF());
 		
 		layout.setHorizontalGroup(layout.createParallelGroup(Alignment.CENTER, true)
@@ -190,10 +190,13 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 				.addComponent(getClustersPanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addComponent(getExplorePanel(), DEFAULT_SIZE, DEFAULT_SIZE, Short.MAX_VALUE)
 				.addGroup(layout.createSequentialGroup()
+						.addContainerGap()
    						.addComponent(getHelpButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addPreferredGap(ComponentPlacement.RELATED)
    						.addComponent(getAboutButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
    						.addGap(0, 0, Short.MAX_VALUE)
    						.addComponent(getClosePanelButton(), PREFERRED_SIZE, DEFAULT_SIZE, PREFERRED_SIZE)
+   						.addContainerGap()
    				)
 		);
 		layout.setVerticalGroup(layout.createSequentialGroup()

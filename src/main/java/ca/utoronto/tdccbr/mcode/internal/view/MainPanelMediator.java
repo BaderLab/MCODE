@@ -16,13 +16,11 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -631,13 +629,10 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				layouter.doLayout();
 			}
 			
-			final Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-			final Graphics2D g = (Graphics2D) image.getGraphics();
-			final Dimension size = new Dimension(width, height);
-	
 			invokeOnEDT(() -> {
 				try {
 					JPanel panel = new JPanel();
+					Dimension size = new Dimension(width, height);
 					panel.setPreferredSize(size);
 					panel.setSize(size);
 					panel.setMinimumSize(size);
@@ -648,16 +643,13 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 					window.getContentPane().add(panel, BorderLayout.CENTER);
 		
 					RenderingEngine<CyNetwork> re = mcodeUtil.createRenderingEngine(panel, clusterView);
-		
 					vs.apply(clusterView);
 					
 					clusterView.fitContent();
 					window.pack();
 					window.repaint();
 		
-					re.createImage(width, height);
-					re.printCanvas(g);
-					g.dispose();
+					Image image = re.createImage(width, height);
 					
 					if (!clusterView.getNodeViews().isEmpty())
 						cluster.setView(clusterView);
