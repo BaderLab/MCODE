@@ -1,5 +1,8 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTER_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isMac;
@@ -130,10 +133,6 @@ import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel.ExploreContentPanel
 
 public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, SetCurrentNetworkListener {
 	
-	private static final String SCORE_ATTR = "MCODE_Score";
-	private static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
-	private static final String CLUSTER_ATTR = "MCODE_Cluster";
-	
 	private UpdateParentNetworkTask updateNetTask;
 	private boolean ignoreResultSelected;
 	private boolean firstTime = true;
@@ -208,26 +207,14 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	}
 
 	private void onResultSelected() {
-		synchronized (lock) {
-			if (ignoreResultSelected)
-				return;
-			
-			getMainPanel().update();
-			
-			if (updateNetTask != null) {
-				updateNetTask.cancel();
-				updateNetTask = null;
-			}
+		if (ignoreResultSelected)
+			return;
 		
-			MCODEResult res = getMainPanel().getSelectedResult();
-			
-			if (res != null) {
-				updateNetTask = new UpdateParentNetworkTask(res, getMainPanel().getSelectedCluster());
-				registrar.getService(DialogTaskManager.class).execute(new TaskIterator(updateNetTask));
-			}
-		}
+		getMainPanel().update();
+		updateParentNetwork(getMainPanel().getSelectedResult());
+		getMainPanel().updateExploreControlPanel();
 	}
-	
+
 	private void addResult(MCODEResult res) {
 		List<MCODECluster> clusters = res != null ? res.getClusters() : null;
 		
@@ -276,6 +263,21 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			
 			if (!c.isTooLargeToVisualize())
 				createClusterImage(c, true);
+		}
+		
+		updateParentNetwork(res);
+		getMainPanel().updateExploreControlPanel();
+	}
+	
+	private void updateParentNetwork(MCODEResult res) {
+		if (updateNetTask != null) {
+			updateNetTask.cancel();
+			updateNetTask = null;
+		}
+	
+		if (res != null) {
+			updateNetTask = new UpdateParentNetworkTask(res, getMainPanel().getSelectedCluster());
+			registrar.getService(DialogTaskManager.class).execute(new TaskIterator(updateNetTask));
 		}
 	}
 

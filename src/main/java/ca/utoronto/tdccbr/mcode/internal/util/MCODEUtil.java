@@ -128,6 +128,10 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
  */
 public class MCODEUtil {
 	
+	public static final String SCORE_ATTR = "MCODE_Score";
+	public static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
+	public static final String CLUSTER_ATTR = "MCODE_Cluster";
+	
 	// 6-class RdYlBu
 	public static final Color CLUSTER_NODE_COLOR = new Color(178, 24, 43);
 	public static final Color CLUSTER_EDGE_COLOR = new Color(103, 169, 207);
@@ -450,7 +454,7 @@ public class MCODEUtil {
 
 		// The lower the score the darker the color
 		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-				.createVisualMappingFunction("MCODE_Score", Double.class, NODE_FILL_COLOR);
+				.createVisualMappingFunction(SCORE_ATTR, Double.class, NODE_FILL_COLOR);
 
 		final Color MIN_COLOR = Color.BLACK;
 		final Color MAX_COLOR = Color.RED;
@@ -474,9 +478,8 @@ public class MCODEUtil {
 
 	public void registerVisualStyle(VisualStyle style) {
 		// Add it once only!
-		if (!visualMappingMgr.getAllVisualStyles().contains(style)) {
+		if (!visualMappingMgr.getAllVisualStyles().contains(style))
 			visualMappingMgr.addVisualStyle(style);
-		}
 	}
 
 	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network) {
