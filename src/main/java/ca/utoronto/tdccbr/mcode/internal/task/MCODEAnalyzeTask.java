@@ -1,12 +1,23 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTER_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.columnName;
+
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.cytoscape.application.CyUserLog;
 import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.model.CyRow;
 import org.cytoscape.util.swing.LookAndFeelUtil;
+import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.json.JSONResult;
@@ -61,7 +72,7 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 /**
  * MCODE Score network and find cluster task.
  */
-public class MCODEAnalyzeTask implements ObservableTask {
+public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 
 	private final MCODEAlgorithm alg;
 	private final MCODEUtil mcodeUtil;
@@ -109,6 +120,7 @@ public class MCODEAnalyzeTask implements ObservableTask {
 			throw new IllegalStateException("Task Monitor is not set.");
 
 		tm.setTitle("MCODE Analysis");
+		tm.setProgress(0.0);
 		
 		try {
 			// Run MCODE scoring algorithm - node scores are saved in the alg object
@@ -137,14 +149,12 @@ public class MCODEAnalyzeTask implements ObservableTask {
 
 			mcodeUtil.sortClusters(clusters);
 			
+			tm.setProgress(0.001);
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");
 			result = resultsMgr.createResult(network, alg.getParams().copy(), clusters);
+			resultsMgr.addResult(result);
 			
-			new Thread(() -> {
-				resultsMgr.addResult(result);
-				mcodeUtil.disposeUnusedNetworks(resultsMgr.getAllResults());
-			}).start();
-			
+			insertTasksAfterCurrentTask(new CreateNetworkAttributesTask());
 			tm.setProgress(1.0);
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
@@ -226,5 +236,76 @@ public class MCODEAnalyzeTask implements ObservableTask {
 	@Override
 	public List<Class<?>> getResultClasses() {
 		return Arrays.asList(MCODEResult.class, String.class, JSONResult.class);
+	}
+	
+	private class CreateNetworkAttributesTask extends AbstractTask {
+		
+		@Override
+		public void run(TaskMonitor tm) throws Exception {
+			tm.setTitle("Create MCODE Attributes");
+			tm.setProgress(0.0);
+			
+			tm.setStatusMessage("Creating Node Table columns...");
+			mcodeUtil.createMCODEColumns(result);
+			
+			tm.setProgress(0.1);
+			tm.setStatusMessage("Updating Node Table values...");
+			
+			int resultId = result.getId();
+			CyNetwork network = result.getNetwork();
+			List<MCODECluster> clusters = result.getClusters();
+			MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+			
+			String scoreCol = columnName(SCORE_ATTR, result);
+			String nodeStatusCol = columnName(NODE_STATUS_ATTR, result);
+			String clusterCol = columnName(CLUSTER_ATTR, result);
+			
+			for (CyNode n : network.getNodeList()) {
+				if (cancelled)
+					return;
+				
+				Long nId = n.getSUID();
+				CyRow nodeRow = network.getRow(n);
+				
+				if (cancelled)
+					return;
+				
+				nodeRow.set(nodeStatusCol, "Unclustered");
+				
+				if (cancelled)
+					return;
+				
+				nodeRow.set(scoreCol, alg.getNodeScore(n.getSUID(), resultId));
+	
+				for (MCODECluster cluster : clusters) {
+					if (cancelled)
+						return;
+					
+					if (cluster.getNodes().contains(nId)) {
+						Set<String> clusterNameSet = new LinkedHashSet<>();
+	
+						if (nodeRow.isSet(clusterCol))
+							clusterNameSet.addAll(nodeRow.getList(clusterCol, String.class));
+	
+						clusterNameSet.add(cluster.getName());
+						
+						if (cancelled)
+							return;
+						
+						nodeRow.set(clusterCol, new ArrayList<>(clusterNameSet));
+	
+						if (cancelled)
+							return;
+						
+						if (cluster.getSeedNode() == nId)
+							nodeRow.set(nodeStatusCol, "Seed");
+						else
+							nodeRow.set(nodeStatusCol, "Clustered");
+					}
+				}
+			}
+			
+			tm.setProgress(1.0);
+		}
 	}
 }

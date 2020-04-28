@@ -52,6 +52,7 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyRow;
+import org.cytoscape.model.CyTable;
 import org.cytoscape.model.SavePolicy;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
@@ -128,14 +129,25 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
  */
 public class MCODEUtil {
 	
-	public static final String SCORE_ATTR = "MCODE_Score";
-	public static final String NODE_STATUS_ATTR = "MCODE_Node_Status";
-	public static final String CLUSTER_ATTR = "MCODE_Cluster";
+	// Columns
+	public static final String NAMESPACE = "MCODE";
 	
-	// 6-class RdYlBu
+	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
+	public static final String SCORE_ATTR = "Score";
+	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
+	public static final String NODE_STATUS_ATTR = "NodeStatus";
+	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
+	public static final String CLUSTER_ATTR = "Cluster";
+	
+	// 6-class RdYlBu for Cluster Style
 	public static final Color CLUSTER_NODE_COLOR = new Color(178, 24, 43);
 	public static final Color CLUSTER_EDGE_COLOR = new Color(103, 169, 207);
 	public static final Color CLUSTER_ARROW_COLOR = new Color(33, 102, 172);
+	
+	// MCODE Style
+	private static final Color NODE_DEF_COLOR = Color.WHITE;
+	private static final Color NODE_MIN_COLOR = Color.BLACK;
+	private static final Color NODE_MAX_COLOR = Color.RED;
 
 	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
 	private final CyNetworkViewFactory networkViewFactory;
@@ -423,7 +435,7 @@ public class MCODEUtil {
 		return clusterStyle;
 	}
 
-	public VisualStyle getAppStyle(double maxScore) {
+	public VisualStyle getAppStyle(double maxScore, MCODEResult res) {
 		if (appStyle == null) {
 			appStyle = visualStyleFactory.createVisualStyle("MCODE");
 
@@ -447,25 +459,22 @@ public class MCODEUtil {
 		}
 
 		// Node Color:
-		appStyle.setDefaultValue(NODE_FILL_COLOR, Color.WHITE);
+		appStyle.setDefaultValue(NODE_FILL_COLOR, NODE_DEF_COLOR);
 
 		// Important: Always recreate this mapping function with the new score.
 		appStyle.removeVisualMappingFunction(NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
 		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
-				.createVisualMappingFunction(SCORE_ATTR, Double.class, NODE_FILL_COLOR);
-
-		final Color MIN_COLOR = Color.BLACK;
-		final Color MAX_COLOR = Color.RED;
+				.createVisualMappingFunction(columnName(SCORE_ATTR, res), Double.class, NODE_FILL_COLOR);
 
 		// First we state that everything below or equaling 0 (min) will be white, and everything above that will
 		// start from black and fade into the next boundary color
-		nodeColorCm.addPoint(0.0, new BoundaryRangeValues<>(Color.WHITE, Color.WHITE, MIN_COLOR));
+		nodeColorCm.addPoint(0.0, new BoundaryRangeValues<>(NODE_DEF_COLOR, NODE_DEF_COLOR, NODE_MIN_COLOR));
 		// Now we state that anything anything below the max score will fade into red from the lower boundary color
 		// and everything equal or greater than the max (never occurs since this is the upper boundary) will be red
 		// The max value is set by MCODEVisualStyleAction based on the current result set's max score
-		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<>(MAX_COLOR, MAX_COLOR, MAX_COLOR));
+		nodeColorCm.addPoint(maxScore, new BoundaryRangeValues<>(NODE_MAX_COLOR, NODE_MAX_COLOR, NODE_MAX_COLOR));
 
 		appStyle.addVisualMappingFunction(nodeColorCm);
 
@@ -647,6 +656,38 @@ public class MCODEUtil {
 		}
 
 		return false;
+	}
+	
+	public void createMCODEColumns(MCODEResult res) {
+		CyNetwork network = res.getNetwork();
+		
+		// Create MCODE columns as local ones:
+		CyTable localNodeTbl = network.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		
+		createColumn(localNodeTbl, columnName(SCORE_ATTR, res), Double.class, false);
+		createColumn(localNodeTbl, columnName(NODE_STATUS_ATTR, res), String.class, false);
+		createColumn(localNodeTbl, columnName(CLUSTER_ATTR, res), String.class, true);
+	}
+
+	public void createColumn(CyTable table, String name, Class<?> type, boolean isList) {
+		// Create MCODE columns as LOCAL ones
+		try {
+			if (table.getColumn(name) == null) {
+				if (isList)
+					table.createListColumn(name, type, false);
+				else
+					table.createColumn(name, type, false);
+			}
+		} catch (IllegalArgumentException e) {
+			logger.error("MCODE cannot create column '" + name + "'", e);
+		}
+	}
+	
+	public static String columnName(String name, MCODEResult res) {
+		String prefix = NAMESPACE + "::";
+		String suffix = "(" + res.getId() + ")";
+		
+		return prefix + name + suffix;
 	}
 	
 	private static Properties loadProperties(String name) {

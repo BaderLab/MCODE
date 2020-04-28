@@ -14,6 +14,7 @@ import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
+import org.cytoscape.application.swing.CyColumnPresentation;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
@@ -39,6 +40,7 @@ import ca.utoronto.tdccbr.mcode.internal.task.CreateClusterNetworkViewTaskFactor
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEAnalyzeCommandTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.task.MCODEOpenTaskFactory;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MCODEColumnPresentation;
 import ca.utoronto.tdccbr.mcode.internal.view.MCODEMainPanel;
 import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
@@ -164,6 +166,13 @@ public class CyActivator extends AbstractCyActivator {
 			props.setProperty(COMMAND_EXAMPLE_JSON, "{ \"view\": 104 }");
 			
 			registerService(bc, factory, TaskFactory.class, props);
+		}
+		
+		// Column namespace
+		{
+			Properties props = new Properties();
+			props.put(CyColumnPresentation.NAMESPACE, MCODEUtil.NAMESPACE);
+			registerService(bc, new MCODEColumnPresentation(), CyColumnPresentation.class, props);
 		}
 	}
 	

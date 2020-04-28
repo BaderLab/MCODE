@@ -1,8 +1,5 @@
 package ca.utoronto.tdccbr.mcode.internal.view;
 
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTER_ATTR;
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isMac;
@@ -27,7 +24,6 @@ import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -61,10 +57,9 @@ import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
-import org.cytoscape.model.CyRow;
-import org.cytoscape.model.CyTable;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
@@ -146,7 +141,6 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	private final MCODEResultsManager resultsMgr;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
-	private final Object lock = new Object();
 	
 	private static final Logger logger = LoggerFactory.getLogger(CyUserLog.class);
 	
@@ -768,37 +762,39 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		}
 		
 		@Override
-		@SuppressWarnings({ "rawtypes", "unchecked" })
 		public void run(TaskMonitor tm) throws Exception {
-			tm.setTitle("Update MCODE Attributes");
-			tm.setStatusMessage("Updating Node Table values...");
+			tm.setTitle("Update MCODE's Source Network");
 			tm.setProgress(0.0);
+			tm.setStatusMessage("Updating MCODE Style...");
 			
 			// To re-initialize the calculators we need the highest score of this particular result set
-			double maxScore = setNodeAttributesAndGetMaxScore();
-			tm.setProgress(5.0);
+			int resultId = result.getId();
+			CyNetwork network = result.getNetwork();
+			MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+			double maxScore = alg.getMaxScore(resultId);
+			tm.setProgress(0.1);
 			
 			if (cancelled)
 				return;
 			
 			// Get the updated app's style
-			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore);
+			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore, result);
 			
 			if (cancelled)
 				return;
 			
 			// Register the app's style but don't make it active by default
 			mcodeUtil.registerVisualStyle(appStyle);
-			tm.setProgress(7.0);
 			
 			if (cancelled)
 				return;
 			
 			// Select nodes and edges that also exist in the selected cluster
-			tm.setStatusMessage("Selecting nodes and edges from selected cluster...");
-			
 			if (cluster != null) {
-				List elements = new ArrayList<>();
+				tm.setProgress(0.7);
+				tm.setStatusMessage("Selecting nodes and edges from selected cluster...");
+				
+				List<CyIdentifiable> elements = new ArrayList<>();
 				elements.addAll(cluster.getGraph().getEdgeList());
 				elements.addAll(cluster.getGraph().getNodeList());
 				
@@ -809,85 +805,6 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			}
 			
 			tm.setProgress(1.0);
-		}
-		
-		/**
-		 * Sets the network node attributes to the current result set's scores and clusters.
-		 * @return the maximal score in the network given the parameters that were used for scoring at the time
-		 */
-		private double setNodeAttributesAndGetMaxScore() {
-			int resultId = result.getId();
-			CyNetwork network = result.getNetwork();
-			List<MCODECluster> clusters = result.getClusters();
-			MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
-			
-			for (CyNode n : network.getNodeList()) {
-				if (cancelled)
-					return 0;
-				
-				Long nId = n.getSUID();
-				CyTable nodeTbl = network.getDefaultNodeTable();
-				
-				try {
-					if (nodeTbl.getColumn(CLUSTER_ATTR) == null)
-						nodeTbl.createListColumn(CLUSTER_ATTR, String.class, false);
-				} catch (IllegalArgumentException e) {
-					logger.error("MCODE", e);
-				}
-				try {
-					if (nodeTbl.getColumn(NODE_STATUS_ATTR) == null)
-						nodeTbl.createColumn(NODE_STATUS_ATTR, String.class, false);
-				} catch (IllegalArgumentException e) {
-					logger.error("MCODE", e);
-				}
-				try {
-					if (nodeTbl.getColumn(SCORE_ATTR) == null)
-						nodeTbl.createColumn(SCORE_ATTR, Double.class, false);
-				} catch (IllegalArgumentException e) {
-					logger.error("MCODE", e);
-				}
-
-				CyRow nodeRow = network.getRow(n);
-				
-				if (cancelled)
-					return 0;
-				
-				nodeRow.set(NODE_STATUS_ATTR, "Unclustered");
-				
-				if (cancelled)
-					return 0;
-				
-				nodeRow.set(SCORE_ATTR, alg.getNodeScore(n.getSUID(), resultId));
-	
-				for (MCODECluster cluster : clusters) {
-					if (cancelled)
-						return 0;
-					
-					if (cluster.getNodes().contains(nId)) {
-						Set<String> clusterNameSet = new LinkedHashSet<>();
-	
-						if (nodeRow.isSet(CLUSTER_ATTR))
-							clusterNameSet.addAll(nodeRow.getList(CLUSTER_ATTR, String.class));
-	
-						clusterNameSet.add(cluster.getName());
-						
-						if (cancelled)
-							return 0;
-						
-						nodeRow.set(CLUSTER_ATTR, new ArrayList<>(clusterNameSet));
-	
-						if (cancelled)
-							return 0;
-						
-						if (cluster.getSeedNode() == nId)
-							nodeRow.set(NODE_STATUS_ATTR, "Seed");
-						else
-							nodeRow.set(NODE_STATUS_ATTR, "Clustered");
-					}
-				}
-			}
-
-			return alg.getMaxScore(resultId);
 		}
 	}
 }

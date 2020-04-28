@@ -153,6 +153,10 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 				// Callback that should be executed after the analysis is done...
 				setDirty(network, false);
 
+				new Thread(() -> {
+					mcodeUtil.disposeUnusedNetworks(resultsMgr.getAllResults());
+				}).start();
+				
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
 					if (result == null || result.getClusters().isEmpty())

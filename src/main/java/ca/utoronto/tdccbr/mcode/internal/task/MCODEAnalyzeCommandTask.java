@@ -157,6 +157,10 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 		@Override
 		public void run(TaskMonitor tm) throws Exception {
 			action.setDirty(params.getNetwork(), false);
+			
+			new Thread(() -> {
+				mcodeUtil.disposeUnusedNetworks(resultsMgr.getAllResults());
+			}).start();
 		}
 	}
 }
