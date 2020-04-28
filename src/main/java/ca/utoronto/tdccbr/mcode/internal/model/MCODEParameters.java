@@ -48,7 +48,7 @@ import org.cytoscape.work.Tunable;
 public class MCODEParameters {
 
 	// scope
-	private CyNetwork network;
+	private transient CyNetwork network;
 	private MCODEAnalysisScope scope;
 
 	// used in scoring stage
