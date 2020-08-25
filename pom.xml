@@ -17,7 +17,7 @@
 	<artifactId>mcode-app</artifactId>
 	<name>MCODE</name>
 	<packaging>bundle</packaging>
-	<version>1.6.1</version>
+	<version>1.7.0</version>
 
 	<build>
 		<resources>
@@ -72,7 +72,6 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-bundle-plugin</artifactId>
-				<version>3.0.0</version>
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
