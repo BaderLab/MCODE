@@ -5,7 +5,6 @@ import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDT;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.swing.JOptionPane;
@@ -117,7 +116,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 	@Override
 	public void actionPerformed(ActionEvent evt) {
 		// Get the selected network
-		final CyNetwork network = applicationManager.getCurrentNetwork();
+		var network = applicationManager.getCurrentNetwork();
 
 		// This should never happen, because the action should be disabled,
 		// but let's keep this extra check anyway 
@@ -135,10 +134,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 			return;
 		}
 		
-		final int resultId = resultsMgr.getNextResultId();
-		MCODEParameters params = mcodeUtil.getParameterManager().getLiveParams();
-
-		TaskObserver taskObserver = new TaskObserver() {
+		var taskObserver = new TaskObserver() {
 			
 			MCODEResult result = null;
 			
@@ -173,7 +169,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 			}
 		};
 		
-		execute(network, resultId, params, taskObserver);
+		execute(network, taskObserver);
 	}
 
 	@Override
@@ -201,16 +197,18 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		setDirty(e.getSource(), true);
 	}
 	
-	private void execute(CyNetwork network, int resultId, MCODEParameters currentParams, TaskObserver taskObserver) {
-		List<CyNode> nodes = network.getNodeList();
-		List<Long> selectedNodes = new ArrayList<>();
+	private void execute(CyNetwork network, TaskObserver taskObserver) {
+		int resultId = resultsMgr.getNextResultId();
+		var currentParams = mcodeUtil.getParameterManager().getLiveParams().copy();
+		var nodes = network.getNodeList();
+		var selectedNodes = new ArrayList<Long>();
 
 		for (CyNode n : nodes) {
 			if (network.getRow(n).get(CyNetwork.SELECTED, Boolean.class))
 				selectedNodes.add(n.getSUID());
 		}
 
-		Long[] selectedNodesRGI = selectedNodes.toArray(new Long[selectedNodes.size()]);
+		var selectedNodesRGI = selectedNodes.toArray(new Long[selectedNodes.size()]);
 		currentParams.setSelectedNodes(selectedNodesRGI);
 
 		final MCODEAlgorithm alg;
@@ -232,7 +230,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 			mode = FIRST_TIME;
 		}
 
-		String interruptedMessage = "";
+		var interruptedMessage = "";
 		
 		// These statements determine which portion of the algorithm needs to be conducted by
 		// testing which parameters have been modified compared to the last saved parameters.
@@ -268,7 +266,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 										  JOptionPane.WARNING_MESSAGE);
 		} else {
 			// Run MCODE
-			MCODEAnalyzeTaskFactory tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, resultsMgr, mcodeUtil);
+			var tf = new MCODEAnalyzeTaskFactory(network, mode, resultId, alg, resultsMgr, mcodeUtil);
 			registrar.getService(DialogTaskManager.class).execute(tf.createTaskIterator(), taskObserver);
 		}
 	}
@@ -278,7 +276,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 	 * @param p2 current parameters set
 	 * @return
 	 */
-	private boolean parametersChanged(final MCODEParameters p1, final MCODEParameters p2) {
+	private boolean parametersChanged(MCODEParameters p1, MCODEParameters p2) {
 		boolean b = !p2.getScope().equals(p1.getScope());
 		b = b || (p2.getScope() != MCODEAnalysisScope.NETWORK && p2.getSelectedNodes() != p1.getSelectedNodes());
 		b = b || (p2.getKCore() != p1.getKCore() ||
@@ -290,7 +288,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		return b;
 	}
 	
-	public void setDirty(final CyNetwork net, final boolean dirty) {
+	public void setDirty(CyNetwork net, boolean dirty) {
 		if (mcodeUtil.containsNetworkAlgorithm(net.getSUID())) {
 			if (dirty)
 				dirtyNetworks.put(net.getSUID(), dirty);
@@ -311,7 +309,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 	 * @param net
 	 * @return true if the network has been modified after the last analysis.
 	 */
-	public boolean isDirty(final CyNetwork net) {
+	public boolean isDirty(CyNetwork net) {
 		return Boolean.TRUE.equals(dirtyNetworks.get(net.getSUID()));
 	}
 }

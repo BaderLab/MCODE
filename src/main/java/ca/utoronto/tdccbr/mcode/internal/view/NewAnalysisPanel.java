@@ -9,7 +9,6 @@ import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.text.DecimalFormat;
@@ -110,7 +109,7 @@ public class NewAnalysisPanel extends JPanel {
 		
 		// Create the three main panels: scope, advanced options, and bottom
 		// Add all the vertically aligned components to the main panel
-		GroupLayout layout = new GroupLayout(this);
+		var layout = new GroupLayout(this);
 		setLayout(layout);
 		layout.setAutoCreateContainerGaps(true);
 		layout.setAutoCreateGaps(true);
@@ -143,9 +142,9 @@ public class NewAnalysisPanel extends JPanel {
 			if (isAquaLAF())
 				scopePnl.setOpaque(false);
 
-			JRadioButton netScopeBtn = new JRadioButton(MCODEAnalysisScope.NETWORK.toString(),
+			var netScopeBtn = new JRadioButton(MCODEAnalysisScope.NETWORK.toString(),
 					parameters.getScope() == MCODEAnalysisScope.NETWORK);
-			JRadioButton selScopeBtn = new JRadioButton(MCODEAnalysisScope.SELECTION.toString(),
+			var selScopeBtn = new JRadioButton(MCODEAnalysisScope.SELECTION.toString(),
 					parameters.getScope() == MCODEAnalysisScope.SELECTION);
 			
 			makeSmall(netScopeBtn, selScopeBtn);
@@ -156,13 +155,13 @@ public class NewAnalysisPanel extends JPanel {
 			netScopeBtn.addActionListener(new ScopeAction());
 			selScopeBtn.addActionListener(new ScopeAction());
 
-			ButtonGroup scopeOptions = new ButtonGroup();
+			var scopeOptions = new ButtonGroup();
 			scopeOptions.add(netScopeBtn);
 			scopeOptions.add(selScopeBtn);
 			
 			scopeLabel.setMinimumSize(netScopeBtn.getMinimumSize());
 			
-			GroupLayout layout = new GroupLayout(scopePnl);
+			var layout = new GroupLayout(scopePnl);
 			scopePnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(false);
@@ -198,7 +197,7 @@ public class NewAnalysisPanel extends JPanel {
 			if (isAquaLAF())
 				advancedOptionsPnl.setOpaque(false);
 			
-			GroupLayout layout = new GroupLayout(advancedOptionsPnl);
+			var layout = new GroupLayout(advancedOptionsPnl);
 			advancedOptionsPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(true);
@@ -232,7 +231,7 @@ public class NewAnalysisPanel extends JPanel {
 			degreeCutoffLabel.setMinimumSize(getDegreeCutoffTxt().getMinimumSize());
 			degreeCutoffLabel.setToolTipText(getDegreeCutoffTxt().getToolTipText());
 
-			GroupLayout layout = new GroupLayout(networkScoringPnl);
+			var layout = new GroupLayout(networkScoringPnl);
 			networkScoringPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(true);
@@ -284,7 +283,7 @@ public class NewAnalysisPanel extends JPanel {
 			maxDepthLabel.setMinimumSize(getMaxDepthTxt().getMinimumSize());
 			maxDepthLabel.setToolTipText(getMaxDepthTxt().getToolTipText());
 			
-			final GroupLayout layout = new GroupLayout(clusterFindingPnl);
+			var layout = new GroupLayout(clusterFindingPnl);
 			clusterFindingPnl.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(true);
@@ -329,9 +328,9 @@ public class NewAnalysisPanel extends JPanel {
 	private JCheckBox getIncludeLoopsCkb() {
 		if (includeLoopsCkb == null) {
 			includeLoopsCkb = new JCheckBox("Include Loops");
-			includeLoopsCkb.addItemListener(new IncludeLoopsCheckBoxAction());
 			includeLoopsCkb.setToolTipText("<html>Self-edges may increase a<br>node's score slightly.</html>");
 			includeLoopsCkb.setSelected(parameters.getIncludeLoops());
+			includeLoopsCkb.addItemListener(evt -> parameters.setIncludeLoops(evt.getStateChange() == ItemEvent.SELECTED));
 			makeSmall(includeLoopsCkb);
 		}
 		
@@ -343,10 +342,10 @@ public class NewAnalysisPanel extends JPanel {
 			degreeCutoffTxt = new JFormattedTextField(decFormat);
 			degreeCutoffTxt.setColumns(3);
 			degreeCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			degreeCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			degreeCutoffTxt.setToolTipText(
 					"<html>Sets the minimum number of<br>edges for a node to be scored.</html>");
 			degreeCutoffTxt.setText(String.valueOf(parameters.getDegreeCutoff()));
+			degreeCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			makeSmall(degreeCutoffTxt);
 		}
 		
@@ -356,9 +355,9 @@ public class NewAnalysisPanel extends JPanel {
 	private JCheckBox getHaircutCkb() {
 		if (haircutCkb == null) {
 			haircutCkb = new JCheckBox("Haircut");
-			haircutCkb.addItemListener(new NewAnalysisPanel.HaircutCheckBoxAction());
 			haircutCkb.setToolTipText("<html>Remove singly connected<br>nodes from clusters.</html>");
 			haircutCkb.setSelected(parameters.getHaircut());
+			haircutCkb.addItemListener(evt -> parameters.setHaircut(evt.getStateChange() == ItemEvent.SELECTED));
 			makeSmall(haircutCkb);
 		}
 		
@@ -368,11 +367,14 @@ public class NewAnalysisPanel extends JPanel {
 	private JCheckBox getFluffCkb() {
 		if (fluffCkb == null) {
 			fluffCkb = new JCheckBox("Fluff");
-			fluffCkb.addItemListener(new NewAnalysisPanel.FluffCheckBoxAction());
 			fluffCkb.setToolTipText(
 					"<html>Expand core cluster by one neighbour shell<br>" +
 					"(applied after the optional haircut).</html>");
 			fluffCkb.setSelected(parameters.getFluff());
+			fluffCkb.addItemListener(evt -> {
+				parameters.setFluff(evt.getStateChange() == ItemEvent.SELECTED);
+				updateClusterFindingPanel();
+			});
 			makeSmall(fluffCkb);
 		}
 		
@@ -384,13 +386,12 @@ public class NewAnalysisPanel extends JPanel {
 			densityCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
 			densityCutoffTxt.setColumns(3);
 			densityCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			densityCutoffTxt.addPropertyChangeListener("value", new NewAnalysisPanel.FormattedTextFieldAction());
 			densityCutoffTxt.setToolTipText(
 					"<html>Limits fluffing by setting the acceptable<br>"
 					+ "node density deviance from the core cluster<br>"
 					+ "density (allows clusters' edges to overlap).</html>");
-			densityCutoffTxt.setText((new Double(parameters.getFluffNodeDensityCutoff())
-					.toString()));
+			densityCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
+			densityCutoffTxt.setText((new Double(parameters.getFluffNodeDensityCutoff()).toString()));
 			makeSmall(densityCutoffTxt);
 		}
 		
@@ -402,12 +403,12 @@ public class NewAnalysisPanel extends JPanel {
 			scoreCutoffTxt = new JFormattedTextField(new DecimalFormat("0.000"));
 			scoreCutoffTxt.setColumns(3);
 			scoreCutoffTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			scoreCutoffTxt.addPropertyChangeListener("value", new NewAnalysisPanel.FormattedTextFieldAction());
 			scoreCutoffTxt.setToolTipText(
 					"<html>Sets the acceptable score deviance from<br>" +
 					"the seed node's score for expanding a cluster<br>" +
 					"(most influental parameter for cluster size).</html>");
 			scoreCutoffTxt.setText((new Double(parameters.getNodeScoreCutoff()).toString()));
+			scoreCutoffTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			makeSmall(scoreCutoffTxt);
 		}
 		
@@ -419,12 +420,12 @@ public class NewAnalysisPanel extends JPanel {
 			kCoreTxt = new JFormattedTextField(decFormat);
 			kCoreTxt.setColumns(3);
 			kCoreTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			kCoreTxt.addPropertyChangeListener("value", new NewAnalysisPanel.FormattedTextFieldAction());
 			kCoreTxt.setToolTipText(
 					"<html>Filters out clusters lacking a<br>" +
 					"maximally inter-connected core<br>" +
 					"of at least k edges per node.</html>");
 			kCoreTxt.setText(String.valueOf(parameters.getKCore()));
+			kCoreTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			makeSmall(kCoreTxt);
 		}
 		
@@ -436,12 +437,12 @@ public class NewAnalysisPanel extends JPanel {
 			maxDepthTxt = new JFormattedTextField(decFormat);
 			maxDepthTxt.setColumns(3);
 			maxDepthTxt.setHorizontalAlignment(SwingConstants.RIGHT);
-			maxDepthTxt.addPropertyChangeListener("value", new NewAnalysisPanel.FormattedTextFieldAction());
 			maxDepthTxt.setToolTipText(
 					"<html>Limits the cluster size by setting the<br>" +
 					"maximum search distance from a seed<br>" +
 					"node (100 virtually means no limit).</html>");
 			maxDepthTxt.setText(String.valueOf(parameters.getMaxDepthFromStart()));
+			maxDepthTxt.addPropertyChangeListener("value", new FormattedTextFieldAction());
 			makeSmall(maxDepthTxt);
 		}
 		
@@ -513,29 +514,19 @@ public class NewAnalysisPanel extends JPanel {
 //	}
 
 	/**
-	 * Handles setting of the include loops parameter
-	 */
-	private class IncludeLoopsCheckBoxAction implements ItemListener {
-		@Override
-		public void itemStateChanged(ItemEvent e) {
-			parameters.setIncludeLoops(e.getStateChange() != ItemEvent.DESELECTED);
-		}
-	}
-
-	/**
 	 * Handles setting for the text field parameters that are numbers.
 	 * Makes sure that the numbers make sense.
 	 */
 	private class FormattedTextFieldAction implements PropertyChangeListener {
 		@Override
 		public void propertyChange(PropertyChangeEvent e) {
-			final JFormattedTextField source = (JFormattedTextField) e.getSource();
+			var source = (JFormattedTextField) e.getSource();
 
-			String message = "The value you have entered is invalid.\n";
+			var message = "The value you have entered is invalid.\n";
 			boolean invalid = false;
 
 			if (source == degreeCutoffTxt) {
-				Number value = (Number) degreeCutoffTxt.getValue();
+				var value = (Number) degreeCutoffTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 1)) {
 					parameters.setDegreeCutoff(value.intValue());
@@ -545,7 +536,7 @@ public class NewAnalysisPanel extends JPanel {
 					invalid = true;
 				}
 			} else if (source == getScoreCutoffTxt()) {
-				Number value = (Number) getScoreCutoffTxt().getValue();
+				var value = (Number) getScoreCutoffTxt().getValue();
 				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					parameters.setNodeScoreCutoff(value.doubleValue());
@@ -555,7 +546,7 @@ public class NewAnalysisPanel extends JPanel {
 					invalid = true;
 				}
 			} else if (source == kCoreTxt) {
-				Number value = (Number) kCoreTxt.getValue();
+				var value = (Number) kCoreTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 1)) {
 					parameters.setKCore(value.intValue());
@@ -565,7 +556,7 @@ public class NewAnalysisPanel extends JPanel {
 					invalid = true;
 				}
 			} else if (source == maxDepthTxt) {
-				Number value = (Number) maxDepthTxt.getValue();
+				var value = (Number) maxDepthTxt.getValue();
 				
 				if ((value != null) && (value.intValue() > 0)) {
 					parameters.setMaxDepthFromStart(value.intValue());
@@ -575,7 +566,7 @@ public class NewAnalysisPanel extends JPanel {
 					invalid = true;
 				}
 			} else if (source == densityCutoffTxt) {
-				Number value = (Number) densityCutoffTxt.getValue();
+				var value = (Number) densityCutoffTxt.getValue();
 				
 				if ((value != null) && (value.doubleValue() >= 0.0) && (value.doubleValue() <= 1.0)) {
 					parameters.setFluffNodeDensityCutoff(value.doubleValue());
@@ -591,27 +582,6 @@ public class NewAnalysisPanel extends JPanel {
 											  message,
 											  "Parameter out of bounds",
 											  JOptionPane.WARNING_MESSAGE);
-		}
-	}
-
-	/**
-	 * Handles setting of the haircut parameter
-	 */
-	private class HaircutCheckBoxAction implements ItemListener {
-		@Override
-		public void itemStateChanged(ItemEvent e) {
-			parameters.setHaircut(e.getStateChange() != ItemEvent.DESELECTED);
-		}
-	}
-
-	/**
-	 * Handles setting of the fluff parameter and showing or hiding of the fluff node density cutoff input
-	 */
-	private class FluffCheckBoxAction implements ItemListener {
-		@Override
-		public void itemStateChanged(ItemEvent e) {
-			parameters.setFluff(e.getStateChange() != ItemEvent.DESELECTED);
-			updateClusterFindingPanel();
 		}
 	}
 }
