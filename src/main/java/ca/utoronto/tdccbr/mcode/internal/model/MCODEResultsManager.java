@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.cytoscape.model.CyNetwork;
@@ -82,7 +81,7 @@ public class MCODEResultsManager {
 
 	public Set<Integer> getNetworkResults(Long suid) {
 		synchronized (lock) {
-			Set<Integer> ids = networkResults.get(suid);
+			var ids = networkResults.get(suid);
 			
 			return ids != null ? new HashSet<>(ids) : Collections.emptySet();
 		}
@@ -118,7 +117,7 @@ public class MCODEResultsManager {
 	 */
 	public void addResult(MCODEResult res) {
 		synchronized (lock) {
-			Set<Integer> ids = networkResults.get(res.getNetwork().getSUID());
+			var ids = networkResults.get(res.getNetwork().getSUID());
 
 			if (ids == null) {
 				ids = new HashSet<>();
@@ -142,8 +141,8 @@ public class MCODEResultsManager {
 		synchronized (lock) {
 			Long networkId = null;
 			
-			for (Entry<Long, Set<Integer>> entries : networkResults.entrySet()) {
-				Set<Integer> ids = entries.getValue();
+			for (var entries : networkResults.entrySet()) {
+				var ids = entries.getValue();
 	
 				if (ids.remove(resultId)) {
 					if (ids.isEmpty())
@@ -157,7 +156,7 @@ public class MCODEResultsManager {
 			if (networkId != null)
 				networkResults.remove(networkId);
 			
-			MCODEResult res = allResults.remove(resultId);
+			var res = allResults.remove(resultId);
 			
 			if (res != null) {
 				// Delete related columns
@@ -176,7 +175,7 @@ public class MCODEResultsManager {
 	
 	public List<MCODECluster> getClusters(int resultId) {
 		synchronized (lock) {
-			MCODEResult res = getResult(resultId);
+			var res = getResult(resultId);
 			
 			return res != null ? res.getClusters() : Collections.emptyList();
 		}
@@ -184,9 +183,9 @@ public class MCODEResultsManager {
 	
 	public MCODECluster getCluster(int resultId, int clusterRank) {
 		synchronized (lock) {
-			List<MCODECluster> clusters = getClusters(resultId);
+			var clusters = getClusters(resultId);
 			
-			for (MCODECluster c : clusters) {
+			for (var c : clusters) {
 				if (clusterRank == c.getRank())
 					return c;
 			}

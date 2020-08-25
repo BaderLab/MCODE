@@ -16,16 +16,13 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_W
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Paint;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -34,7 +31,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -51,10 +47,8 @@ import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.CyNode;
-import org.cytoscape.model.CyRow;
 import org.cytoscape.model.CyTable;
 import org.cytoscape.model.SavePolicy;
-import org.cytoscape.model.subnetwork.CyRootNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.util.swing.FileChooserFilter;
@@ -62,7 +56,6 @@ import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.model.VisualLexicon;
 import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.RenderingEngine;
 import org.cytoscape.view.presentation.RenderingEngineFactory;
@@ -71,7 +64,6 @@ import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.presentation.property.values.NodeShape;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
-import org.cytoscape.view.vizmap.VisualPropertyDependency;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.view.vizmap.mappings.BoundaryRangeValues;
@@ -229,22 +221,22 @@ public class MCODEUtil {
 	}
 	
 	public void disposeUnusedNetworks(Collection<MCODEResult> allResults) {
-		Set<MCODECluster> clusters = new HashSet<>();
+		var clusters = new HashSet<MCODECluster>();
 		
-		for (MCODEResult res : allResults)
+		for (var res : allResults)
 			clusters.addAll(res.getClusters());
 		
 		// Create an index of cluster networks
-		Map<CySubNetwork, Boolean> clusterNetworks = new HashMap<>();
+		var clusterNetworks = new HashMap<CySubNetwork, Boolean>();
 		
-		for (MCODECluster c : clusters)
+		for (var c : clusters)
 			clusterNetworks.put(c.getNetwork(), Boolean.TRUE);
 		
 		synchronized (lock) {
-			Iterator<CySubNetwork> iterator = createdSubNetworks.iterator();
+			var iterator = createdSubNetworks.iterator();
 			
 			while (iterator.hasNext()) {
-				CySubNetwork sn = iterator.next();
+				var sn = iterator.next();
 				
 				// Only remove the subnetwork if it is not registered and does not belong to a cluster
 				if (!clusterNetworks.containsKey(sn) && !networkMgr.networkExists(sn.getSUID())) {
@@ -261,7 +253,7 @@ public class MCODEUtil {
 
 	public void destroy(CySubNetwork net) {
 		if (net != null) {
-			final CyRootNetwork rootNet = rootNetworkMgr.getRootNetwork(net);
+			var rootNet = rootNetworkMgr.getRootNetwork(net);
 			
 			if (rootNet.containsNetwork(net)) {
 				try {
@@ -303,13 +295,13 @@ public class MCODEUtil {
 	}
 
 	public MCODEGraph createGraph(CyNetwork net, Collection<CyNode> nodes, boolean includeLoops) {
-		final Set<CyEdge> edges = new HashSet<>();
+		var edges = new HashSet<CyEdge>();
 
 		for (CyNode n : nodes) {
-			final Set<CyEdge> adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+			var adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
-			for (CyEdge e : adjacentEdges) {
+			for (var e : adjacentEdges) {
 				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
 					continue;
 				
@@ -318,15 +310,15 @@ public class MCODEUtil {
 			}
 		}
 
-		final MCODEGraph graph = new MCODEGraph(net, nodes, edges, this); // TODO remove circular dependency MCODEUtil/MCODEGraph
+		var graph = new MCODEGraph(net, nodes, edges, this); // TODO remove circular dependency MCODEUtil/MCODEGraph
 
 		return graph;
 	}
 	
 	public CySubNetwork createSubNetwork(CyNetwork net, Collection<CyNode> nodes, Collection<CyEdge> edges,
 			SavePolicy policy) {
-		final CyRootNetwork root = rootNetworkMgr.getRootNetwork(net);
-		final CySubNetwork subNet = root.addSubNetwork(nodes, edges, policy);
+		var rootNet = rootNetworkMgr.getRootNetwork(net);
+		var subNet = rootNet.addSubNetwork(nodes, edges, policy);
 		
 		synchronized (lock) {
 			// Save it for later disposal
@@ -338,13 +330,13 @@ public class MCODEUtil {
 	
 	public CySubNetwork createSubNetwork(CyNetwork net, Collection<CyNode> nodes, boolean includeLoops,
 			SavePolicy policy) {
-		final Set<CyEdge> edges = new HashSet<>();
+		var edges = new HashSet<CyEdge>();
 
-		for (CyNode n : nodes) {
-			Set<CyEdge> adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+		for (var n : nodes) {
+			var adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
-			for (CyEdge e : adjacentEdges) {
+			for (var e : adjacentEdges) {
 				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
 					continue;
 				
@@ -356,8 +348,8 @@ public class MCODEUtil {
 		return createSubNetwork(net, nodes, edges, policy);
 	}
 
-	public CyNetworkView createNetworkView(final CyNetwork net, VisualStyle vs) {
-		final CyNetworkView view = networkViewFactory.createNetworkView(net);
+	public CyNetworkView createNetworkView(CyNetwork net, VisualStyle vs) {
+		var view = networkViewFactory.createNetworkView(net);
 
 		if (vs == null)
 			vs = visualMappingMgr.getDefaultVisualStyle();
@@ -372,7 +364,7 @@ public class MCODEUtil {
 		return renderingEngineFactory.createRenderingEngine(panel, view);
 	}
 
-	public void displayNetworkView(final CyNetworkView view) {
+	public void displayNetworkView(CyNetworkView view) {
 		networkMgr.addNetwork(view.getModel());
 		networkViewMgr.addNetworkView(view);
 		applicationMgr.setCurrentNetworkView(view);
@@ -400,19 +392,19 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 
-			NetworkViewRenderer viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
+			var viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
 			
 			if (viewRenderer == null)
 				viewRenderer = applicationMgr.getDefaultNetworkViewRenderer();
 			
-			VisualLexicon lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
+			var lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
 					.getVisualLexicon();
 			
 			{
 				VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
 	
 				if (vp != null) {
-					Object value = vp.parseSerializableString("ARROW");
+					var value = vp.parseSerializableString("ARROW");
 					
 					if (value != null)
 						clusterStyle.setDefaultValue(vp, value);
@@ -440,7 +432,7 @@ public class MCODEUtil {
 			appStyle = visualStyleFactory.createVisualStyle("MCODE");
 
 			// Node Shape:
-			DiscreteMapping<String, NodeShape> nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
+			var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
 					.createVisualMappingFunction("MCODE_Node_Status", String.class, NODE_SHAPE);
 
 			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
@@ -448,7 +440,7 @@ public class MCODEUtil {
 			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
 
 			// Set node width/height lock
-			for (VisualPropertyDependency<?> dep : appStyle.getAllVisualPropertyDependencies()) {
+			for (var dep : appStyle.getAllVisualPropertyDependencies()) {
 				if (dep.getParentVisualProperty() == BasicVisualLexicon.NODE_SIZE &&
 						dep.getVisualProperties().contains(BasicVisualLexicon.NODE_WIDTH) &&
 						dep.getVisualProperties().contains(BasicVisualLexicon.NODE_HEIGHT))
@@ -465,7 +457,7 @@ public class MCODEUtil {
 		appStyle.removeVisualMappingFunction(NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
-		ContinuousMapping<Double, Paint> nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
+		var nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
 				.createVisualMappingFunction(columnName(SCORE_ATTR, res), Double.class, NODE_FILL_COLOR);
 
 		// First we state that everything below or equaling 0 (min) will be white, and everything above that will
@@ -492,10 +484,10 @@ public class MCODEUtil {
 	}
 
 	public void setSelected(final Collection<? extends CyIdentifiable> elements, CyNetwork network) {
-		final Collection<CyIdentifiable> allElements = new ArrayList<>(network.getNodeList());
+		var allElements = new ArrayList<CyIdentifiable>(network.getNodeList());
 		allElements.addAll(network.getEdgeList());
 
-		for (final CyIdentifiable nodeOrEdge : allElements) {
+		for (var nodeOrEdge : allElements) {
 			boolean select = elements.contains(nodeOrEdge);
 			network.getRow(nodeOrEdge).set(CyNetwork.SELECTED, select);
 		}
@@ -513,16 +505,16 @@ public class MCODEUtil {
 		if (placeHolderImage == null) {
 			placeHolderImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
-			Graphics2D g2 = (Graphics2D) placeHolderImage.getGraphics();
+			var g2 = (Graphics2D) placeHolderImage.getGraphics();
 
 			int fontSize = 10;
 			g2.setFont(new Font("Arial", Font.PLAIN, fontSize));
 			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			Font f = g2.getFont();
-			FontMetrics fm = g2.getFontMetrics(f);
+			var f = g2.getFont();
+			var fm = g2.getFontMetrics(f);
 
 			// Place Holder text
-			String placeHolderText = "Too big to show";
+			var placeHolderText = "Too big to show";
 			// We want to center the text vertically in the top 20 pixels
 			height = 20;
 			// White outline
@@ -568,21 +560,21 @@ public class MCODEUtil {
 	 * @return A concatenated set of all node names (separated by a comma)
 	 */
 	public String getNodeNameList(CyNetwork network) {
-		StringBuffer sb = new StringBuffer();
+		var sb = new StringBuffer();
 
-		for (CyNode node : network.getNodeList()) {
-			CyRow row = network.getRow(node);
-			String id = "" + node.getSUID();
+		for (var node : network.getNodeList()) {
+			var row = network.getRow(node);
+			var id = "" + node.getSUID();
 
-			if (row.isSet(CyNetwork.NAME)) {
+			if (row.isSet(CyNetwork.NAME))
 				id = row.get(CyNetwork.NAME, String.class);
-			}
 
 			sb.append(id);
 			sb.append(", ");
 		}
 
-		if (sb.length() > 2) sb.delete(sb.length() - 2, sb.length());
+		if (sb.length() > 2)
+			sb.delete(sb.length() - 2, sb.length());
 
 		return sb.toString();
 	}
@@ -600,18 +592,18 @@ public class MCODEUtil {
 		if (alg == null || clusters == null || network == null)
 			return false;
 
-		final String lineSep = System.getProperty("line.separator");
+		var lineSep = System.getProperty("line.separator");
 		String fileName = null;
 		FileWriter fout = null;
 
 		try {
 			// Call save method in MCODE get the file name
-			Collection<FileChooserFilter> filters = new ArrayList<>();
+			var filters = new ArrayList<FileChooserFilter>();
 			filters.add(new FileChooserFilter("Text format", "txt"));
-			File file = fileUtil.getFile(swingApplication.getJFrame(),
-										 "Export Graph as Interactions",
-										 FileUtil.SAVE,
-										 filters);
+			var file = fileUtil.getFile(swingApplication.getJFrame(),
+										"Export Graph as Interactions",
+										FileUtil.SAVE,
+										filters);
 
 			if (file != null) {
 				fileName = file.getAbsolutePath();
@@ -626,10 +618,10 @@ public class MCODEUtil {
 				// Get sub-networks for all clusters, score and rank them
 				// convert the ArrayList to an array of CyNetworks and sort it by cluster score
 				for (int i = 0; i < clusters.size(); i++) {
-					final MCODECluster c = clusters.get(i);
-					final CyNetwork clusterNetwork = c.getNetwork();
+					var c = clusters.get(i);
+					var clusterNetwork = c.getNetwork();
 					fout.write((i + 1) + "\t"); //rank
-					NumberFormat nf = NumberFormat.getInstance();
+					var nf = NumberFormat.getInstance();
 					nf.setMaximumFractionDigits(3);
 					fout.write(nf.format(c.getScore()) + "\t");
 					// cluster size - format: (# prot, # intx)
@@ -638,6 +630,7 @@ public class MCODEUtil {
 					// create a string of node names - this can be long
 					fout.write(getNodeNameList(clusterNetwork) + lineSep);
 				}
+				
 				return true;
 			}
 		} catch (IOException e) {
@@ -659,7 +652,7 @@ public class MCODEUtil {
 	}
 	
 	public void createMCODEColumns(MCODEResult res) {
-		CyNetwork network = res.getNetwork();
+		var net = res.getNetwork();
 		
 		// Create MCODE columns as local ones:
 		var localNodeTbl = net.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
@@ -710,10 +703,10 @@ public class MCODEUtil {
 	}
 	
 	private static Properties loadProperties(String name) {
-		Properties props = new Properties();
+		var props = new Properties();
 
 		try {
-			InputStream in = CyActivator.class.getResourceAsStream(name);
+			var in = CyActivator.class.getResourceAsStream(name);
 
 			if (in != null) {
 				props.load(in);
@@ -727,7 +720,7 @@ public class MCODEUtil {
 	}
 	
 	public static String getName(final CyNetwork network) {
-		String name = "";
+		var name = "";
 		
 		try {
 			name = network.getRow(network).get(CyNetwork.NAME, String.class);
