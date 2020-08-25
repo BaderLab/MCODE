@@ -92,18 +92,15 @@ public class NewAnalysisPanel extends JPanel {
 	private JFormattedTextField densityCutoffTxt;
 	private JFormattedTextField maxDepthTxt;
 
-	private MCODEParameters parameters; // stores current parameters - populates panel fields
-	private DecimalFormat decFormat; // used in the formatted text fields
+	private final MCODEParameters parameters; // stores current parameters - populates panel fields
+	private final DecimalFormat decFormat; // used in the formatted text fields
 	
 	public NewAnalysisPanel(MCODEUtil mcodeUtil) {
 		if (isAquaLAF())
 			setOpaque(false);
 
 		// get the current parameters
-		parameters = mcodeUtil.getParameterManager().getNetworkParams(null);
-		parameters.setDefaultParams();
-		// TODO: Find a more elegant way of sharing the current UI parameters:
-		mcodeUtil.getParameterManager().setLiveParams(parameters);
+		parameters = mcodeUtil.getParameterManager().getLiveParams();
 
 		decFormat = new DecimalFormat();
 		decFormat.setParseIntegerOnly(true);
@@ -133,10 +130,6 @@ public class NewAnalysisPanel extends JPanel {
 		scoreCutoffLabel.setHorizontalAlignment(JLabel.RIGHT);
 		kCoreLabel.setHorizontalAlignment(JLabel.RIGHT);
 		maxDepthLabel.setHorizontalAlignment(JLabel.RIGHT);
-	}
-
-	public MCODEParameters getParameters() {
-		return parameters;
 	}
 
 	/**

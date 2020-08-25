@@ -49,9 +49,9 @@ import org.cytoscape.model.CyNetwork;
 public class MCODEParameterManager {
 
 	/** Parameters being used by the UI right now. */
-	private MCODEParameters liveParams;
-	private Map<Long, MCODEParameters> networkParamsMap = new HashMap<>();
-	private Map<Integer, MCODEParameters> resultParamsMap = new HashMap<>();
+	private final MCODEParameters liveParams = new MCODEParameters();
+	private final Map<Long, MCODEParameters> networkParamsMap = new HashMap<>();
+	private final Map<Integer, MCODEParameters> resultParamsMap = new HashMap<>();
 
 	/**
 	 * Current parameters can only be updated using this method.
@@ -124,10 +124,11 @@ public class MCODEParameterManager {
 	}
 	
 	public MCODEParameters getLiveParams() {
-		return liveParams != null ? liveParams.copy() : new MCODEParameters();
+		return liveParams;
 	}
 	
-	public void setLiveParams(MCODEParameters liveParams) {
-		this.liveParams = liveParams;
+	public void reset() {
+		networkParamsMap.clear();
+		resultParamsMap.clear();
 	}
 }

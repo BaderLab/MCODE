@@ -158,11 +158,11 @@ public class MCODEUtil {
 	private Image placeHolderImage;
 	private VisualStyle clusterStyle;
 	private VisualStyle appStyle;
-	private MCODEParameterManager paramMgr;
-	// Keeps track of networks (id is key) and their respective algorithms
-	private Map<Long, MCODEAlgorithm> networkAlgorithms;
 	
-	private Set<CySubNetwork> createdSubNetworks;
+	private final MCODEParameterManager paramMgr = new MCODEParameterManager();
+	// Keeps track of networks (id is key) and their respective algorithms
+	private final Map<Long, MCODEAlgorithm> networkAlgorithms = new HashMap<>();
+	private final Set<CySubNetwork> createdSubNetworks = new HashSet<>();
 	
 	private final Object lock = new Object();
 	
@@ -195,8 +195,6 @@ public class MCODEUtil {
 		this.continuousMappingFactory = continuousMappingFactory;
 		this.fileUtil = fileUtil;
 		this.props = loadProperties("/mcode.properties");
-		
-		reset();
 	}
 
 	public String abbreviate(String s, int maxLength) {
@@ -214,9 +212,9 @@ public class MCODEUtil {
 
 	public void reset() {
 		synchronized (lock) {
-			paramMgr = new MCODEParameterManager();
-			networkAlgorithms = new HashMap<>();
-			createdSubNetworks = new HashSet<>();
+			paramMgr.reset();
+			networkAlgorithms.clear();
+			createdSubNetworks.clear();
 		}
 	}
 	
