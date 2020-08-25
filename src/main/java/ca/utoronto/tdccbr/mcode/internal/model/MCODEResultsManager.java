@@ -160,7 +160,11 @@ public class MCODEResultsManager {
 			MCODEResult res = allResults.remove(resultId);
 			
 			if (res != null) {
-				for (MCODECluster c : res.getClusters())
+				// Delete related columns
+				mcodeUtil.removeMCODEColumns(res);
+				
+				// Dispose clusters
+				for (var c : res.getClusters())
 					c.dispose();
 				
 				pcs.firePropertyChange("resultRemoved", null, res);

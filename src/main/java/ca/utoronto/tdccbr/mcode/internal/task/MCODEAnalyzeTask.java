@@ -1,6 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal.task;
 
-import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTER_ATTR;
+import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTERS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.columnName;
@@ -258,7 +258,7 @@ public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 			
 			String scoreCol = columnName(SCORE_ATTR, result);
 			String nodeStatusCol = columnName(NODE_STATUS_ATTR, result);
-			String clusterCol = columnName(CLUSTER_ATTR, result);
+			String clusterCol = columnName(CLUSTERS_ATTR, result);
 			
 			for (CyNode n : network.getNodeList()) {
 				if (cancelled)

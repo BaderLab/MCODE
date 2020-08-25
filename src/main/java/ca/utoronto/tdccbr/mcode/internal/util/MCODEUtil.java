@@ -135,9 +135,9 @@ public class MCODEUtil {
 	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
 	public static final String SCORE_ATTR = "Score";
 	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
-	public static final String NODE_STATUS_ATTR = "NodeStatus";
+	public static final String NODE_STATUS_ATTR = "Node Status";
 	/** Use it with {@link MCODEUtil#columnName(MCODEResult, String)} */
-	public static final String CLUSTER_ATTR = "Cluster";
+	public static final String CLUSTERS_ATTR = "Clusters";
 	
 	// 6-class RdYlBu for Cluster Style
 	public static final Color CLUSTER_NODE_COLOR = new Color(178, 24, 43);
@@ -662,11 +662,11 @@ public class MCODEUtil {
 		CyNetwork network = res.getNetwork();
 		
 		// Create MCODE columns as local ones:
-		CyTable localNodeTbl = network.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		var localNodeTbl = net.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
 		
 		createColumn(localNodeTbl, columnName(SCORE_ATTR, res), Double.class, false);
 		createColumn(localNodeTbl, columnName(NODE_STATUS_ATTR, res), String.class, false);
-		createColumn(localNodeTbl, columnName(CLUSTER_ATTR, res), String.class, true);
+		createColumn(localNodeTbl, columnName(CLUSTERS_ATTR, res), String.class, true);
 	}
 
 	public void createColumn(CyTable table, String name, Class<?> type, boolean isList) {
@@ -683,9 +683,28 @@ public class MCODEUtil {
 		}
 	}
 	
+	public void removeMCODEColumns(MCODEResult res) {
+		var net = res.getNetwork();
+		
+		// Create MCODE columns as local ones:
+		var localNodeTbl = net.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		
+		removeColumn(localNodeTbl, columnName(SCORE_ATTR, res));
+		removeColumn(localNodeTbl, columnName(NODE_STATUS_ATTR, res));
+		removeColumn(localNodeTbl, columnName(CLUSTERS_ATTR, res));
+	}
+	
+	private void removeColumn(CyTable table, String name) {
+		try {
+			table.deleteColumn(name);
+		} catch (IllegalArgumentException e) {
+			logger.error("MCODE cannot remove column '" + name + "'", e);
+		}
+	}
+
 	public static String columnName(String name, MCODEResult res) {
-		String prefix = NAMESPACE + "::";
-		String suffix = "(" + res.getId() + ")";
+		var prefix = NAMESPACE + "::";
+		var suffix = " (" + res.getId() + ")";
 		
 		return prefix + name + suffix;
 	}
