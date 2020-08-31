@@ -13,6 +13,14 @@ import java.util.Map;
 import java.util.Set;
 
 import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.events.AddedEdgesEvent;
+import org.cytoscape.model.events.AddedEdgesListener;
+import org.cytoscape.model.events.AddedNodesEvent;
+import org.cytoscape.model.events.AddedNodesListener;
+import org.cytoscape.model.events.RemovedEdgesEvent;
+import org.cytoscape.model.events.RemovedEdgesListener;
+import org.cytoscape.model.events.RemovedNodesEvent;
+import org.cytoscape.model.events.RemovedNodesListener;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -52,9 +60,10 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
  * * Description: Utilities for MCODE
  */
 
-public class MCODEResultsManager {
+public class MCODEResultsManager
+		implements AddedNodesListener, AddedEdgesListener, RemovedNodesListener, RemovedEdgesListener {
 
-	/** Keeps track of networks (id is key) and their respective results (list of result ids). */
+	/** Indexes all results in the session by their ids. */
 	private Map<Integer, MCODEResult> allResults = new HashMap<>();
 	/** Keeps track of analyzed networks (network SUID is key) and their respective results (list of result ids). */
 	private Map<Long, Set<Integer>> networkResults = new HashMap<>();
@@ -69,6 +78,26 @@ public class MCODEResultsManager {
 		this.mcodeUtil = mcodeUtil;
 	}
 	
+	@Override
+	public void handleEvent(RemovedEdgesEvent evt) {
+		staleResults(evt.getSource());
+	}
+
+	@Override
+	public void handleEvent(RemovedNodesEvent evt) {
+		staleResults(evt.getSource());
+	}
+
+	@Override
+	public void handleEvent(AddedEdgesEvent evt) {
+		staleResults(evt.getSource());
+	}
+
+	@Override
+	public void handleEvent(AddedNodesEvent evt) {
+		staleResults(evt.getSource());
+	}
+	
 	public int getNextResultId() {
 		return nextResultId;
 	}
@@ -78,7 +107,7 @@ public class MCODEResultsManager {
 			return networkResults.containsKey(suid);
 		}
 	}
-
+	
 	public Set<Integer> getNetworkResults(Long suid) {
 		synchronized (lock) {
 			var ids = networkResults.get(suid);
@@ -90,6 +119,27 @@ public class MCODEResultsManager {
 	public MCODEResult getResult(int resultId) {
 		synchronized (lock) {
 			return allResults.get(resultId);
+		}
+	}
+	
+	/**
+	 * Search for a non-stale result that has been registered for a network and which has an specific set of parameters.
+	 * @param suid {@link CyNetwork} SUID
+	 * @param params
+	 * @return the first result found for the passed network that has the same parameters or null if it cannot find any
+	 */
+	public MCODEResult getFreshResult(Long suid, MCODEParameters params) {
+		synchronized (lock) {
+			var results = getNetworkResults(suid);
+			
+			for (var id : results) {
+				var res = getResult(id);
+				
+				if (res != null && !res.isStale() && params.equals(res.getParameters()))
+					return res;
+			}
+			
+			return null;
 		}
 	}
 	
@@ -208,6 +258,15 @@ public class MCODEResultsManager {
 			networkResults.clear();
 			allResults.clear();
 			pcs.firePropertyChange("reset", false, true);
+		}
+	}
+	
+	private void staleResults(CyNetwork net) {
+		synchronized (lock) {
+			for (var res : allResults.values()) {
+				if (net.equals(res.getNetwork()))
+					res.setStale();
+			}
 		}
 	}
 }

@@ -2,6 +2,8 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 
 import static ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope.NETWORK;
 
+import java.util.Arrays;
+
 import org.cytoscape.command.StringToModel;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.work.Tunable;
@@ -337,6 +339,70 @@ public class MCODEParameters {
 
 	public void setSelectedNodes(Long[] selectedNodes) {
 		this.selectedNodes = selectedNodes;
+	}
+
+	
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 7;
+		result = prime * result + degreeCutoff;
+		result = prime * result + (fluff ? 1231 : 1237);
+		
+		if (fluff) {
+			long temp = Double.doubleToLongBits(fluffNodeDensityCutoff);
+			result = prime * result + (int) (temp ^ (temp >>> 32));
+		}
+		
+		result = prime * result + (haircut ? 1231 : 1237);
+		result = prime * result + (includeLoops ? 1231 : 1237);
+		result = prime * result + kCore;
+		result = prime * result + maxDepthFromStart;
+		long temp = Double.doubleToLongBits(nodeScoreCutoff);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + ((scope == null) ? 0 : scope.hashCode());
+		
+		if (scope == MCODEAnalysisScope.SELECTION)
+			result = prime * result + Arrays.hashCode(selectedNodes);
+		
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof MCODEParameters))
+			return false;
+		
+		var other = (MCODEParameters) obj;
+		
+		if (degreeCutoff != other.degreeCutoff)
+			return false;
+		if (haircut != other.haircut)
+			return false;
+		if (includeLoops != other.includeLoops)
+			return false;
+		if (kCore != other.kCore)
+			return false;
+		if (maxDepthFromStart != other.maxDepthFromStart)
+			return false;
+		if (Double.doubleToLongBits(nodeScoreCutoff) != Double.doubleToLongBits(other.nodeScoreCutoff))
+			return false;
+		
+		if (scope != other.scope)
+			return false;
+		if (scope == MCODEAnalysisScope.SELECTION && !Arrays.equals(selectedNodes, other.selectedNodes))
+			return false; // selectedNodes is only important when scope is SELECTION!
+		
+		if (fluff != other.fluff)
+			return false;
+		if (fluff && Double.doubleToLongBits(fluffNodeDensityCutoff) != Double.doubleToLongBits(other.fluffNodeDensityCutoff))
+			return false; // fluffNodeDensityCutoff is ignored when fluff is off !
+		
+		
+		return true;
 	}
 
 	/**

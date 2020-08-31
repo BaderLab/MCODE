@@ -212,7 +212,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		currentParams.setSelectedNodes(selectedNodesRGI);
 
 		final MCODEAlgorithm alg;
-		final MCODEParameters savedParams;
+		MCODEParameters savedParams = null;
 
 		// Here we determine if we have already run mcode on this network before
 		// if we have then we use the stored alg class and the last saved parameters
@@ -225,7 +225,6 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 			savedParams = mcodeUtil.getParameterManager().getNetworkParams(network.getSUID());
 		} else {
 			alg = new MCODEAlgorithm(null, mcodeUtil);
-			savedParams = mcodeUtil.getParameterManager().getNetworkParams(null);
 			mcodeUtil.addNetworkAlgorithm(network.getSUID(), alg);
 			mode = FIRST_TIME;
 		}
@@ -238,25 +237,32 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		// parameter is irrelevant if fluff is not used in the current parameters.  Also, none of
 		// the clustering parameters are relevant if the optimization is used
 		if (mode == FIRST_TIME || isDirty(network)
-				|| currentParams.getIncludeLoops() != savedParams.getIncludeLoops()
-				|| currentParams.getDegreeCutoff() != savedParams.getDegreeCutoff()) {
+				|| (savedParams != null
+						&& (currentParams.getIncludeLoops() != savedParams.getIncludeLoops()
+						|| currentParams.getDegreeCutoff() != savedParams.getDegreeCutoff()))) {
 			mode = RESCORE;
 			logger.debug("Analysis: score network, find clusters");
 			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network);
-		} else if (parametersChanged(savedParams, currentParams)) {
-			mode = REFIND;
-			logger.debug("Analysis: find clusters");
-			mcodeUtil.getParameterManager().setParams(currentParams, resultId, network);
 		} else {
-			mode = INTERRUPTION;
-			interruptedMessage = "The parameters you specified have not changed.";
+			var res = resultsMgr.getFreshResult(network.getSUID(), currentParams);
+			
+			if (res != null) {
+				mode = INTERRUPTION;
+				interruptedMessage =
+						"The parameters you specified have not changed\n"
+						+ "(you used the same parameters in analysis #" + res.getId() + ").";
+			} else {
+				mode = REFIND;
+				logger.debug("Analysis: find clusters");
+				mcodeUtil.getParameterManager().setParams(currentParams, resultId, network);
+			}
 		}
-
+		
 		// In case the user selected selection scope we must make sure that they selected at least 1 node
 		if (currentParams.getScope() == MCODEAnalysisScope.SELECTION &&
 			currentParams.getSelectedNodes().length < 1) {
 			mode = INTERRUPTION;
-			interruptedMessage = "You must select ONE OR MORE NODES\nfor this scope.";
+			interruptedMessage = "You must first SELECT one or more NODES for this scope.";
 		}
 
 		if (mode == INTERRUPTION) {
@@ -271,23 +277,6 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 		}
 	}
 
-	/**
-	 * @param p1 previous parameters set
-	 * @param p2 current parameters set
-	 * @return
-	 */
-	private boolean parametersChanged(MCODEParameters p1, MCODEParameters p2) {
-		boolean b = !p2.getScope().equals(p1.getScope());
-		b = b || (p2.getScope() != MCODEAnalysisScope.NETWORK && p2.getSelectedNodes() != p1.getSelectedNodes());
-		b = b || (p2.getKCore() != p1.getKCore() ||
-					p2.getMaxDepthFromStart() != p1.getMaxDepthFromStart() ||
-					p2.getHaircut() != p1.getHaircut() ||
-					p2.getNodeScoreCutoff() != p1.getNodeScoreCutoff() ||
-					p2.getFluff() != p1.getFluff() || 
-					(p2.getFluff() && p2.getFluffNodeDensityCutoff() != p1.getFluffNodeDensityCutoff()));
-		return b;
-	}
-	
 	public void setDirty(CyNetwork net, boolean dirty) {
 		if (mcodeUtil.containsNetworkAlgorithm(net.getSUID())) {
 			if (dirty)

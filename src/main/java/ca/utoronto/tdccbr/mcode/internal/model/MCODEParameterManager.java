@@ -105,12 +105,12 @@ public class MCODEParameterManager {
 	 * so if you always need the latest, you should get the updated parameters again.                                                    
 	 *
 	 * @param networkID Id of the network
-	 * @return A copy of the parameters
+	 * @return A copy of the last parameters or null
 	 */
 	public MCODEParameters getNetworkParams(Long networkID) {
-		MCODEParameters params = networkID != null ? networkParamsMap.get(networkID) : null;
+		var params = networkID != null ? networkParamsMap.get(networkID) : null;
 		
-		return params != null ? params.copy() : new MCODEParameters();
+		return params != null ? params.copy() : null;
 	}
 	
 	public MCODEParameters getResultParams(int resultId) {

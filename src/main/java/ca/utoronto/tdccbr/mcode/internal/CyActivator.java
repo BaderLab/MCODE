@@ -20,7 +20,11 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
+import org.cytoscape.model.events.AddedEdgesListener;
+import org.cytoscape.model.events.AddedNodesListener;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
+import org.cytoscape.model.events.RemovedEdgesListener;
+import org.cytoscape.model.events.RemovedNodesListener;
 import org.cytoscape.model.subnetwork.CyRootNetworkManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.service.util.CyServiceRegistrar;
@@ -114,6 +118,10 @@ public class CyActivator extends AbstractCyActivator {
 								  continuousMappingFactory, fileUtil);
 		
 		MCODEResultsManager resultsMgr = new MCODEResultsManager(mcodeUtil);
+		registerService(bc, resultsMgr, AddedNodesListener.class);
+		registerService(bc, resultsMgr, AddedEdgesListener.class);
+		registerService(bc, resultsMgr, RemovedNodesListener.class);
+		registerService(bc, resultsMgr, RemovedEdgesListener.class);
 
 		closeMCODEPanels();
 		

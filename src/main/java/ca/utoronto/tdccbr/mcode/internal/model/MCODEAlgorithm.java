@@ -128,7 +128,7 @@ public class MCODEAlgorithm {
 	 */
 	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
 		this.mcodeUtil = mcodeUtil;
-		this.params = mcodeUtil.getParameterManager().getNetworkParams(networkID);
+		setParams(mcodeUtil.getParameterManager().getNetworkParams(networkID));
 	}
 
 	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
@@ -137,8 +137,8 @@ public class MCODEAlgorithm {
 	}
 
 	public void setTaskMonitor(TaskMonitor taskMonitor, Long networkID) {
-		this.params = mcodeUtil.getParameterManager().getNetworkParams(networkID);
 		this.taskMonitor = taskMonitor;
+		setParams(mcodeUtil.getParameterManager().getNetworkParams(networkID));
 	}
 
 	/**
@@ -166,6 +166,13 @@ public class MCODEAlgorithm {
 	 */
 	public MCODEParameters getParams() {
 		return params;
+	}
+	
+	private void setParams(MCODEParameters params) {
+		if (params == null)
+			params = new MCODEParameters();
+		
+		this.params = params;
 	}
 
 	/**

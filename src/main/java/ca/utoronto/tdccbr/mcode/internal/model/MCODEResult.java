@@ -49,6 +49,7 @@ public class MCODEResult {
 	private final transient CyNetwork network;
 	private final MCODEParameters parameters;
 	private final List<MCODECluster> clusters = new ArrayList<>();
+	private boolean stale;
 	
 	private final Object lock = new Object();
 	
@@ -83,6 +84,19 @@ public class MCODEResult {
 		synchronized (lock) {
 			clusters.set(index, newCluster);
 		}
+	}
+	
+	/**
+	 * Indicates whether or not this result has become stale, usually because the analyzed network had nodes or edges
+	 * added or removed after the analysis.
+	 * @return true if stale, false if still fresh
+	 */
+	public boolean isStale() {
+		return stale;
+	}
+	
+	public void setStale() {
+		this.stale = true;
 	}
 	
 	@Override
