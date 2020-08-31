@@ -9,16 +9,14 @@ import static org.cytoscape.work.ServiceProperties.COMMAND_SUPPORTS_JSON;
 import static org.cytoscape.work.ServiceProperties.PREFERRED_MENU;
 import static org.cytoscape.work.ServiceProperties.TITLE;
 
-import java.awt.Component;
 import java.util.Properties;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.events.SetCurrentNetworkListener;
+import org.cytoscape.application.swing.CyAction;
 import org.cytoscape.application.swing.CyColumnPresentation;
 import org.cytoscape.application.swing.CySwingApplication;
-import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.model.events.AddedEdgesListener;
 import org.cytoscape.model.events.AddedNodesListener;
@@ -95,29 +93,29 @@ public class CyActivator extends AbstractCyActivator {
 	public void start(BundleContext bc) {
 		registrar = getService(bc, CyServiceRegistrar.class);
 		
-		CyApplicationManager appMgr = getService(bc, CyApplicationManager.class);
-		CyNetworkViewManager netViewMgr = getService(bc, CyNetworkViewManager.class);
-		CyNetworkManager netMgr = getService(bc, CyNetworkManager.class);
+		var appMgr = getService(bc, CyApplicationManager.class);
+		var netViewMgr = getService(bc, CyNetworkViewManager.class);
+		var netMgr = getService(bc, CyNetworkManager.class);
 		
-		CyNetworkViewFactory netViewFactory = getService(bc, CyNetworkViewFactory.class);
-		CyRootNetworkManager rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
+		var netViewFactory = getService(bc, CyNetworkViewFactory.class);
+		var rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
 		
-		CySwingApplication swingApp = getService(bc, CySwingApplication.class);
-		RenderingEngineFactory<CyNetwork> dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
+		var swingApp = getService(bc, CySwingApplication.class);
+		var dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
 		
-		VisualStyleFactory visualStyleFactory = getService(bc, VisualStyleFactory.class);
-		VisualMappingManager visualMappingMgr = getService(bc, VisualMappingManager.class);
-		VisualMappingFunctionFactory discreteMappingFactory = getService(bc, VisualMappingFunctionFactory.class, "(mapping.type=discrete)");
-		VisualMappingFunctionFactory continuousMappingFactory = getService(bc, VisualMappingFunctionFactory.class, "(mapping.type=continuous)");
+		var visualStyleFactory = getService(bc, VisualStyleFactory.class);
+		var visualMappingMgr = getService(bc, VisualMappingManager.class);
+		var discreteMappingFactory = getService(bc, VisualMappingFunctionFactory.class, "(mapping.type=discrete)");
+		var continuousMappingFactory = getService(bc, VisualMappingFunctionFactory.class, "(mapping.type=continuous)");
 		
-		FileUtil fileUtil = getService(bc, FileUtil.class);
+		var fileUtil = getService(bc, FileUtil.class);
 		
 		mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
 								  appMgr, netMgr, netViewMgr, visualStyleFactory,
 								  visualMappingMgr, swingApp, discreteMappingFactory,
 								  continuousMappingFactory, fileUtil);
 		
-		MCODEResultsManager resultsMgr = new MCODEResultsManager(mcodeUtil);
+		var resultsMgr = new MCODEResultsManager(mcodeUtil);
 		registerService(bc, resultsMgr, AddedNodesListener.class);
 		registerService(bc, resultsMgr, AddedEdgesListener.class);
 		registerService(bc, resultsMgr, RemovedNodesListener.class);
@@ -125,8 +123,13 @@ public class CyActivator extends AbstractCyActivator {
 
 		closeMCODEPanels();
 		
-		AnalysisAction analysisAction = new AnalysisAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
-		registerAllServices(bc, analysisAction);
+		var analysisAction = new AnalysisAction("Analyze Current Network", resultsMgr, mcodeUtil, registrar);
+		registerService(bc, analysisAction, CyAction.class);
+		registerService(bc, analysisAction, SetCurrentNetworkListener.class);
+		registerService(bc, analysisAction, AddedNodesListener.class);
+		registerService(bc, analysisAction, AddedEdgesListener.class);
+		registerService(bc, analysisAction, RemovedNodesListener.class);
+		registerService(bc, analysisAction, RemovedEdgesListener.class);
 		
 		// View Mediators
 		mainPanelMediator = new MainPanelMediator(analysisAction, resultsMgr, mcodeUtil, registrar);
@@ -135,8 +138,8 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// Tasks
 		{
-			MCODEOpenTaskFactory factory = new MCODEOpenTaskFactory(mainPanelMediator);
-			Properties props = new Properties();
+			var factory = new MCODEOpenTaskFactory(mainPanelMediator);
+			var props = new Properties();
 			props.setProperty(PREFERRED_MENU, "Apps");
 			props.setProperty(TITLE, "MCODE");
 			
@@ -145,8 +148,8 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// Commands
 		{
-			MCODEAnalyzeCommandTaskFactory factory = new MCODEAnalyzeCommandTaskFactory(analysisAction, resultsMgr, mcodeUtil, registrar);
-			Properties props = new Properties();
+			var factory = new MCODEAnalyzeCommandTaskFactory(analysisAction, resultsMgr, mcodeUtil, registrar);
+			var props = new Properties();
 			props.setProperty(COMMAND, "cluster");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");
 			props.setProperty(COMMAND_DESCRIPTION, "Finds clusters in a network.");
@@ -164,8 +167,8 @@ public class CyActivator extends AbstractCyActivator {
 			registerService(bc, factory, TaskFactory.class, props);
 		}
 		{
-			CreateClusterNetworkViewTaskFactory factory = new CreateClusterNetworkViewTaskFactory(resultsMgr, mcodeUtil, registrar);
-			Properties props = new Properties();
+			var factory = new CreateClusterNetworkViewTaskFactory(resultsMgr, mcodeUtil, registrar);
+			var props = new Properties();
 			props.setProperty(COMMAND, "view");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");
 			props.setProperty(COMMAND_DESCRIPTION, "Creates a view from a cluster.");
@@ -178,7 +181,7 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// Column namespace
 		{
-			Properties props = new Properties();
+			var props = new Properties();
 			props.put(CyColumnPresentation.NAMESPACE, MCODEUtil.NAMESPACE);
 			registerService(bc, new MCODEColumnPresentation(), CyColumnPresentation.class, props);
 		}
@@ -193,14 +196,14 @@ public class CyActivator extends AbstractCyActivator {
 	
 	private void closeMCODEPanels() {
 		// First, unregister result panels from old versions of MCODE
-		CytoPanel resPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
+		var resPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.EAST);
 		
 		if (resPanel != null) {
 			int count = resPanel.getCytoPanelComponentCount();
 			
 			try {
 				for (int i = 0; i < count; i++) {
-					final Component comp = resPanel.getComponentAt(i);
+					var comp = resPanel.getComponentAt(i);
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
 					if (comp.getClass().getName().equals("ca.utoronto.tdccbr.mcode.internal.view.MCODEResultsPanel"))
@@ -211,15 +214,15 @@ public class CyActivator extends AbstractCyActivator {
 		}
 		
 		// Then unregister the main panel...
-		CytoPanel ctrlPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.WEST);
+		var ctrlPanel = registrar.getService(CySwingApplication.class).getCytoPanel(CytoPanelName.WEST);
 		
 		if (ctrlPanel != null) {
 			int count = ctrlPanel.getCytoPanelComponentCount();
 	
 			for (int i = 0; i < count; i++) {
 				try {
-					Component comp = ctrlPanel.getComponentAt(i);
-					String name = comp.getClass().getName();
+					var comp = ctrlPanel.getComponentAt(i);
+					var name = comp.getClass().getName();
 					
 					// Compare the class names to also get panels that may have been left by old versions of MCODE
 					if (name.equals(MCODEMainPanel.class.getName()))

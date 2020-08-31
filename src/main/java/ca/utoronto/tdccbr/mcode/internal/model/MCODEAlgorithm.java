@@ -97,24 +97,29 @@ public class MCODEAlgorithm {
 		}
 	}
 
-	//data structures useful to have around for more than one cluster finding iteration
-	//key is the node SUID, value is a NodeInfo instance
+	/**
+	 * Data structures useful to have around for more than one cluster finding iteration.
+	 * Key is the node SUID, value is a NodeInfo instance
+	 */
 	private Map<Long, NodeInfo> currentNodeInfoHashMap;
-	//key is node score, value is nodeIndex
+	/** key is node score, value is nodeIndex. */
 	private SortedMap<Double, List<Long>> currentNodeScoreSortedMap;
-	//because every network can be scored and clustered several times with different parameters
-	//these results have to be stored so that the same scores are used during exploration when
-	//the user is switching between the various results
-	//Since the network is not always rescored whenever a new result is generated (if the scoring parameters
-	//haven't changed for example) the clustering method must save the current node scores under the new result
-	//title for later reference
-	//key is result id, value is nodeScoreSortedMap
-	private Map<Integer, SortedMap<Double, List<Long>>> nodeScoreResultsMap = new HashMap<>();
-	//key is result id, value is nodeInfroHashMap
-	private Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<>();
-
-	private MCODEParameters params; //the parameters used for this instance of the algorithm
-	//stats
+	/**
+	 * Because every network can be scored and clustered several times with different parameters,
+	 * these results have to be stored so that the same scores are used during exploration when
+	 * the user is switching between the various results.
+	 * Since the network is not always rescored whenever a new result is generated (if the scoring parameters
+	 * haven't changed for example) the clustering method must save the current node scores under the new result
+	 * title for later reference.<br>
+	 * Key is result id, value is nodeScoreSortedMap.
+	 */
+	private final Map<Integer, SortedMap<Double, List<Long>>> nodeScoreResultsMap = new HashMap<>();
+	/** Key is result id, value is nodeInfoHashMap. */
+	private final Map<Integer, Map<Long, NodeInfo>> nodeInfoResultsMap = new HashMap<>();
+	/** The parameters used for this instance of the algorithm. */
+	private MCODEParameters params;
+	
+	// Stats
 	private long lastScoreTime;
 	private long lastFindTime;
 	private int count;
@@ -126,12 +131,12 @@ public class MCODEAlgorithm {
 	 *
 	 * @param networkID Allows the algorithm to get the parameters of the focused network
 	 */
-	public MCODEAlgorithm(final Long networkID, final MCODEUtil mcodeUtil) {
+	public MCODEAlgorithm(Long networkID, MCODEUtil mcodeUtil) {
 		this.mcodeUtil = mcodeUtil;
 		setParams(mcodeUtil.getParameterManager().getNetworkParams(networkID));
 	}
 
-	public MCODEAlgorithm(final TaskMonitor taskMonitor, final Long networkID, final MCODEUtil mcodeUtil) {
+	public MCODEAlgorithm(TaskMonitor taskMonitor, Long networkID, MCODEUtil mcodeUtil) {
 		this(networkID, mcodeUtil);
 		this.taskMonitor = taskMonitor;
 	}
@@ -193,10 +198,10 @@ public class MCODEAlgorithm {
 	 * @return node score as a Double
 	 */
 	public double getNodeScore(Long nodeId, int resultId) {
-		Map<Double, List<Long>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
+		var nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
 
 		for (double nodeScore : nodeScoreSortedMap.keySet()) {
-			List<Long> nodes = nodeScoreSortedMap.get(nodeScore);
+			var nodes = nodeScoreSortedMap.get(nodeScore);
 
 			if (nodes.contains(nodeId))
 				return nodeScore;
@@ -213,7 +218,7 @@ public class MCODEAlgorithm {
 	 * @return First key in the nodeScoreSortedMap corresponding to the highest score
 	 */
 	public double getMaxScore(int resultId) {
-		SortedMap<Double, List<Long>> nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
+		var nodeScoreSortedMap = nodeScoreResultsMap.get(resultId);
 
 		//Since the map is sorted, the first key is the highest value
 		return nodeScoreSortedMap.firstKey();
@@ -227,7 +232,7 @@ public class MCODEAlgorithm {
 	 * @param resultId Title of the result, used as an identifier in various hash maps
 	 */
 	public void scoreGraph(final CyNetwork inputNetwork, final int resultId) {
-		final String callerID = "MCODEAlgorithm.MCODEAlgorithm";
+		var callerID = "MCODEAlgorithm.MCODEAlgorithm";
 
 		if (inputNetwork == null) {
 			logger.error("In " + callerID + ": inputNetwork was null.");

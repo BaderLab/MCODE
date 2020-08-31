@@ -66,7 +66,7 @@ public class MCODEParameterManager {
 		// Cannot simply equate the passed params and new params classes since that creates a permanent reference
 		// and prevents us from keeping 2 sets of the class such that the saved version is not altered
 		// until this method is called
-		MCODEParameters netParams = new MCODEParameters(
+		var netParams = new MCODEParameters(
 				network,
 				params.getScope(),
 				params.getSelectedNodes(),
@@ -81,7 +81,7 @@ public class MCODEParameterManager {
 
 		networkParamsMap.put(network.getSUID(), netParams);
 
-		MCODEParameters resultParams = new MCODEParameters(
+		var resultParams = new MCODEParameters(
 				network,
 				params.getScope(),
 				params.getSelectedNodes(),
@@ -114,7 +114,7 @@ public class MCODEParameterManager {
 	}
 	
 	public MCODEParameters getResultParams(int resultId) {
-		MCODEParameters params = resultParamsMap.get(resultId);
+		var params = resultParamsMap.get(resultId);
 		
 		return params != null ? params.copy() : null;
 	}

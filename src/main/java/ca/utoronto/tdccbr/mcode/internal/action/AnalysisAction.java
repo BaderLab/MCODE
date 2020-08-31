@@ -298,7 +298,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 	 * @param net
 	 * @return true if the network has been modified after the last analysis.
 	 */
-	public boolean isDirty(CyNetwork net) {
+	private boolean isDirty(CyNetwork net) {
 		return Boolean.TRUE.equals(dirtyNetworks.get(net.getSUID()));
 	}
 }
