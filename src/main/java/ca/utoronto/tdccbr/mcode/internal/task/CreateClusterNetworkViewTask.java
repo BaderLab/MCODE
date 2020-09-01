@@ -9,20 +9,15 @@ import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y
 
 import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.CyNode;
 import org.cytoscape.model.SavePolicy;
-import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.json.CyJSONUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.model.View;
-import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
@@ -30,8 +25,6 @@ import org.cytoscape.work.json.JSONResult;
 
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.util.layout.SpringEmbeddedLayouter;
@@ -106,43 +99,50 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		if (cluster == null) // From commands
 			cluster = resultsMgr.getCluster(id, rank);
 		
-		MCODEParameters params = mcodeUtil.getParameterManager().getResultParams(id);
-		MCODEResult res = resultsMgr.getResult(id);
+		var params = mcodeUtil.getParameterManager().getResultParams(id);
+		var res = resultsMgr.getResult(id);
 		
 		if (cluster == null || params == null || res == null) {
 			throw new RuntimeException("Cannot find cluster with result id " + id + " and rank " + rank);
 		} else {
 			alg = mcodeUtil.getNetworkAlgorithm(params.getNetwork().getSUID());
-			CyNetworkView currentView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
+			var currentView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
 			
 			if (currentView != null && currentView.getModel().equals(res.getNetwork())) {
 				view = currentView;
 			} else {
-				Collection<CyNetworkView> viewSet = registrar.getService(CyNetworkViewManager.class)
-						.getNetworkViews(res.getNetwork());
-				
+				var viewSet = registrar.getService(CyNetworkViewManager.class).getNetworkViews(res.getNetwork());
+
 				if (!viewSet.isEmpty())
 					view = viewSet.iterator().next();
 			}
 		}
 		
-		CyNetwork clusterNetwork = cluster.getNetwork();
+		var clusterNet = cluster.getNetwork();
 		
-		NumberFormat nf = NumberFormat.getInstance();
+		var nf = NumberFormat.getInstance();
 		nf.setMaximumFractionDigits(3);
 		
-		String title = id + ": " + cluster.getName() + " (Score: " + nf.format(cluster.getScore()) + ")";
+		var title = id + ": " + cluster.getName() + " (Score: " + nf.format(cluster.getScore()) + ")";
 
 		// Create the child network and view
-		CySubNetwork newNetwork = mcodeUtil.createSubNetwork(clusterNetwork, clusterNetwork.getNodeList(),
-				alg.getParams().getIncludeLoops(), SavePolicy.SESSION_FILE);
-		newNetwork.getRow(newNetwork).set(CyNetwork.NAME, title);
+		var newNet = mcodeUtil.createSubNetwork(clusterNet, clusterNet.getNodeList(), alg.getParams().getIncludeLoops(),
+				SavePolicy.SESSION_FILE);
+		newNet.getRow(newNet).set(CyNetwork.NAME, title);
 		
 		if (interrupted)
 			return;
 		
-		VisualStyle vs = mcodeUtil.getNetworkViewStyle(view);
-		newNetworkView = mcodeUtil.createNetworkView(newNetwork, vs);
+		// Create MCODE columns and copy values from parent network
+		mcodeUtil.copyMCODEColumns(newNet, res);
+		
+		if (interrupted)
+			return;
+		
+		tm.setStatusMessage("Creating View...");
+		
+		var vs = mcodeUtil.getNetworkViewStyle(view);
+		newNetworkView = mcodeUtil.createNetworkView(newNet, vs);
 	
 		newNetworkView.setVisualProperty(NETWORK_CENTER_X_LOCATION, 0.0);
 		newNetworkView.setVisualProperty(NETWORK_CENTER_Y_LOCATION, 0.0);
@@ -157,14 +157,14 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		// (so they don't fall into a local minimum for the SpringEmbedder)
 		// If the SpringEmbedder implementation changes, this code may need to be removed
 		boolean layoutNecessary = false;
-		CyNetworkView clusterView = cluster.getView();
+		var clusterView = cluster.getView();
 		
-		for (View<CyNode> nv : newNetworkView.getNodeViews()) {
+		for (var nv : newNetworkView.getNodeViews()) {
 			if (interrupted)
 				return;
 			
-			CyNode node = nv.getModel();
-			View<CyNode> cnv = clusterView != null ? clusterView.getNodeView(node) : null;
+			var node = nv.getModel();
+			var cnv = clusterView != null ? clusterView.getNodeView(node) : null;
 			
 			if (cnv != null) {
 				// If it does, then we take the layout position that was already generated for it
@@ -218,8 +218,8 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 			return (newNetworkView != null) ? "Created view: " + newNetworkView : "No views were created.";
 				
 		if (type == JSONResult.class) {
-			String view = newNetworkView != null ? registrar.getService(CyJSONUtil.class).toJson(newNetworkView) : null;
-			String json = "{ \"view\": " + view + " }";
+			var view = newNetworkView != null ? registrar.getService(CyJSONUtil.class).toJson(newNetworkView) : null;
+			var json = "{ \"view\": " + view + " }";
 			
 			JSONResult res = () -> { return json; };
 			

@@ -121,6 +121,8 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
  */
 public class MCODEUtil {
 	
+	public static final String APP_STYLE_TITLE = "MCODE";
+	
 	// Columns
 	public static final String NAMESPACE = "MCODE";
 	
@@ -157,7 +159,6 @@ public class MCODEUtil {
 
 	private Image placeHolderImage;
 	private VisualStyle clusterStyle;
-	private VisualStyle appStyle;
 	
 	private final MCODEParameterManager paramMgr = new MCODEParameterManager();
 	// Keeps track of networks (id is key) and their respective algorithms
@@ -425,18 +426,16 @@ public class MCODEUtil {
 		return clusterStyle;
 	}
 
-	public VisualStyle getAppStyle(double maxScore, MCODEResult res) {
+	public VisualStyle updateAppStyle(double maxScore, MCODEResult res) {
+		var appStyle = getStyle(APP_STYLE_TITLE);
+		
 		if (appStyle == null) {
-			appStyle = visualStyleFactory.createVisualStyle("MCODE");
-
-			// Node Shape:
-			var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
-					.createVisualMappingFunction("MCODE_Node_Status", String.class, NODE_SHAPE);
-
-			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
-			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
-			nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
-
+			appStyle = visualStyleFactory.createVisualStyle(APP_STYLE_TITLE);
+			registerVisualStyle(appStyle);
+			
+			// Default values
+			appStyle.setDefaultValue(NODE_FILL_COLOR, NODE_DEF_COLOR);
+			
 			// Set node width/height lock
 			for (var dep : appStyle.getAllVisualPropertyDependencies()) {
 				if (dep.getParentVisualProperty() == BasicVisualLexicon.NODE_SIZE &&
@@ -444,14 +443,23 @@ public class MCODEUtil {
 						dep.getVisualProperties().contains(BasicVisualLexicon.NODE_HEIGHT))
 					dep.setDependency(true);
 			}
-			
-			appStyle.addVisualMappingFunction(nodeShapeDm);
 		}
+		
+		// IMPORTANT: Always recreate the mapping functions for the correct result columns!!!
+		
+		// -- Node Shape:
+		appStyle.removeVisualMappingFunction(NODE_SHAPE);
+		
+		var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
+				.createVisualMappingFunction(columnName(NODE_STATUS_ATTR, res), String.class, NODE_SHAPE);
 
-		// Node Color:
-		appStyle.setDefaultValue(NODE_FILL_COLOR, NODE_DEF_COLOR);
+		nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
+		nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
+		nodeShapeDm.putMapValue("Unclustered", NodeShapeVisualProperty.DIAMOND);
 
-		// Important: Always recreate this mapping function with the new score.
+		appStyle.addVisualMappingFunction(nodeShapeDm);
+
+		// -- Node Color:
 		appStyle.removeVisualMappingFunction(NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
@@ -473,6 +481,20 @@ public class MCODEUtil {
 
 	public VisualStyle getNetworkViewStyle(CyNetworkView view) {
 		return view != null ? visualMappingMgr.getVisualStyle(view) : null;
+	}
+	
+	/**
+	 * Returns the first style with the passed title or null if none is found.
+	 */
+	public VisualStyle getStyle(String title) {
+		var allStyles = visualMappingMgr.getAllVisualStyles();
+		
+		for (var vs : allStyles) {
+			if (title.equals(vs.getTitle()))
+				return vs;
+		}
+		
+		return null;
 	}
 
 	public void registerVisualStyle(VisualStyle style) {
@@ -650,14 +672,66 @@ public class MCODEUtil {
 	}
 	
 	public void createMCODEColumns(MCODEResult res) {
-		var net = res.getNetwork();
-		
+		createMCODEColumns(res.getNetwork(), res);
+	}
+	
+	/**
+	 * @param clusterNet
+	 * @param res if null, the column names won't have the result id as suffix
+	 */
+	public void createMCODEColumns(CyNetwork net, MCODEResult res) {
 		// Create MCODE columns as local ones:
-		var localNodeTbl = net.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		var table = net.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
 		
-		createColumn(localNodeTbl, columnName(SCORE_ATTR, res), Double.class, false);
-		createColumn(localNodeTbl, columnName(NODE_STATUS_ATTR, res), String.class, false);
-		createColumn(localNodeTbl, columnName(CLUSTERS_ATTR, res), String.class, true);
+		createColumn(table, columnName(SCORE_ATTR, res), Double.class, false);
+		createColumn(table, columnName(NODE_STATUS_ATTR, res), String.class, false);
+		createColumn(table, columnName(CLUSTERS_ATTR, res), String.class, true);
+	}
+	
+	public void copyMCODEColumns(CyNetwork clusterNet, MCODEResult res) {
+		// Create MCODE columns as local ones (these ones don't have the result number as suffix)
+		createMCODEColumns(clusterNet, null);
+		
+		// Copy the values from the parent network
+		var parentNet = res.getNetwork();
+		var parentNodeTbl = parentNet.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		var clusterNodeTbl = clusterNet.getTable(CyNode.class, CyNetwork.LOCAL_ATTRS);
+		
+		for (var node : clusterNet.getNodeList()) {
+			var parentRow = parentNodeTbl.getRow(node.getSUID());
+			var clusterRow = clusterNodeTbl.getRow(node.getSUID());
+			
+			try {
+				var score = parentRow.get(columnName(SCORE_ATTR, res), Double.class);
+				
+				if (score != null)
+					clusterRow.set(columnName(SCORE_ATTR), score);
+			} catch (Exception e) {
+				logger.error("MCODE cannot copy value from column '" + columnName(SCORE_ATTR, res) + "'", e);
+			}
+			
+			try {
+				var status = parentRow.get(columnName(NODE_STATUS_ATTR, res), String.class);
+				
+				if (status != null)
+					clusterRow.set(columnName(NODE_STATUS_ATTR), status);
+			} catch (Exception e) {
+				logger.error("MCODE cannot copy value from column '" + columnName(NODE_STATUS_ATTR, res) + "'", e);
+			}
+			
+			try {
+				var clusters = parentRow.getList(columnName(CLUSTERS_ATTR, res), String.class);
+				
+				if (clusters != null)
+					clusterRow.set(columnName(CLUSTERS_ATTR), clusters);
+			} catch (Exception e) {
+				logger.error("MCODE cannot copy value from column '" + columnName(CLUSTERS_ATTR, res) + "'", e);
+			}
+		}
+		
+		createColumn(parentNodeTbl, columnName(SCORE_ATTR, res), Double.class, false);
+		createColumn(parentNodeTbl, columnName(NODE_STATUS_ATTR, res), String.class, false);
+		createColumn(parentNodeTbl, columnName(CLUSTERS_ATTR, res), String.class, true);
 	}
 
 	public void createColumn(CyTable table, String name, Class<?> type, boolean isList) {
@@ -693,9 +767,13 @@ public class MCODEUtil {
 		}
 	}
 
+	public static String columnName(String name) {
+		return columnName(name, null);
+	}
+	
 	public static String columnName(String name, MCODEResult res) {
 		var prefix = NAMESPACE + "::";
-		var suffix = " (" + res.getId() + ")";
+		var suffix = res != null ? " (" + res.getId() + ")" : "";
 		
 		return prefix + name + suffix;
 	}

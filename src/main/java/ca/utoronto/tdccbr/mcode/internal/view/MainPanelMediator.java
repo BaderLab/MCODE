@@ -55,7 +55,6 @@ import org.cytoscape.application.swing.CytoPanel;
 import org.cytoscape.application.swing.CytoPanelComponent;
 import org.cytoscape.application.swing.CytoPanelName;
 import org.cytoscape.model.CyIdentifiable;
-import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
@@ -63,7 +62,6 @@ import org.cytoscape.util.swing.IconManager;
 import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
-import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
@@ -72,7 +70,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
-import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODECluster;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
@@ -757,22 +754,16 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			
 			// To re-initialize the calculators we need the highest score of this particular result set
 			int resultId = result.getId();
-			CyNetwork network = result.getNetwork();
-			MCODEAlgorithm alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
+			var network = result.getNetwork();
+			var alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 			double maxScore = alg.getMaxScore(resultId);
 			tm.setProgress(0.1);
 			
 			if (cancelled)
 				return;
 			
-			// Get the updated app's style
-			VisualStyle appStyle = mcodeUtil.getAppStyle(maxScore, result);
-			
-			if (cancelled)
-				return;
-			
-			// Register the app's style but don't make it active by default
-			mcodeUtil.registerVisualStyle(appStyle);
+			// Update the MCODE style but do not set it to the network view (it's just there for the user)
+			mcodeUtil.updateAppStyle(maxScore, result);
 			
 			if (cancelled)
 				return;
@@ -782,7 +773,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				tm.setProgress(0.7);
 				tm.setStatusMessage("Selecting nodes and edges from selected cluster...");
 				
-				List<CyIdentifiable> elements = new ArrayList<>();
+				var elements = new ArrayList<CyIdentifiable>();
 				elements.addAll(cluster.getGraph().getEdgeList());
 				elements.addAll(cluster.getGraph().getNodeList());
 				
