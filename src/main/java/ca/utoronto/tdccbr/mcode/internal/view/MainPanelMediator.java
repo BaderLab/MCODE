@@ -242,7 +242,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			c.setRank(++rank);
 			
 			if (!c.isTooLargeToVisualize())
-				createClusterImage(c, true);
+				createClusterImage(c, res, true);
 		}
 		
 		updateParentNetwork(res);
@@ -562,17 +562,19 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	 * @param cluster Input network to convert to an image
 	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
 	 */
-	private void createClusterImage(MCODECluster cluster, boolean layoutNecessary) {
+	private void createClusterImage(MCODECluster cluster, MCODEResult res, boolean layoutNecessary) {
 		try {
 			var net = cluster.getNetwork();
+			mcodeUtil.copyMCODEColumns(net, res);
+			
 			var vs = mcodeUtil.getClusterStyle();
 			var clusterView = mcodeUtil.createNetworkView(net, vs);
 	
 			int width = ClusterPanel.GRAPH_IMG_SIZE;
 			int height = ClusterPanel.GRAPH_IMG_SIZE;
 			
-			clusterView.setVisualProperty(NETWORK_WIDTH, new Double(width));
-			clusterView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
+			clusterView.setVisualProperty(NETWORK_WIDTH, Double.valueOf(width));
+			clusterView.setVisualProperty(NETWORK_HEIGHT, Double.valueOf(height));
 	
 			for (var nv : clusterView.getNodeViews()) {
 				// Node position
@@ -727,7 +729,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 						// Graph drawing will only occur if the cluster is not too large,
 						// otherwise a place holder will be drawn
 						if (!newCluster.isTooLargeToVisualize())
-							createClusterImage(newCluster, layoutNecessary);
+							createClusterImage(newCluster, res, layoutNecessary);
 					}
 				}
 	        });

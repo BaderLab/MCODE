@@ -142,7 +142,7 @@ public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 			tm.setProgress(0.001);
 			tm.setStatusMessage("Finding Clusters (Step 2 of 3)");
 
-			List<MCODECluster> clusters = alg.findClusters(network, resultId);
+			var clusters = alg.findClusters(network, resultId);
 
 			if (cancelled || clusters.isEmpty())
 				return;

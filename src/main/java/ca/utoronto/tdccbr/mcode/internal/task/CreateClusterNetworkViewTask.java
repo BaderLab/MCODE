@@ -126,15 +126,8 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		var title = id + ": " + cluster.getName() + " (Score: " + nf.format(cluster.getScore()) + ")";
 
 		// Create the child network and view
-		var newNet = mcodeUtil.createSubNetwork(clusterNet, clusterNet.getNodeList(), alg.getParams().getIncludeLoops(),
-				SavePolicy.SESSION_FILE);
+		var newNet = mcodeUtil.createSubNetwork(clusterNet, res, SavePolicy.SESSION_FILE);
 		newNet.getRow(newNet).set(CyNetwork.NAME, title);
-		
-		if (interrupted)
-			return;
-		
-		// Create MCODE columns and copy values from parent network
-		mcodeUtil.copyMCODEColumns(newNet, res);
 		
 		if (interrupted)
 			return;

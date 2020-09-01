@@ -121,7 +121,8 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
  */
 public class MCODEUtil {
 	
-	public static final String APP_STYLE_TITLE = "MCODE";
+	public static final String STYLE_TITLE = "MCODE";
+	public static final String CLUSTER_STYLE_TITLE = "MCODE Cluster";
 	
 	// Columns
 	public static final String NAMESPACE = "MCODE";
@@ -327,16 +328,19 @@ public class MCODEUtil {
 		return subNet;
 	}
 	
-	public CySubNetwork createSubNetwork(CyNetwork net, Collection<CyNode> nodes, boolean includeLoops,
-			SavePolicy policy) {
+	/**
+	 * Create a new subnetwork from the passed cluster network.
+	 */
+	public CySubNetwork createSubNetwork(CySubNetwork clusterNet, MCODEResult res, SavePolicy policy) {
+		var nodes = clusterNet.getNodeList();
 		var edges = new HashSet<CyEdge>();
 
 		for (var n : nodes) {
-			var adjacentEdges = new HashSet<>(net.getAdjacentEdgeList(n, CyEdge.Type.ANY));
+			var adjacentEdges = new HashSet<>(clusterNet.getAdjacentEdgeList(n, CyEdge.Type.ANY));
 
 			// Get only the edges that connect nodes that belong to the subnetwork:
 			for (var e : adjacentEdges) {
-				if (!includeLoops && e.getSource().getSUID() == e.getTarget().getSUID())
+				if (!res.getParameters().getIncludeLoops() && e.getSource().getSUID() == e.getTarget().getSUID())
 					continue;
 				
 				if (nodes.contains(e.getSource()) && nodes.contains(e.getTarget()))
@@ -344,7 +348,12 @@ public class MCODEUtil {
 			}
 		}
 		
-		return createSubNetwork(net, nodes, edges, policy);
+		var newNet = createSubNetwork(clusterNet, nodes, edges, policy);
+		
+		// Create MCODE columns and copy values from parent network
+		copyMCODEColumns(newNet, res);
+		
+		return newNet;
 	}
 
 	public CyNetworkView createNetworkView(CyNetwork net, VisualStyle vs) {
@@ -374,8 +383,9 @@ public class MCODEUtil {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public VisualStyle getClusterStyle() {
 		if (clusterStyle == null) {
-			clusterStyle = visualStyleFactory.createVisualStyle("MCODE Cluster");
+			clusterStyle = visualStyleFactory.createVisualStyle(CLUSTER_STYLE_TITLE);
 
+			// Defaults
 			clusterStyle.setDefaultValue(NODE_SIZE, 40.0);
 			clusterStyle.setDefaultValue(NODE_WIDTH, 40.0);
 			clusterStyle.setDefaultValue(NODE_HEIGHT, 40.0);
@@ -390,7 +400,7 @@ public class MCODEUtil {
 			clusterStyle.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-
+			
 			var viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
 			
 			if (viewRenderer == null)
@@ -421,16 +431,25 @@ public class MCODEUtil {
 				if (vp != null)
 					clusterStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
 			}
+			
+			// Node Shape Mapping
+			var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
+					.createVisualMappingFunction(columnName(NODE_STATUS_ATTR), String.class, NODE_SHAPE);
+			
+			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
+			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
+			
+			clusterStyle.addVisualMappingFunction(nodeShapeDm);
 		}
 
 		return clusterStyle;
 	}
 
 	public VisualStyle updateAppStyle(double maxScore, MCODEResult res) {
-		var appStyle = getStyle(APP_STYLE_TITLE);
+		var appStyle = getStyle(STYLE_TITLE);
 		
 		if (appStyle == null) {
-			appStyle = visualStyleFactory.createVisualStyle(APP_STYLE_TITLE);
+			appStyle = visualStyleFactory.createVisualStyle(STYLE_TITLE);
 			registerVisualStyle(appStyle);
 			
 			// Default values
