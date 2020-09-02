@@ -122,7 +122,7 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 public class MCODEUtil {
 	
 	public static final String STYLE_TITLE = "MCODE";
-	public static final String CLUSTER_STYLE_TITLE = "MCODE Cluster";
+	public static final String CLUSTER_IMG_STYLE_TITLE = "MCODE (Cluster Image)";
 	
 	// Columns
 	public static final String NAMESPACE = "MCODE";
@@ -159,7 +159,7 @@ public class MCODEUtil {
 	private final Properties props;
 
 	private Image placeHolderImage;
-	private VisualStyle clusterStyle;
+	private VisualStyle clusterImgStyle;
 	
 	private final MCODEParameterManager paramMgr = new MCODEParameterManager();
 	// Keeps track of networks (id is key) and their respective algorithms
@@ -381,25 +381,25 @@ public class MCODEUtil {
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public VisualStyle getClusterStyle() {
-		if (clusterStyle == null) {
-			clusterStyle = visualStyleFactory.createVisualStyle(CLUSTER_STYLE_TITLE);
+	public VisualStyle getClusterImageStyle() {
+		if (clusterImgStyle == null) {
+			clusterImgStyle = visualStyleFactory.createVisualStyle(CLUSTER_IMG_STYLE_TITLE);
 
 			// Defaults
-			clusterStyle.setDefaultValue(NODE_SIZE, 40.0);
-			clusterStyle.setDefaultValue(NODE_WIDTH, 40.0);
-			clusterStyle.setDefaultValue(NODE_HEIGHT, 40.0);
-			clusterStyle.setDefaultValue(NODE_PAINT, CLUSTER_NODE_COLOR);
-			clusterStyle.setDefaultValue(NODE_FILL_COLOR, CLUSTER_NODE_COLOR);
-			clusterStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
+			clusterImgStyle.setDefaultValue(NODE_SIZE, 40.0);
+			clusterImgStyle.setDefaultValue(NODE_WIDTH, 40.0);
+			clusterImgStyle.setDefaultValue(NODE_HEIGHT, 40.0);
+			clusterImgStyle.setDefaultValue(NODE_PAINT, CLUSTER_NODE_COLOR);
+			clusterImgStyle.setDefaultValue(NODE_FILL_COLOR, CLUSTER_NODE_COLOR);
+			clusterImgStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
 
-			clusterStyle.setDefaultValue(EDGE_WIDTH, 5.0);
-			clusterStyle.setDefaultValue(EDGE_PAINT, CLUSTER_EDGE_COLOR);
-			clusterStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterStyle.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_WIDTH, 5.0);
+			clusterImgStyle.setDefaultValue(EDGE_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+			clusterImgStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
 			
 			var viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
 			
@@ -416,20 +416,20 @@ public class MCODEUtil {
 					var value = vp.parseSerializableString("ARROW");
 					
 					if (value != null)
-						clusterStyle.setDefaultValue(vp, value);
+						clusterImgStyle.setDefaultValue(vp, value);
 				}
 			}
 			{
 				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_SOURCE_ARROW_UNSELECTED_PAINT");
 				
 				if (vp != null)
-					clusterStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+					clusterImgStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
 			}
 			{
 				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_TARGET_ARROW_UNSELECTED_PAINT");
 				
 				if (vp != null)
-					clusterStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+					clusterImgStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
 			}
 			
 			// Node Shape Mapping
@@ -439,17 +439,18 @@ public class MCODEUtil {
 			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
 			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
 			
-			clusterStyle.addVisualMappingFunction(nodeShapeDm);
+			clusterImgStyle.addVisualMappingFunction(nodeShapeDm);
 		}
 
-		return clusterStyle;
+		return clusterImgStyle;
 	}
 
-	public VisualStyle updateAppStyle(double maxScore, MCODEResult res) {
-		var appStyle = getStyle(STYLE_TITLE);
+	public VisualStyle createMCODEStyle(MCODEResult res) {
+		var title = STYLE_TITLE + " (" + res.getId() + ")";
+		var appStyle = getStyle(title);
 		
 		if (appStyle == null) {
-			appStyle = visualStyleFactory.createVisualStyle(STYLE_TITLE);
+			appStyle = visualStyleFactory.createVisualStyle(title);
 			registerVisualStyle(appStyle);
 			
 			// Default values
@@ -482,6 +483,9 @@ public class MCODEUtil {
 		appStyle.removeVisualMappingFunction(NODE_FILL_COLOR);
 
 		// The lower the score the darker the color
+		var alg = getNetworkAlgorithm(res.getNetwork().getSUID());
+		double maxScore = alg.getMaxScore(res.getId());
+		
 		var nodeColorCm = (ContinuousMapping<Double, Paint>) continuousMappingFactory
 				.createVisualMappingFunction(columnName(SCORE_ATTR, res), Double.class, NODE_FILL_COLOR);
 

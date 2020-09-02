@@ -22,6 +22,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -58,14 +59,18 @@ import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedEvent;
 import org.cytoscape.model.events.NetworkAboutToBeDestroyedListener;
 import org.cytoscape.service.util.CyServiceRegistrar;
+import org.cytoscape.task.visualize.ApplyVisualStyleTaskFactory;
 import org.cytoscape.util.swing.IconManager;
 import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
+import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.work.TunableSetter;
 import org.cytoscape.work.swing.DialogTaskManager;
+import org.cytoscape.work.util.ListSingleSelection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,10 +162,14 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				var res = (MCODEResult) evt.getNewValue();
 				
 				if (res != null) {
+					// Remove result panel
 					getMainPanel().removeResult(res);
 					
+					// Remove associated style
+					if (res.getStyle() != null)
+						registrar.getService(VisualMappingManager.class).removeVisualStyle(res.getStyle());
+					
 					if (getMainPanel().getResultsCount() == 0) {
-						// TODO Move out from here
 						// Reset the results cache
 						resultsMgr.reset();
 						mcodeUtil.reset();
@@ -436,6 +445,27 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		});
 	}
 	
+	public void applyMCODEStyle(MCODEResult res) {
+		var viewMgr = registrar.getService(CyNetworkViewManager.class);
+		
+		if (res == null || res.getNetwork() == null || !viewMgr.viewExists(res.getNetwork()))
+			return;
+		
+		var style = res.getStyle();
+		
+		if (style == null)
+			res.setStyle(style = mcodeUtil.createMCODEStyle(res));
+		
+		var views = viewMgr.getNetworkViews(res.getNetwork());
+		
+		var args = new HashMap<String, Object>();
+		args.put("styles", new ListSingleSelection<>(style));
+		
+		var ti = registrar.getService(ApplyVisualStyleTaskFactory.class).createTaskIterator(views);
+		ti = registrar.getService(TunableSetter.class).createTaskIterator(ti, args);
+		registrar.getService(DialogTaskManager.class).execute(ti);
+	}
+	
 	public boolean discardAllResults(boolean requestUserConfirmation) {
 		Integer confirmed = JOptionPane.YES_OPTION;
 		
@@ -494,6 +524,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		var res = getMainPanel().getSelectedResult();
 		var cluster = getMainPanel().getSelectedCluster();
 		var currentNet = registrar.getService(CyApplicationManager.class).getCurrentNetwork();
+		var viewMgr = registrar.getService(CyNetworkViewManager.class);
 		
 		{
 			var mi = new JMenuItem("View Source Network");
@@ -504,6 +535,15 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				registrar.getService(CyApplicationManager.class).setCurrentNetwork(res.getNetwork());
 			});
 			mi.setEnabled(res != null && !res.getNetwork().equals(currentNet));
+			menu.add(mi);
+		}
+		{
+			var mi = new JMenuItem("Apply MCODE Style");
+			mi.setToolTipText("Apply the MCODE Style to the source network view(s)");
+			mi.setIcon(new TextIcon(
+					IconManager.ICON_PAINT_BRUSH, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
+			mi.addActionListener(evt -> applyMCODEStyle(res));
+			mi.setEnabled(res != null && viewMgr.viewExists(res.getNetwork()));
 			menu.add(mi);
 		}
 		menu.addSeparator();
@@ -570,7 +610,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			var net = cluster.getNetwork();
 			mcodeUtil.copyMCODEColumns(net, res);
 			
-			var vs = mcodeUtil.getClusterStyle();
+			var vs = mcodeUtil.getClusterImageStyle();
 			var clusterView = mcodeUtil.createNetworkView(net, vs);
 	
 			int width = ClusterPanel.GRAPH_IMG_SIZE;
@@ -754,28 +794,9 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		@Override
 		public void run(TaskMonitor tm) throws Exception {
 			tm.setTitle("Update MCODE's Source Network");
-			tm.setProgress(0.0);
-			tm.setStatusMessage("Updating MCODE Style...");
-			
-			// To re-initialize the calculators we need the highest score of this particular result set
-			int resultId = result.getId();
-			var network = result.getNetwork();
-			var alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
-			double maxScore = alg.getMaxScore(resultId);
-			tm.setProgress(0.1);
-			
-			if (cancelled)
-				return;
-			
-			// Update the MCODE style but do not set it to the network view (it's just there for the user)
-			mcodeUtil.updateAppStyle(maxScore, result);
-			
-			if (cancelled)
-				return;
 			
 			// Select nodes and edges that also exist in the selected cluster
 			if (cluster != null) {
-				tm.setProgress(0.7);
 				tm.setStatusMessage("Selecting nodes and edges from selected cluster...");
 				
 				var elements = new ArrayList<CyIdentifiable>();
@@ -787,8 +808,6 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				
 				mcodeUtil.setSelected(elements, result.getNetwork());
 			}
-			
-			tm.setProgress(1.0);
 		}
 	}
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.cytoscape.model.CyNetwork;
+import org.cytoscape.view.vizmap.VisualStyle;
 
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 
@@ -46,10 +47,12 @@ import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 public class MCODEResult {
 	
 	private final int id;
-	private final transient CyNetwork network;
 	private final MCODEParameters parameters;
 	private final List<MCODECluster> clusters = new ArrayList<>();
 	private boolean stale;
+	
+	private final transient CyNetwork network;
+	private transient VisualStyle style;
 	
 	private final Object lock = new Object();
 	
@@ -84,6 +87,14 @@ public class MCODEResult {
 		synchronized (lock) {
 			clusters.set(index, newCluster);
 		}
+	}
+	
+	public VisualStyle getStyle() {
+		return style;
+	}
+	
+	public void setStyle(VisualStyle style) {
+		this.style = style;
 	}
 	
 	/**
