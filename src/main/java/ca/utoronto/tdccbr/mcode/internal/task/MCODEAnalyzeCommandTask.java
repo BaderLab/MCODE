@@ -2,6 +2,7 @@ package ca.utoronto.tdccbr.mcode.internal.task;
 
 import static ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction.INTERRUPTION;
 import static ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction.RESCORE;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -67,17 +69,20 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 	
 	private final AnalysisAction action;
 	private final MCODEResultsManager resultsMgr;
+	private final MainPanelMediator mediator;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODEAnalyzeCommandTask(
 			AnalysisAction action,
 			MCODEResultsManager resultsMgr,
+			MainPanelMediator mediator,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
 		this.action = action;
 		this.resultsMgr = resultsMgr;
+		this.mediator = mediator;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 	}
@@ -143,9 +148,12 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 		action.setMode(mode);
 		
 		if (mode != INTERRUPTION) {
+			// Make sure the MCODE panel is open
+			invokeOnEDTAndWait(() -> mediator.showMainPanel(false));
+			
 			// Run MCODE
-			MCODEAnalyzeTask analyzeTask = new MCODEAnalyzeTask(network, mode, resultId, alg, resultsMgr, mcodeUtil);
-			FinalizeTask finalizeTask = new FinalizeTask();
+			var analyzeTask = new MCODEAnalyzeTask(network, mode, resultId, alg, resultsMgr, mcodeUtil);
+			var finalizeTask = new FinalizeTask();
 			
 			insertTasksAfterCurrentTask(finalizeTask);
 			insertTasksAfterCurrentTask(analyzeTask);

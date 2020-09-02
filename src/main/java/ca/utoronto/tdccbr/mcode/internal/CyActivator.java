@@ -148,7 +148,7 @@ public class CyActivator extends AbstractCyActivator {
 		
 		// Commands
 		{
-			var factory = new MCODEAnalyzeCommandTaskFactory(analysisAction, resultsMgr, mcodeUtil, registrar);
+			var factory = new MCODEAnalyzeCommandTaskFactory(analysisAction, resultsMgr, mainPanelMediator, mcodeUtil, registrar);
 			var props = new Properties();
 			props.setProperty(COMMAND, "cluster");
 			props.setProperty(COMMAND_NAMESPACE, "mcode");

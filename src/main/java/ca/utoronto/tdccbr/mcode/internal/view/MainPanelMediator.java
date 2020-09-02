@@ -144,7 +144,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		
 		resultsMgr.addPropertyChangeListener("resultAdded", evt -> {
 			invokeOnEDT(() -> {
-				MCODEResult res = (MCODEResult) evt.getNewValue();
+				var res = (MCODEResult) evt.getNewValue();
 				
 				if (res != null) {
 					addResult(res);
@@ -154,7 +154,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		});
 		resultsMgr.addPropertyChangeListener("resultRemoved", evt -> {
 			invokeOnEDT(() -> {
-				MCODEResult res = (MCODEResult) evt.getNewValue();
+				var res = (MCODEResult) evt.getNewValue();
 				
 				if (res != null) {
 					getMainPanel().removeResult(res);
@@ -293,7 +293,10 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		}
 	}
 	
-	public void showMainPanel() {
+	/**
+	 * @param showAnalysisDialog if true, this will show the "new analysis" dialog when opening MCODE for the first time.
+	 */
+	public void showMainPanel(boolean showAnalysisDialog) {
 		invokeOnEDT(() -> {
 			CytoPanelComponent panel = null;
 			
@@ -305,11 +308,11 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			if (panel == null) {
 				panel = getMainPanel();
 				
-				Properties props = new Properties();
+				var props = new Properties();
 				props.setProperty("id", MCODEMainPanel.ID);
 				registrar.registerService(panel, CytoPanelComponent.class, props);
 				
-				if (firstTime && getMainPanel().getResultsCount() == 0
+				if (showAnalysisDialog && firstTime && getMainPanel().getResultsCount() == 0
 						&& registrar.getService(CyApplicationManager.class).getCurrentNetwork() != null) {
 					firstTime = false;
 					showNewAnalysisDialog();

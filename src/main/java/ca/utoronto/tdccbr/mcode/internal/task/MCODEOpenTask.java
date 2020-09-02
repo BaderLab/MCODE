@@ -20,7 +20,7 @@ public class MCODEOpenTask implements Task {
 	public void run(TaskMonitor tm) throws Exception {
 		tm.setTitle("Open MCODE");
 		tm.setStatusMessage("Opening MCODE Panel...");
-		mediator.showMainPanel();
+		mediator.showMainPanel(true);
 	}
 
 	@Override

@@ -7,6 +7,7 @@ import org.cytoscape.work.TaskIterator;
 import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
+import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
 
 /**
  * * Copyright (c) 2004 Memorial Sloan-Kettering Cancer Center
@@ -48,24 +49,27 @@ public class MCODEAnalyzeCommandTaskFactory implements TaskFactory {
 
 	private final AnalysisAction action;
 	private final MCODEResultsManager resultsMgr;
+	private final MainPanelMediator mediator;
 	private final MCODEUtil mcodeUtil;
 	private final CyServiceRegistrar registrar;
 	
 	public MCODEAnalyzeCommandTaskFactory(
 			AnalysisAction action,
 			MCODEResultsManager resultsMgr,
+			MainPanelMediator mediator,
 			MCODEUtil mcodeUtil,
 			CyServiceRegistrar registrar
 	) {
 		this.action = action;
 		this.resultsMgr = resultsMgr;
+		this.mediator = mediator;
 		this.mcodeUtil = mcodeUtil;
 		this.registrar = registrar;
 	}
 	
 	@Override
 	public TaskIterator createTaskIterator() {
-		return new TaskIterator(new MCODEAnalyzeCommandTask(action, resultsMgr, mcodeUtil, registrar));
+		return new TaskIterator(new MCODEAnalyzeCommandTask(action, resultsMgr, mediator, mcodeUtil, registrar));
 	}
 
 	@Override
