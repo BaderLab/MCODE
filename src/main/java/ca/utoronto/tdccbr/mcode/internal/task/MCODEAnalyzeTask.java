@@ -4,6 +4,7 @@ import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTERS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.columnName;
+import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -152,7 +153,8 @@ public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 			tm.setProgress(0.001);
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");
 			result = resultsMgr.createResult(network, alg.getParams().copy(), clusters);
-			resultsMgr.addResult(result);
+			
+			invokeOnEDTAndWait(() -> resultsMgr.addResult(result));
 			
 			insertTasksAfterCurrentTask(new CreateNetworkAttributesTask());
 			tm.setProgress(1.0);
