@@ -65,6 +65,7 @@ import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
@@ -245,13 +246,14 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			p.getSizeSlider().addChangeListener(new SizeAction(p));
 		
 		// Create all the images for the clusters
+		var style = mcodeUtil.createClusterImageStyle(res);
 		int rank = 0;
 		
 		for (var c : clusters) {
 			c.setRank(++rank);
 			
 			if (!c.isTooLargeToVisualize())
-				createClusterImage(c, res, true);
+				createClusterImage(c, res, style, true);
 		}
 		
 		updateParentNetwork(res);
@@ -605,14 +607,13 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	 * @param cluster Input network to convert to an image
 	 * @param layoutNecessary Determinant of cluster size growth or shrinkage, the former requires layout
 	 */
-	private void createClusterImage(MCODECluster cluster, MCODEResult res, boolean layoutNecessary) {
+	private void createClusterImage(MCODECluster cluster, MCODEResult res, VisualStyle style, boolean layoutNecessary) {
 		try {
 			var net = cluster.getNetwork();
 			mcodeUtil.copyMCODEColumns(net, res);
 			
-			var vs = mcodeUtil.getClusterImageStyle();
-			var clusterView = mcodeUtil.createNetworkView(net, vs);
-	
+			var clusterView = mcodeUtil.createNetworkView(net, style);
+			
 			int width = ClusterPanel.GRAPH_IMG_SIZE;
 			int height = ClusterPanel.GRAPH_IMG_SIZE;
 			
@@ -663,13 +664,13 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 					panel.setSize(size);
 					panel.setMinimumSize(size);
 					panel.setMaximumSize(size);
-					panel.setBackground((Color) vs.getDefaultValue(NETWORK_BACKGROUND_PAINT));
+					panel.setBackground((Color) style.getDefaultValue(NETWORK_BACKGROUND_PAINT));
 		
 					var window = new JWindow();
 					window.getContentPane().add(panel, BorderLayout.CENTER);
 		
 					var re = mcodeUtil.createRenderingEngine(panel, clusterView);
-					vs.apply(clusterView);
+					style.apply(clusterView);
 					
 					clusterView.fitContent();
 					window.pack();
@@ -732,6 +733,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				return;
 			
 			var network = res.getNetwork();
+			var style = mcodeUtil.createClusterImageStyle(res);
 			var alg = mcodeUtil.getNetworkAlgorithm(network.getSUID());
 			
 			Runnable command = (() -> {
@@ -772,7 +774,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 						// Graph drawing will only occur if the cluster is not too large,
 						// otherwise a place holder will be drawn
 						if (!newCluster.isTooLargeToVisualize())
-							createClusterImage(newCluster, res, layoutNecessary);
+							createClusterImage(newCluster, res, style, layoutNecessary);
 					}
 				}
 	        });

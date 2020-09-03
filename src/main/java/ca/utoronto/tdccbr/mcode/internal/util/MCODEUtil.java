@@ -159,7 +159,6 @@ public class MCODEUtil {
 	private final Properties props;
 
 	private Image placeHolderImage;
-	private VisualStyle clusterImgStyle;
 	
 	private final MCODEParameterManager paramMgr = new MCODEParameterManager();
 	// Keeps track of networks (id is key) and their respective algorithms
@@ -381,68 +380,66 @@ public class MCODEUtil {
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public VisualStyle getClusterImageStyle() {
-		if (clusterImgStyle == null) {
-			clusterImgStyle = visualStyleFactory.createVisualStyle(CLUSTER_IMG_STYLE_TITLE);
+	public VisualStyle createClusterImageStyle(MCODEResult res) {
+		var style = visualStyleFactory.createVisualStyle(CLUSTER_IMG_STYLE_TITLE + " (" + res.getId() + ")");
 
-			// Defaults
-			clusterImgStyle.setDefaultValue(NODE_SIZE, 40.0);
-			clusterImgStyle.setDefaultValue(NODE_WIDTH, 40.0);
-			clusterImgStyle.setDefaultValue(NODE_HEIGHT, 40.0);
-			clusterImgStyle.setDefaultValue(NODE_PAINT, CLUSTER_NODE_COLOR);
-			clusterImgStyle.setDefaultValue(NODE_FILL_COLOR, CLUSTER_NODE_COLOR);
-			clusterImgStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
+		// Defaults
+		style.setDefaultValue(NODE_SIZE, 40.0);
+		style.setDefaultValue(NODE_WIDTH, 40.0);
+		style.setDefaultValue(NODE_HEIGHT, 40.0);
+		style.setDefaultValue(NODE_PAINT, CLUSTER_NODE_COLOR);
+		style.setDefaultValue(NODE_FILL_COLOR, CLUSTER_NODE_COLOR);
+		style.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
 
-			clusterImgStyle.setDefaultValue(EDGE_WIDTH, 5.0);
-			clusterImgStyle.setDefaultValue(EDGE_PAINT, CLUSTER_EDGE_COLOR);
-			clusterImgStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterImgStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterImgStyle.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterImgStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			clusterImgStyle.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
-			
-			var viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
-			
-			if (viewRenderer == null)
-				viewRenderer = applicationMgr.getDefaultNetworkViewRenderer();
-			
-			var lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
-					.getVisualLexicon();
-			
-			{
-				VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
-	
-				if (vp != null) {
-					var value = vp.parseSerializableString("ARROW");
-					
-					if (value != null)
-						clusterImgStyle.setDefaultValue(vp, value);
-				}
-			}
-			{
-				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_SOURCE_ARROW_UNSELECTED_PAINT");
+		style.setDefaultValue(EDGE_WIDTH, 5.0);
+		style.setDefaultValue(EDGE_PAINT, CLUSTER_EDGE_COLOR);
+		style.setDefaultValue(EDGE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+		style.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, CLUSTER_EDGE_COLOR);
+		style.setDefaultValue(EDGE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+		style.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+		style.setDefaultValue(EDGE_STROKE_SELECTED_PAINT, CLUSTER_EDGE_COLOR);
+		
+		var viewRenderer = applicationMgr.getCurrentNetworkViewRenderer();
+		
+		if (viewRenderer == null)
+			viewRenderer = applicationMgr.getDefaultNetworkViewRenderer();
+		
+		var lexicon = viewRenderer.getRenderingEngineFactory(NetworkViewRenderer.DEFAULT_CONTEXT)
+				.getVisualLexicon();
+		
+		{
+			VisualProperty vp = lexicon.lookup(CyEdge.class, "edgeTargetArrowShape");
+
+			if (vp != null) {
+				var value = vp.parseSerializableString("ARROW");
 				
-				if (vp != null)
-					clusterImgStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+				if (value != null)
+					style.setDefaultValue(vp, value);
 			}
-			{
-				VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_TARGET_ARROW_UNSELECTED_PAINT");
-				
-				if (vp != null)
-					clusterImgStyle.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
-			}
-			
-			// Node Shape Mapping
-			var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
-					.createVisualMappingFunction(columnName(NODE_STATUS_ATTR), String.class, NODE_SHAPE);
-			
-			nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
-			nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
-			
-			clusterImgStyle.addVisualMappingFunction(nodeShapeDm);
 		}
+		{
+			VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_SOURCE_ARROW_UNSELECTED_PAINT");
+			
+			if (vp != null)
+				style.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+		}
+		{
+			VisualProperty vp = lexicon.lookup(CyEdge.class, "EDGE_TARGET_ARROW_UNSELECTED_PAINT");
+			
+			if (vp != null)
+				style.setDefaultValue(vp, CLUSTER_ARROW_COLOR);
+		}
+		
+		// Node Shape Mapping
+		var nodeShapeDm = (DiscreteMapping<String, NodeShape>) discreteMappingFactory
+				.createVisualMappingFunction(columnName(NODE_STATUS_ATTR, res), String.class, NODE_SHAPE);
+		
+		nodeShapeDm.putMapValue("Clustered", NodeShapeVisualProperty.ELLIPSE);
+		nodeShapeDm.putMapValue("Seed", NodeShapeVisualProperty.RECTANGLE);
+		
+		style.addVisualMappingFunction(nodeShapeDm);
 
-		return clusterImgStyle;
+		return style;
 	}
 
 	public VisualStyle createMCODEStyle(MCODEResult res) {
@@ -713,7 +710,7 @@ public class MCODEUtil {
 	
 	public void copyMCODEColumns(CyNetwork clusterNet, MCODEResult res) {
 		// Create MCODE columns as local ones (these ones don't have the result number as suffix)
-		createMCODEColumns(clusterNet, null);
+		createMCODEColumns(clusterNet, res);
 		
 		// Copy the values from the parent network
 		var parentNet = res.getNetwork();
@@ -728,7 +725,7 @@ public class MCODEUtil {
 				var score = parentRow.get(columnName(SCORE_ATTR, res), Double.class);
 				
 				if (score != null)
-					clusterRow.set(columnName(SCORE_ATTR), score);
+					clusterRow.set(columnName(SCORE_ATTR, res), score);
 			} catch (Exception e) {
 				logger.error("MCODE cannot copy value from column '" + columnName(SCORE_ATTR, res) + "'", e);
 			}
@@ -737,7 +734,7 @@ public class MCODEUtil {
 				var status = parentRow.get(columnName(NODE_STATUS_ATTR, res), String.class);
 				
 				if (status != null)
-					clusterRow.set(columnName(NODE_STATUS_ATTR), status);
+					clusterRow.set(columnName(NODE_STATUS_ATTR, res), status);
 			} catch (Exception e) {
 				logger.error("MCODE cannot copy value from column '" + columnName(NODE_STATUS_ATTR, res) + "'", e);
 			}
@@ -746,7 +743,7 @@ public class MCODEUtil {
 				var clusters = parentRow.getList(columnName(CLUSTERS_ATTR, res), String.class);
 				
 				if (clusters != null)
-					clusterRow.set(columnName(CLUSTERS_ATTR), clusters);
+					clusterRow.set(columnName(CLUSTERS_ATTR, res), clusters);
 			} catch (Exception e) {
 				logger.error("MCODE cannot copy value from column '" + columnName(CLUSTERS_ATTR, res) + "'", e);
 			}

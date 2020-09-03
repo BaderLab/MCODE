@@ -35,12 +35,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
@@ -73,10 +71,7 @@ import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.CyUserLog;
 import org.cytoscape.application.swing.CytoPanelComponent2;
 import org.cytoscape.application.swing.CytoPanelName;
-import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.CyNode;
-import org.cytoscape.model.CyRow;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.BasicCollapsiblePanel;
 import org.cytoscape.util.swing.IconManager;
@@ -275,9 +270,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 		getResultsCombo().addItem(res);
 		getResultsCombo().setSelectedItem(res);
 		
-		ClusterBrowser clusterBrowser = new ClusterBrowser(res);
+		var clusterBrowser = new ClusterBrowser(res);
 		
-		JScrollPane scrollPane = new JScrollPane();
+		var scrollPane = new JScrollPane();
 		scrollPane.setBorder(BorderFactory.createEmptyBorder());
 		scrollPane.setViewportView(clusterBrowser);
 		scrollPane.addComponentListener(new ComponentAdapter() {
@@ -300,7 +295,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 		getResultsCombo().removeItem(res);
 		
 		synchronized (lock) {
-			JScrollPane scrollPane = clusterBrowserPanes.remove(res);
+			var scrollPane = clusterBrowserPanes.remove(res);
 			
 			if (scrollPane != null)
 				getClustersPanel().remove(scrollPane);
@@ -315,17 +310,17 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 	
 	ClusterBrowser getClusterBrowser(MCODEResult res) {
 		synchronized (lock) {
-			JScrollPane scrollPane = clusterBrowserPanes.get(res);
+			var scrollPane = clusterBrowserPanes.get(res);
 			
 			return scrollPane != null ? (ClusterBrowser) scrollPane.getViewport().getView() : null;
 		}
 	}
 	
 	ClusterBrowser getSelectedClusterBrowser() {
-		MCODEResult res = getSelectedResult();
+		var res = getSelectedResult();
 		
 		synchronized (lock) {
-			JScrollPane scrollPane = res != null ? clusterBrowserPanes.get(res) : null;
+			var scrollPane = res != null ? clusterBrowserPanes.get(res) : null;
 			
 			return scrollPane != null ? (ClusterBrowser) scrollPane.getViewport().getView() : null;
 		}
@@ -454,18 +449,18 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 	
 	void updateExploreControlPanel() {
 		try {
-			ClusterPanel item = getSelectedClusterPanel();
+			var item = getSelectedClusterPanel();
 			
 			if (item != null) {
-				final int index = getSelectedClusterRow();
-				final MCODECluster cluster = item.getCluster();
-				final CyNetwork net = cluster.getNetwork();
+				int index = getSelectedClusterRow();
+				var cluster = item.getCluster();
+				var net = cluster.getNetwork();
 				selectCluster(net);
 
 				// Upon selection of a cluster, we must show the corresponding explore panel content
 				// First we test if this cluster has been selected yet and if its content exists.
 				// If it does not, we create it.
-				ExploreContentPanel explorePanel = getExploreContentPanel(index);
+				var explorePanel = getExploreContentPanel(index);
 				
 				if (explorePanel == null)
 					exploreContentPanels.put(index, explorePanel = new ExploreContentPanel(index, net));
@@ -476,14 +471,14 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 
 				// Finally the explore panel must be redrawn upon the selection
 				// event to display the new content with the name of the cluster, if it exists
-				String title = "Explore: " + cluster.getName();
+				var title = "Explore: " + cluster.getName();
 				getExplorePanel().setTitleComponentText(title);
 				getExplorePanel().updateUI();
 
 				// In order for the enumeration to be conducted for this cluster
 				// on the same attribute that might already have been selected
 				// we get a reference to the combo box within the explore content...
-				final JComboBox<String> nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
+				var nodeAttributesComboBox = explorePanel.getNodeAttributesComboBox();
 				// ...and fire the enumeration action
 				nodeAttributesComboBox.setSelectedIndex(enumerationSelection);
 
@@ -645,7 +640,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 			setName(result.toString());
 			setBackground(UIManager.getColor("Table.background"));
 			
-			Color fg = UIManager.getColor("Label.disabledForeground");
+			var fg = UIManager.getColor("Label.disabledForeground");
 			fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
 			
 			filler.setBorder(null);
@@ -660,23 +655,23 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 				}
 			});
 			
-			GroupLayout layout = new GroupLayout(this);
+			var layout = new GroupLayout(this);
 			setLayout(layout);
 			layout.setAutoCreateContainerGaps(false);
 			layout.setAutoCreateGaps(false);
 			
-			ParallelGroup hGroup = layout.createParallelGroup(Alignment.CENTER, true);
-			SequentialGroup vGroup = layout.createSequentialGroup();
+			var hGroup = layout.createParallelGroup(Alignment.CENTER, true);
+			var vGroup = layout.createSequentialGroup();
 			layout.setHorizontalGroup(hGroup);
 			layout.setVerticalGroup(vGroup);
 			
 			int index = 0;
-			List<MCODECluster> clusters = getClusters();
+			var clusters = getClusters();
 			
-			for (MCODECluster c : clusters) {
+			for (var c : clusters) {
 				c.setRank(index + 1);
 				
-				ClusterPanel p = new ClusterPanel(index, c, getSelectedResult().getParameters(), registrar);
+				var p = new ClusterPanel(index, c, getSelectedResult().getParameters(), registrar);
 				p.addComponentListener(new ComponentAdapter() {
 					@Override
 					public void componentResized(ComponentEvent e) {
@@ -901,10 +896,10 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 			if (isAquaLAF())
 				setOpaque(false);
 			
-			Collection<CyColumn> nodeColumns = clusterNet.getDefaultNodeTable().getColumns();
-			List<String> attributesList = new ArrayList<>(nodeColumns.size());
+			var nodeColumns = clusterNet.getDefaultNodeTable().getColumns();
+			var attributesList = new ArrayList<>(nodeColumns.size());
 
-			for (CyColumn column : nodeColumns) {
+			for (var column : nodeColumns) {
 				if (!column.getName().equals(CyNetwork.SUID) &&
 						!column.getName().equals(CyNetwork.SELECTED) &&
 						!column.getName().endsWith(".SUID"))
@@ -912,11 +907,11 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 			}
 
 			// Node attributes enumerator
-			JLabel attrEnumLbl = new JLabel("Node Attribute:");
-			String ATTR_ENUM_TOOL_TIP = "Node Attribute Enumerator";
+			var attrEnumLbl = new JLabel("Node Attribute:");
+			var ATTR_ENUM_TOOL_TIP = "Node Attribute Enumerator";
 			attrEnumLbl.setToolTipText(ATTR_ENUM_TOOL_TIP);
 			
-			Collator collator = Collator.getInstance(Locale.getDefault());
+			var collator = Collator.getInstance(Locale.getDefault());
 			Collections.sort(attributesList, collator);
 
 			nodeAttributesComboBox = new JComboBox<>(attributesList.toArray(new String[attributesList.size()]));
@@ -942,8 +937,8 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 			// Create a table listing the node attributes and their enumerations
 			modelEnumerator = new ResultsEnumeratorTableModel(new HashMap<>());
 
-			JTable enumerationsTable = new JTable(modelEnumerator);
-			JScrollPane tableScrollPane = new JScrollPane(enumerationsTable);
+			var enumerationsTable = new JTable(modelEnumerator);
+			var tableScrollPane = new JScrollPane(enumerationsTable);
 			enumerationsTable.setPreferredScrollableViewportSize(new Dimension(100, ClusterPanel.GRAPH_IMG_SIZE));
 			enumerationsTable.setGridColor(new JSeparator().getForeground());
 			enumerationsTable.setFont(new Font(enumerationsTable.getFont().getFontName(), Font.PLAIN,
@@ -961,7 +956,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 				enumerationsTable.putClientProperty("JComponent.sizeVariant", "small");
 			}
 			
-			GroupLayout layout = new GroupLayout(this);
+			var layout = new GroupLayout(this);
 			this.setLayout(layout);
 			layout.setAutoCreateContainerGaps(true);
 			layout.setAutoCreateGaps(!isAquaLAF());
@@ -985,34 +980,34 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 		@SuppressWarnings("unchecked")
 		void updateEnumerationsTable(int index) {
 			// The key is the attribute value and the value is the number of times that value appears in the cluster
-			final HashMap<Object, Integer> attributeEnumerations = new HashMap<>();
+			var attributeEnumerations = new HashMap<Object, Integer>();
 
 			// First we want to see which attribute was selected in the combo box
-			final String attributeName = (String) nodeAttributesComboBox.getSelectedItem();
-			final int selectedIndex = nodeAttributesComboBox.getSelectedIndex();
+			var attributeName = (String) nodeAttributesComboBox.getSelectedItem();
+			int selectedIndex = nodeAttributesComboBox.getSelectedIndex();
 
 			// If its the generic 'please select' option then we don't do any enumeration
 			if (attributeName != null) {
-				final CyNetwork net = getCluster(index).getNetwork();
+				var net = getCluster(index).getNetwork();
 				
 				// Otherwise, we want to get the selected attribute's value for each node in the selected cluster
-				for (CyNode node : net.getNodeList()) {
+				for (var node : net.getNodeList()) {
 					// The attribute value will be stored as a string no matter
 					// what it is but we need an array list because some attributes are maps or lists of any size
-					final ArrayList<Object> attributeValues = new ArrayList<>();
-					final CyRow row = net.getRow(node);
-					final CyColumn column = row.getTable().getColumn(attributeName);
+					var attributeValues = new ArrayList<Object>();
+					var row = net.getRow(node);
+					var column = row.getTable().getColumn(attributeName);
 					
 					if (column == null) // This should never happen!
 						continue;
 					
-					final Class<?> type = column.getType();
+					var type = column.getType();
 
 					if (Collection.class.isAssignableFrom(type)) {
-						final Collection<Object> valueList = (Collection<Object>) row.get(attributeName, type);
+						var valueList = (Collection<Object>) row.get(attributeName, type);
 
 						if (valueList != null) {
-							for (Object value : valueList)
+							for (var value : valueList)
 								attributeValues.add(value);
 						}
 					} else {
@@ -1020,9 +1015,9 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 					}
 
 					// Next we must make a non-repeating list with the attribute values and enumerate the repetitions
-					for (final Object aviElement : attributeValues) {
+					for (var aviElement : attributeValues) {
 						if (aviElement != null) {
-							final Object value = aviElement instanceof Number ? aviElement : aviElement.toString();
+							var value = aviElement instanceof Number ? aviElement : aviElement.toString();
 
 							if (!attributeEnumerations.containsKey(value)) {
 								// If the attribute value appears for the first
@@ -1030,7 +1025,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 								attributeEnumerations.put(value, 1);
 							} else {
 								// If it already appeared before, we want to add to the enumeration of the value
-								Integer enumeration = (Integer) attributeEnumerations.get(value);
+								var enumeration = (Integer) attributeEnumerations.get(value);
 								enumeration = enumeration.intValue() + 1;
 								attributeEnumerations.put(value, enumeration);
 							}
@@ -1064,14 +1059,14 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 
 		public void listIt(final HashMap<Object, Integer> enumerations) {
 			// First we sort the hash map of attributes values and their occurrences
-			final List<Entry<Object, Integer>> enumerationsSorted = sortMap(enumerations);
+			var enumerationsSorted = sortMap(enumerations);
 			// Then we put it into the data array in reverse order so that the
 			// most frequent attribute value is on top
-			final Object[][] newData = new Object[enumerationsSorted.size()][columnNames.length];
+			var newData = new Object[enumerationsSorted.size()][columnNames.length];
 			int c = enumerationsSorted.size() - 1;
 
-			for (Iterator<Map.Entry<Object, Integer>> i = enumerationsSorted.iterator(); i.hasNext();) {
-				final Map.Entry<Object, Integer> mp = i.next();
+			for (var iter = enumerationsSorted.iterator(); iter.hasNext();) {
+				var mp = iter.next();
 				
 				newData[c][0] = mp.getKey();
 				newData[c][1] = mp.getValue();
