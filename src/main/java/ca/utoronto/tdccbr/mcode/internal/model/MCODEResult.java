@@ -89,6 +89,9 @@ public class MCODEResult {
 		}
 	}
 	
+	/**
+	 * @return the MCODE style for this result or null if none has been created yet
+	 */
 	public VisualStyle getStyle() {
 		return style;
 	}

@@ -447,7 +447,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		});
 	}
 	
-	public void applyMCODEStyle(MCODEResult res) {
+	public void applyMCODEStyle(MCODEResult res, TaskIterator activeTaskIterator) {
 		var viewMgr = registrar.getService(CyNetworkViewManager.class);
 		
 		if (res == null || res.getNetwork() == null || !viewMgr.viewExists(res.getNetwork()))
@@ -465,7 +465,11 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		
 		var ti = registrar.getService(ApplyVisualStyleTaskFactory.class).createTaskIterator(views);
 		ti = registrar.getService(TunableSetter.class).createTaskIterator(ti, args);
-		registrar.getService(DialogTaskManager.class).execute(ti);
+		
+		if (activeTaskIterator != null)
+			activeTaskIterator.append(ti);
+		else
+			registrar.getService(DialogTaskManager.class).execute(ti);
 	}
 	
 	public boolean discardAllResults(boolean requestUserConfirmation) {
@@ -544,7 +548,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			mi.setToolTipText("Apply the MCODE Style to the source network view(s)");
 			mi.setIcon(new TextIcon(
 					IconManager.ICON_PAINT_BRUSH, registrar.getService(IconManager.class).getIconFont(14), 16, 16));
-			mi.addActionListener(evt -> applyMCODEStyle(res));
+			mi.addActionListener(evt -> applyMCODEStyle(res, null));
 			mi.setEnabled(res != null && viewMgr.viewExists(res.getNetwork()));
 			menu.add(mi);
 		}
@@ -796,6 +800,8 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		@Override
 		public void run(TaskMonitor tm) throws Exception {
 			tm.setTitle("Update MCODE's Source Network");
+			tm.setProgress(0.0);
+			var network = result.getNetwork();
 			
 			// Select nodes and edges that also exist in the selected cluster
 			if (cluster != null) {
@@ -808,7 +814,34 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				if (cancelled)
 					return;
 				
-				mcodeUtil.setSelected(elements, result.getNetwork());
+				mcodeUtil.setSelected(elements, network);
+			}
+			
+			tm.setProgress(0.5);
+			
+			// Apply the correct MCODE style if another MCODE style is currently set to the parent network view(s)
+			// (usually only necessary if there's more than one analysis result for the network)
+			var viewMgr = registrar.getService(CyNetworkViewManager.class);
+			var vmMgr = registrar.getService(VisualMappingManager.class);
+			// We only check other results for the same network
+			var netResults = resultsMgr.getNetworkResults(network.getSUID());
+			
+			for (var view : viewMgr.getNetworkViews(network)) {
+				var curStyle = vmMgr.getVisualStyle(view);
+				
+				if (!curStyle.equals(result.getStyle())) {
+					for (var resId : netResults) {
+						var res = resultsMgr.getResult(resId);
+						
+						if (res != null && curStyle.equals(res.getStyle())) {
+							// The current style is an MCODE style,
+							// so do we need to apply the correct one for the current result?
+							applyMCODEStyle(result, getTaskIterator());
+							
+							break;
+						}
+					}
+				}
 			}
 		}
 	}
