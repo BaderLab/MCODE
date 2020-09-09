@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.text.NumberFormat;
 import java.util.Dictionary;
-import java.util.Enumeration;
 import java.util.Hashtable;
 
 import javax.swing.BorderFactory;
@@ -99,8 +98,8 @@ public class ClusterPanel extends JPanel {
 		this.params = params;
 		this.registrar = registrar;
 		
-		Font font = registrar.getService(IconManager.class).getIconFont(36.0f);
-		Color fg = UIManager.getColor("Label.disabledForeground");
+		var font = registrar.getService(IconManager.class).getIconFont(36.0f);
+		var fg = UIManager.getColor("Label.disabledForeground");
 		fg = new Color(fg.getRed(), fg.getGreen(), fg.getBlue(), 60);
 		warnIcon = new TextIcon(IconManager.ICON_EXCLAMATION_TRIANGLE, font, fg, GRAPH_IMG_SIZE, GRAPH_IMG_SIZE);
 		
@@ -141,7 +140,7 @@ public class ClusterPanel extends JPanel {
 		setBackground(UIManager.getColor("Table.background"));
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("Separator.foreground")));
 		
-		final GroupLayout layout = new GroupLayout(this);
+		var layout = new GroupLayout(this);
 		setLayout(layout);
 		layout.setAutoCreateContainerGaps(false);
 		layout.setAutoCreateGaps(false);
@@ -187,12 +186,12 @@ public class ClusterPanel extends JPanel {
 		
 		// Change the slider's label sizes -- only works if it's done after the slider has been added to
 		// its parent container and had its UI assigned
-		Font tickFont = getSizeSlider().getFont().deriveFont(getSmallFontSize());
+		var tickFont = getSizeSlider().getFont().deriveFont(getSmallFontSize());
 		Dictionary<Integer, JLabel> labelTable = getSizeSlider().getLabelTable();
 		
-		for (Enumeration<Integer> enumeration = labelTable.keys(); enumeration.hasMoreElements();) {
+		for (var enumeration = labelTable.keys(); enumeration.hasMoreElements();) {
 			int k = enumeration.nextElement();
-			JLabel label = labelTable.get(k);
+			var label = labelTable.get(k);
 			label.setFont(tickFont); // Updates the font size
 			label.setSize(label.getPreferredSize()); // Updates the label size and slider layout
 		}
@@ -225,7 +224,7 @@ public class ClusterPanel extends JPanel {
 			
 			final int bw = 3; // Border width
 			
-			Dimension d = new Dimension(GRAPH_IMG_SIZE + 2 * bw, GRAPH_IMG_SIZE + 2 * bw);
+			var d = new Dimension(GRAPH_IMG_SIZE + 2 * bw, GRAPH_IMG_SIZE + 2 * bw);
 			imageLabel.setMinimumSize(d);
 			imageLabel.setPreferredSize(d);
 			imageLabel.setMaximumSize(d);
@@ -298,7 +297,7 @@ public class ClusterPanel extends JPanel {
 			sizeSlider.setPaintLabels(true);
 			
 			// Set labels ranging from 0 to 100
-			final Dictionary<Integer, JLabel> labelTable = new Hashtable<>();
+			var labelTable = new Hashtable<Integer, JLabel>();
 			// Make a special label for the initial position
 			labelTable.put((int) (params.getNodeScoreCutoff() * 1000), new JLabel("*"));
 
@@ -321,7 +320,7 @@ public class ClusterPanel extends JPanel {
 	}
 
 	private void updateSelection() {
-		final Color c = UIManager.getColor(isSelected() ? "Table.selectionBackground" : "Table.background");
+		var c = UIManager.getColor(isSelected() ? "Table.selectionBackground" : "Table.background");
 		setBackground(c);
 		getSizeSlider().setEnabled(isSelected());
 		
@@ -329,7 +328,7 @@ public class ClusterPanel extends JPanel {
 	}
 	
 	private void updateLabels() {
-		final NumberFormat nf = NumberFormat.getInstance();
+		var nf = NumberFormat.getInstance();
 		nf.setMinimumFractionDigits(3);
 		nf.setMaximumFractionDigits(3);
 
@@ -368,7 +367,7 @@ public class ClusterPanel extends JPanel {
 	}
 	
 	private JLabel createLabel(String txt) {
-		JLabel lbl = new JLabel(txt);
+		var lbl = new JLabel(txt);
 		
 		if (LookAndFeelUtil.isAquaLAF())
 			lbl.putClientProperty("JComponent.sizeVariant", "small");

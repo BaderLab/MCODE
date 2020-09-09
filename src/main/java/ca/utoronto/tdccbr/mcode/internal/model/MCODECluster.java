@@ -156,7 +156,7 @@ public class MCODECluster {
 	}
 
 	public void setImage(Image image) {
-		Image oldImage = this.image;
+		var oldImage = this.image;
 		this.image = image;
 		pcs.firePropertyChange("image", oldImage, image);
 	}
@@ -176,6 +176,8 @@ public class MCODECluster {
 			if (isDisposed())
 				return;
 			
+			removeAllPropertyChangeListeners();
+			
 			if (view != null)
 				view.dispose();
 			
@@ -194,6 +196,13 @@ public class MCODECluster {
 
 	public void removePropertyChangeListener(PropertyChangeListener listener) {
 		pcs.removePropertyChangeListener(listener);
+	}
+	
+	public void removeAllPropertyChangeListeners() {
+		var listeners = pcs.getPropertyChangeListeners();
+		
+		for (var l : listeners)
+			pcs.removePropertyChangeListener(l);
 	}
 	
 	@Override
