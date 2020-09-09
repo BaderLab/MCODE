@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -41,7 +42,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSlider;
-import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
@@ -153,8 +153,8 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				var res = (MCODEResult) evt.getNewValue();
 				
 				if (res != null) {
-					addResult(res);
 					disposeNewAnalysisDialog();
+					addResult(res);
 				}
 			});
 		});
@@ -249,15 +249,33 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		var style = mcodeUtil.createClusterImageStyle(res);
 		int rank = 0;
 		
-		for (var c : clusters) {
+		for (var c : clusters)
 			c.setRank(++rank);
-			
-			if (!c.isTooLargeToVisualize())
-				createClusterImage(c, res, style, true);
-		}
 		
 		updateParentNetwork(res);
 		getMainPanel().updateExploreControlPanel();
+
+		int cores = Runtime.getRuntime().availableProcessors();
+		var exec = Executors.newFixedThreadPool(cores);
+		var tasks = new ArrayList<Callable<MCODECluster>>();
+		
+		for (var c : clusters) {
+			if (!c.isTooLargeToVisualize()) {
+				Callable<MCODECluster> callable = () -> {
+					createClusterImage(c, res, style, true);
+					return c;
+			    };
+			    tasks.add(callable);
+			}
+		}
+		
+		try {
+			exec.invokeAll(tasks);
+		} catch (Exception e) {
+			logger.error("Error creating cluster images.", e);
+		} finally {
+            exec.shutdown();
+        }
 	}
 	
 	private void updateParentNetwork(MCODEResult res) {
@@ -670,22 +688,16 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 					panel.setMaximumSize(size);
 					panel.setBackground((Color) style.getDefaultValue(NETWORK_BACKGROUND_PAINT));
 		
-					var window = new JWindow();
-					window.getContentPane().add(panel, BorderLayout.CENTER);
-		
 					var re = mcodeUtil.createRenderingEngine(panel, clusterView);
 					style.apply(clusterView);
 					
 					clusterView.fitContent();
-					window.pack();
-					window.repaint();
 		
 					var image = re.createImage(width, height);
+					cluster.setImage(image);
 					
 					if (!clusterView.getNodeViews().isEmpty())
 						cluster.setView(clusterView);
-					
-					cluster.setImage(image);
 				} catch (Exception ex) {
 					logger.error("Cannot update cluster image.", ex);
 				}

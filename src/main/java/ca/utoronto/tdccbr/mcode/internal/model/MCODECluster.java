@@ -100,7 +100,7 @@ public class MCODECluster {
 		return name;
 	}
 
-	public void setName(final String name) {
+	public void setName(String name) {
 		throwExceptionIfDisposed();
 		this.name = name;
 	}
@@ -113,7 +113,7 @@ public class MCODECluster {
 		return view;
 	}
 
-	public void setView(final CyNetworkView view) {
+	public void setView(CyNetworkView view) {
 		throwExceptionIfDisposed();
 		
 		if (this.view != null)
