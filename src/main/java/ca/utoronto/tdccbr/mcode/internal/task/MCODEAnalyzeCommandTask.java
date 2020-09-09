@@ -20,6 +20,7 @@ import ca.utoronto.tdccbr.mcode.internal.action.AnalysisAction;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAlgorithm;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEAnalysisScope;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEParameters;
+import ca.utoronto.tdccbr.mcode.internal.model.MCODEResult;
 import ca.utoronto.tdccbr.mcode.internal.model.MCODEResultsManager;
 import ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil;
 import ca.utoronto.tdccbr.mcode.internal.view.MainPanelMediator;
@@ -153,7 +154,7 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 			
 			// Run MCODE
 			var analyzeTask = new MCODEAnalyzeTask(network, mode, resultId, alg, resultsMgr, mcodeUtil);
-			var finalizeTask = new FinalizeTask();
+			var finalizeTask = new FinalizeTask(analyzeTask);
 			
 			insertTasksAfterCurrentTask(finalizeTask);
 			insertTasksAfterCurrentTask(analyzeTask);
@@ -162,6 +163,12 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 	
 	private class FinalizeTask extends AbstractTask {
 
+		private MCODEAnalyzeTask analyzeTask;
+
+		public FinalizeTask(MCODEAnalyzeTask analyzeTask) {
+			this.analyzeTask = analyzeTask;
+		}
+
 		@Override
 		public void run(TaskMonitor tm) throws Exception {
 			action.setDirty(params.getNetwork(), false);
@@ -169,6 +176,14 @@ public class MCODEAnalyzeCommandTask extends AbstractTask {
 			new Thread(() -> {
 				mcodeUtil.disposeUnusedNetworks(resultsMgr.getAllResults());
 			}).start();
+			
+			var result = (MCODEResult) analyzeTask.getResults(MCODEResult.class);
+			
+			// Not the best idea to use invokeOnEDTAndWait here, but if we don't do that,
+			// cyREST commands may get into race conditions where the UI is not ready before the
+			// client tries to create a cluster network, for instance.
+			if (result != null && !result.getClusters().isEmpty())
+				invokeOnEDTAndWait(() -> resultsMgr.addResult(result));
 		}
 	}
 }

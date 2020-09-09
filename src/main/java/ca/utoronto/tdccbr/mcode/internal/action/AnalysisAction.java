@@ -155,7 +155,7 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 				
 				// Display clusters in a new modal dialog box
 				if (finishStatus == FinishStatus.getSucceeded()) {
-					if (result == null || result.getClusters().isEmpty())
+					if (result == null || result.getClusters().isEmpty()) {
 						invokeOnEDT(() -> {
 							JOptionPane.showMessageDialog(swingApplication.getJFrame(),
 														  "No clusters were found.\n"
@@ -165,6 +165,9 @@ public class AnalysisAction extends AbstractMCODEAction implements SetCurrentNet
 														  "No Results",
 														  JOptionPane.WARNING_MESSAGE);
 						});
+					} else {
+						resultsMgr.addResult(result);
+					}
 				}
 			}
 		};

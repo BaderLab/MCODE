@@ -4,7 +4,6 @@ import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.CLUSTERS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.NODE_STATUS_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.SCORE_ATTR;
 import static ca.utoronto.tdccbr.mcode.internal.util.MCODEUtil.columnName;
-import static ca.utoronto.tdccbr.mcode.internal.util.ViewUtil.invokeOnEDTAndWait;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -151,10 +150,6 @@ public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 			result = resultsMgr.createResult(network, alg.getParams().copy(), clusters);
 			
 			createNetworkAttributes(tm);
-			
-			tm.setProgress(0.8);
-			invokeOnEDTAndWait(() -> resultsMgr.addResult(result));
-			
 			tm.setProgress(1.0);
 		} catch (Exception e) {
 			throw new Exception("Error while executing the MCODE analysis", e);
