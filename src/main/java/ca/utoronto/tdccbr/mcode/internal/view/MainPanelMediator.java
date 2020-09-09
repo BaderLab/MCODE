@@ -149,14 +149,12 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		this.registrar = registrar;
 		
 		resultsMgr.addPropertyChangeListener("resultAdded", evt -> {
-			invokeOnEDT(() -> {
-				var res = (MCODEResult) evt.getNewValue();
-				
-				if (res != null) {
-					disposeNewAnalysisDialog();
-					addResult(res);
-				}
-			});
+			var res = (MCODEResult) evt.getNewValue();
+			
+			if (res != null) {
+				disposeNewAnalysisDialog();
+				addResult(res);
+			}
 		});
 		resultsMgr.addPropertyChangeListener("resultRemoved", evt -> {
 			invokeOnEDT(() -> {
@@ -212,38 +210,29 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		if (clusters == null || clusters.isEmpty())
 			return;
 		
-		ignoreResultSelected = true;
-		
-		try {
-			var cytoPanel = getControlPanel();
-			int index = cytoPanel.indexOfComponent(getMainPanel());
+		invokeOnEDT(() -> {
+			ignoreResultSelected = true;
 			
-			if (index >= 0)
-				cytoPanel.setSelectedIndex(index);
+			try {
+				var cytoPanel = getControlPanel();
+				int index = cytoPanel.indexOfComponent(getMainPanel());
+				
+				if (index >= 0)
+					cytoPanel.setSelectedIndex(index);
+				
+				getMainPanel().addResult(res);
+			} finally {
+				ignoreResultSelected = false;
+			}
 			
-			getMainPanel().addResult(res);
-		} finally {
-			ignoreResultSelected = false;
-		}
-		
-		var network = res.getNetwork();
-		var currView = registrar.getService(CyApplicationManager.class).getCurrentNetworkView();
-		var netView = currView != null && currView.getModel().equals(network) ? currView : null;
-
-		if (netView == null) {
-			var allViews = registrar.getService(CyNetworkViewManager.class).getNetworkViews(network);
-
-			if (allViews.isEmpty())
-				netView = allViews.iterator().next();
-		}
-		
-		// Add required listeners to results components
-		var clusterBrowser = getMainPanel().getClusterBrowser(res);
-		List<ClusterPanel> clusterPanels = clusterBrowser != null ? clusterBrowser.getAllItems()
-				: Collections.emptyList();
-		
-		for (var p : clusterPanels)
-			p.getSizeSlider().addChangeListener(new SizeAction(p));
+			// Add required listeners to results components
+			var clusterBrowser = getMainPanel().getClusterBrowser(res);
+			List<ClusterPanel> clusterPanels = clusterBrowser != null ? clusterBrowser.getAllItems()
+					: Collections.emptyList();
+			
+			for (var p : clusterPanels)
+				p.getSizeSlider().addChangeListener(new SizeAction(p));
+		});
 		
 		// Create all the images for the clusters
 		var style = mcodeUtil.createClusterImageStyle(res);
@@ -253,7 +242,10 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			c.setRank(++rank);
 		
 		updateParentNetwork(res);
-		getMainPanel().updateExploreControlPanel();
+		
+		invokeOnEDT(() -> {
+			getMainPanel().updateExploreControlPanel();
+		});
 
 		int cores = Runtime.getRuntime().availableProcessors();
 		var exec = Executors.newFixedThreadPool(cores);
@@ -316,10 +308,12 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	}
 	
 	public void disposeNewAnalysisDialog() {
-		if (newAnalysisDialog != null && newAnalysisDialog.isVisible()) {
-			newAnalysisDialog.dispose();
-			newAnalysisDialog = null;
-		}
+		invokeOnEDT(() -> {
+			if (newAnalysisDialog != null && newAnalysisDialog.isVisible()) {
+				newAnalysisDialog.dispose();
+				newAnalysisDialog = null;
+			}
+		});
 	}
 	
 	/**
