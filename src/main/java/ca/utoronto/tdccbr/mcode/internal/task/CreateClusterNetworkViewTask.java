@@ -18,6 +18,7 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.json.CyJSONUtil;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
@@ -135,6 +136,10 @@ public class CreateClusterNetworkViewTask implements ObservableTask {
 		tm.setStatusMessage("Creating View...");
 		
 		var vs = mcodeUtil.getNetworkViewStyle(view);
+		
+		if (vs == null)
+			vs = registrar.getService(VisualMappingManager.class).getDefaultVisualStyle();
+		
 		newNetworkView = mcodeUtil.createNetworkView(newNet, vs);
 	
 		newNetworkView.setVisualProperty(NETWORK_CENTER_X_LOCATION, 0.0);

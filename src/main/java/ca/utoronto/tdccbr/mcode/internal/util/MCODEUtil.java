@@ -358,11 +358,10 @@ public class MCODEUtil {
 	public CyNetworkView createNetworkView(CyNetwork net, VisualStyle vs) {
 		var view = networkViewFactory.createNetworkView(net);
 
-		if (vs == null)
-			vs = visualMappingMgr.getDefaultVisualStyle();
-		
-		visualMappingMgr.setVisualStyle(vs, view);
-		vs.apply(view);
+		if (vs != null) {
+			visualMappingMgr.setVisualStyle(vs, view);
+			vs.apply(view);
+		}
 		
 		return view;
 	}

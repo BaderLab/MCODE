@@ -9,7 +9,6 @@ import static org.cytoscape.util.swing.LookAndFeelUtil.setDefaultOkCancelKeyStro
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SHAPE;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
 
@@ -63,7 +62,6 @@ import org.cytoscape.task.visualize.ApplyVisualStyleTaskFactory;
 import org.cytoscape.util.swing.IconManager;
 import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
@@ -628,7 +626,7 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 			var net = cluster.getNetwork();
 			mcodeUtil.copyMCODEColumns(net, res);
 			
-			var clusterView = mcodeUtil.createNetworkView(net, style);
+			var clusterView = mcodeUtil.createNetworkView(net, null);
 			
 			int width = ClusterPanel.GRAPH_IMG_SIZE;
 			int height = ClusterPanel.GRAPH_IMG_SIZE;
@@ -659,12 +657,6 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 	
 				nv.setVisualProperty(NODE_X_LOCATION, x);
 				nv.setVisualProperty(NODE_Y_LOCATION, y);
-	
-				// Node shape
-				if (cluster.getSeedNode() == nv.getModel().getSUID())
-					nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.RECTANGLE);
-				else
-					nv.setLockedValue(NODE_SHAPE, NodeShapeVisualProperty.ELLIPSE);
 			}
 	
 			if (layoutNecessary) {
@@ -684,14 +676,14 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 		
 					var re = mcodeUtil.createRenderingEngine(panel, clusterView);
 					style.apply(clusterView);
-					
+					clusterView.updateView();
 					clusterView.fitContent();
 		
-					var image = re.createImage(width, height);
-					cluster.setImage(image);
-					
 					if (!clusterView.getNodeViews().isEmpty())
 						cluster.setView(clusterView);
+					
+					var image = re.createImage(width, height);
+					cluster.setImage(image);
 				} catch (Exception ex) {
 					logger.error("Cannot update cluster image.", ex);
 				}
