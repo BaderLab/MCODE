@@ -422,7 +422,7 @@ public class MCODEMainPanel extends JPanel implements CytoPanelComponent2 {
 	
 	private JButton getHelpButton() {
 		if (helpButton == null) {
-			helpButton = LookAndFeelUtil.createHelpButton("http://baderlab.org/Software/MCODE/UsersManual/");
+			helpButton = LookAndFeelUtil.createHelpButton("https://mcode.readthedocs.io/en/docs-2.0/");
 			helpButton.setToolTipText("Online Help...");
 		}
 		
