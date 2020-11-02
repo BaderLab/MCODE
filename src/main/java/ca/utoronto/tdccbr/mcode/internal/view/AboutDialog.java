@@ -91,10 +91,11 @@ public class AboutDialog extends JDialog {
 
 		getContentPane().setBackground(Color.WHITE);
 		
-		setResizable(false);
 		getContentPane().add(getMainContainer(), BorderLayout.CENTER);
 		getContentPane().add(getButtonPanel(), BorderLayout.SOUTH);
+		
 		pack();
+		setResizable(false);
 	}
 
 	private JEditorPane getMainContainer() {
