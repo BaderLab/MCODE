@@ -1,13 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal;
 
-import static org.cytoscape.work.ServiceProperties.COMMAND;
-import static org.cytoscape.work.ServiceProperties.COMMAND_DESCRIPTION;
-import static org.cytoscape.work.ServiceProperties.COMMAND_EXAMPLE_JSON;
-import static org.cytoscape.work.ServiceProperties.COMMAND_LONG_DESCRIPTION;
-import static org.cytoscape.work.ServiceProperties.COMMAND_NAMESPACE;
-import static org.cytoscape.work.ServiceProperties.COMMAND_SUPPORTS_JSON;
-import static org.cytoscape.work.ServiceProperties.PREFERRED_MENU;
-import static org.cytoscape.work.ServiceProperties.TITLE;
+import static org.cytoscape.work.ServiceProperties.*;
 
 import java.util.Properties;
 
@@ -29,7 +22,6 @@ import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.presentation.RenderingEngineFactory;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
@@ -89,7 +81,6 @@ public class CyActivator extends AbstractCyActivator {
 	private MainPanelMediator mainPanelMediator;
 	
 	@Override
-	@SuppressWarnings("unchecked")
 	public void start(BundleContext bc) {
 		registrar = getService(bc, CyServiceRegistrar.class);
 		
@@ -101,7 +92,6 @@ public class CyActivator extends AbstractCyActivator {
 		var rootNetworkMgr = getService(bc, CyRootNetworkManager.class);
 		
 		var swingApp = getService(bc, CySwingApplication.class);
-		var dingRenderingEngineFactory = getService(bc, RenderingEngineFactory.class, "(id=ding)");
 		
 		var visualStyleFactory = getService(bc, VisualStyleFactory.class);
 		var visualMappingMgr = getService(bc, VisualMappingManager.class);
@@ -110,7 +100,7 @@ public class CyActivator extends AbstractCyActivator {
 		
 		var fileUtil = getService(bc, FileUtil.class);
 		
-		mcodeUtil = new MCODEUtil(dingRenderingEngineFactory, netViewFactory, rootNetworkMgr,
+		mcodeUtil = new MCODEUtil(netViewFactory, rootNetworkMgr,
 								  appMgr, netMgr, netViewMgr, visualStyleFactory,
 								  visualMappingMgr, swingApp, discreteMappingFactory,
 								  continuousMappingFactory, fileUtil);
