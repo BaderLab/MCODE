@@ -6,16 +6,13 @@ import static org.cytoscape.util.swing.LookAndFeelUtil.createOkCancelPanel;
 import static org.cytoscape.util.swing.LookAndFeelUtil.isMac;
 import static org.cytoscape.util.swing.LookAndFeelUtil.makeSmall;
 import static org.cytoscape.util.swing.LookAndFeelUtil.setDefaultOkCancelKeyStrokes;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_BACKGROUND_PAINT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_HEIGHT;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NETWORK_WIDTH;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_X_LOCATION;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_Y_LOCATION;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dialog.ModalityType;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -38,7 +35,6 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JSlider;
 import javax.swing.SwingUtilities;
@@ -62,6 +58,7 @@ import org.cytoscape.task.visualize.ApplyVisualStyleTaskFactory;
 import org.cytoscape.util.swing.IconManager;
 import org.cytoscape.util.swing.TextIcon;
 import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.presentation.NetworkImageFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
@@ -664,30 +661,15 @@ public class MainPanelMediator implements NetworkAboutToBeDestroyedListener, Set
 				layouter.doLayout();
 			}
 			
-			invokeOnEDT(() -> {
-				try {
-					var panel = new JPanel();
-					var size = new Dimension(width, height);
-					panel.setPreferredSize(size);
-					panel.setSize(size);
-					panel.setMinimumSize(size);
-					panel.setMaximumSize(size);
-					panel.setBackground((Color) style.getDefaultValue(NETWORK_BACKGROUND_PAINT));
-		
-					var re = mcodeUtil.createRenderingEngine(panel, clusterView);
-					style.apply(clusterView);
-					clusterView.updateView();
-					clusterView.fitContent();
-		
-					if (!clusterView.getNodeViews().isEmpty())
-						cluster.setView(clusterView);
-					
-					var image = re.createImage(width, height);
-					cluster.setImage(image);
-				} catch (Exception ex) {
-					logger.error("Cannot update cluster image.", ex);
-				}
-			});
+			
+			style.apply(clusterView);
+			
+			var networkImageFactory = registrar.getService(NetworkImageFactory.class);
+			var image = networkImageFactory.createImage(clusterView, width, height);
+			
+			cluster.setView(clusterView);
+			cluster.setImage(image);
+			
 		} catch (Exception ex) {
 			logger.error("Cannot create cluster image.", ex);
 		}

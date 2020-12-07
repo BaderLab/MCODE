@@ -17,7 +17,6 @@ import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.util.swing.FileUtil;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.presentation.RenderingEngineFactory;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyleFactory;
@@ -74,7 +73,6 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 
 	CyNetwork networkSmall;
 	
-	@Mock RenderingEngineFactory<CyNetwork> rendererFactory;
 	@Mock CyRootNetworkManager rootNetMgr;
 	@Mock CyApplicationManager appMgr;
 	@Mock CyNetworkManager netMgr;
@@ -96,7 +94,7 @@ public class MCODEAlgorithmTest extends AbstractMCODETest {
 		rootNetMgr = netViewTestSupport.getRootNetworkFactory();
 		netViewFactory = netViewTestSupport.getNetworkViewFactory();
 		
-		mcodeUtil = new MCODEUtil(rendererFactory, netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
+		mcodeUtil = new MCODEUtil(netViewFactory, rootNetMgr, appMgr, netMgr, netViewMgr,
 				styleFactory, vmMgr, swingApp, vmfFactory, vmfFactory, fileUtil);
 		resultsMgr = new MCODEResultsManager(mcodeUtil);
 //		networkSmall = Cytoscape.createNetworkFromFile("testData" + File.separator + "smallTest.sif");
