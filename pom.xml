@@ -80,7 +80,6 @@
 						<Private-Package>${bundle.namespace}.*</Private-Package>
 						<Bundle-Activator>${bundle.namespace}.CyActivator</Bundle-Activator>
 						<Import-Package>*</Import-Package>
-						<Embed-Dependency>ci-bridge-impl;inline=true</Embed-Dependency>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -152,7 +151,7 @@
 				<enabled>false</enabled>
 			</releases>
 			<name>Cytoscape Snapshots</name>
-			<url>http://code.cytoscape.org/nexus/content/repositories/snapshots/</url>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_snapshots/</url>
 		</repository>
 		<repository>
 			<id>cytoscape_releases</id>
@@ -163,7 +162,7 @@
 				<enabled>true</enabled>
 			</releases>
 			<name>Cytoscape Releases</name>
-			<url>http://code.cytoscape.org/nexus/content/repositories/releases/</url>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_releases/</url>
 		</repository>
 	</repositories>
 
@@ -177,6 +176,11 @@
 		</dependency>
 	
 		<!-- Cytoscape -->
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>ci-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
 			<artifactId>application-api</artifactId>
@@ -258,11 +262,6 @@
 			<version>1.5.7</version>
 			<scope>provided</scope>
 		</dependency>
-			<dependency>
-			<groupId>org.cytoscape-ci</groupId>
-			<artifactId>ci-bridge-impl</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
 
 		<!-- Logging -->
 		<dependency>
@@ -281,8 +280,9 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.10.19</version>
+			<artifactId>mockito-core</artifactId>
+			<version>4.2.0</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.cytoscape</groupId>
