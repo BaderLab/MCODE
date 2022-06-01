@@ -1,18 +1,6 @@
 package ca.utoronto.tdccbr.mcode.internal.util;
 
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_SELECTED_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_STROKE_SELECTED_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_STROKE_UNSELECTED_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_UNSELECTED_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.EDGE_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_BORDER_WIDTH;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_FILL_COLOR;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_HEIGHT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_PAINT;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SHAPE;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_SIZE;
-import static org.cytoscape.view.presentation.property.BasicVisualLexicon.NODE_WIDTH;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -36,7 +24,6 @@ import java.util.Properties;
 import java.util.Set;
 
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.NetworkViewRenderer;
@@ -56,8 +43,6 @@ import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewFactory;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.VisualProperty;
-import org.cytoscape.view.presentation.RenderingEngine;
-import org.cytoscape.view.presentation.RenderingEngineFactory;
 import org.cytoscape.view.presentation.property.BasicVisualLexicon;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
 import org.cytoscape.view.presentation.property.values.NodeShape;
@@ -143,7 +128,7 @@ public class MCODEUtil {
 	private static final Color NODE_MIN_COLOR = Color.BLACK;
 	private static final Color NODE_MAX_COLOR = Color.RED;
 
-	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
+//	private final RenderingEngineFactory<CyNetwork> renderingEngineFactory;
 	private final CyNetworkViewFactory networkViewFactory;
 	private final CyRootNetworkManager rootNetworkMgr;
 	private final CyApplicationManager applicationMgr;
@@ -169,7 +154,6 @@ public class MCODEUtil {
 	private static final Logger logger = LoggerFactory.getLogger(MCODEUtil.class);
 	
 	public MCODEUtil(
-			RenderingEngineFactory<CyNetwork> renderingEngineFactory,
 			CyNetworkViewFactory networkViewFactory,
 			CyRootNetworkManager rootNetworkMgr,
 			CyApplicationManager applicationMgr,
@@ -182,7 +166,6 @@ public class MCODEUtil {
 			VisualMappingFunctionFactory continuousMappingFactory,
 			FileUtil fileUtil
 	) {
-		this.renderingEngineFactory = renderingEngineFactory;
 		this.networkViewFactory = networkViewFactory;
 		this.rootNetworkMgr = rootNetworkMgr;
 		this.applicationMgr = applicationMgr;
@@ -365,9 +348,6 @@ public class MCODEUtil {
 		return view;
 	}
 	
-	public RenderingEngine<CyNetwork> createRenderingEngine(JPanel panel, CyNetworkView view) {
-		return renderingEngineFactory.createRenderingEngine(panel, view);
-	}
 
 	public void displayNetworkView(CyNetworkView view) {
 		networkMgr.addNetwork(view.getModel());
