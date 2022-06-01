@@ -538,7 +538,7 @@ public class MCODEAlgorithm {
 	 */
 	private double scoreNode(NodeInfo nodeInfo) {
 		if (nodeInfo.numNodeNeighbors > params.getDegreeCutoff())
-			nodeInfo.score = nodeInfo.coreDensity * (double) nodeInfo.coreLevel;
+			nodeInfo.score = nodeInfo.coreDensity * nodeInfo.coreLevel;
 		else
 			nodeInfo.score = 0.0;
 
@@ -670,7 +670,7 @@ public class MCODEAlgorithm {
 		List<Long> cluster = new ArrayList<>(); //stores node indexes
 		getClusterCoreInternal(startNode,
 							   nodeSeenHashMap,
-							   ((NodeInfo) nodeInfoHashMap.get(startNode)).score,
+							   nodeInfoHashMap.get(startNode).score,
 							   1,
 							   cluster,
 							   nodeScoreCutoff,
@@ -771,7 +771,7 @@ public class MCODEAlgorithm {
 
 				if ((!nodeSeenHashMap.containsKey(nodeNeighbor)) &&
 					(!nodeSeenHashMapInternal.containsKey(nodeNeighbor)) &&
-					((((NodeInfo) nodeInfoHashMap.get(nodeNeighbor)).density) > params.getFluffNodeDensityCutoff())) {
+					((nodeInfoHashMap.get(nodeNeighbor).density) > params.getFluffNodeDensityCutoff())) {
 					nodesToAdd.add(nodeNeighbor);
 					nodeSeenHashMapInternal.put(nodeNeighbor, true);
 				}
