@@ -3,6 +3,7 @@ package ca.utoronto.tdccbr.mcode.internal.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -450,6 +451,8 @@ public class MCODEAlgorithm {
 
 			clusters = selectedClusters;
 		}
+		
+		rank(clusters);
 
 		long msTimeAfter = System.currentTimeMillis();
 		lastFindTime = msTimeAfter - msTimeBefore;
@@ -535,7 +538,7 @@ public class MCODEAlgorithm {
 	 */
 	private double scoreNode(NodeInfo nodeInfo) {
 		if (nodeInfo.numNodeNeighbors > params.getDegreeCutoff())
-			nodeInfo.score = nodeInfo.coreDensity * (double) nodeInfo.coreLevel;
+			nodeInfo.score = nodeInfo.coreDensity * nodeInfo.coreLevel;
 		else
 			nodeInfo.score = 0.0;
 
@@ -667,7 +670,7 @@ public class MCODEAlgorithm {
 		List<Long> cluster = new ArrayList<>(); //stores node indexes
 		getClusterCoreInternal(startNode,
 							   nodeSeenHashMap,
-							   ((NodeInfo) nodeInfoHashMap.get(startNode)).score,
+							   nodeInfoHashMap.get(startNode).score,
 							   1,
 							   cluster,
 							   nodeScoreCutoff,
@@ -768,7 +771,7 @@ public class MCODEAlgorithm {
 
 				if ((!nodeSeenHashMap.containsKey(nodeNeighbor)) &&
 					(!nodeSeenHashMapInternal.containsKey(nodeNeighbor)) &&
-					((((NodeInfo) nodeInfoHashMap.get(nodeNeighbor)).density) > params.getFluffNodeDensityCutoff())) {
+					((nodeInfoHashMap.get(nodeNeighbor).density) > params.getFluffNodeDensityCutoff())) {
 					nodesToAdd.add(nodeNeighbor);
 					nodeSeenHashMapInternal.put(nodeNeighbor, true);
 				}
@@ -965,5 +968,29 @@ public class MCODEAlgorithm {
 		returnArray[1] = prevGraph; //in the last iteration, curGraph is null (loop termination condition)
 
 		return returnArray;
+	}
+	
+	/**
+	 * Sorts a list of MCODE generated clusters by the score and then rank them.
+	 *
+	 * @param clusters List of MCODE generated clusters
+	 */
+	private static void rank(List<MCODECluster> clusters) {
+		Collections.sort(clusters, (c1, c2) -> {
+			//sorting clusters by decreasing score
+			double d1 = c1.getScore();
+			double d2 = c2.getScore();
+			
+			if (d1 == d2)     return 0;
+			else if (d1 < d2) return 1;
+			return -1;
+		});
+		
+		int rank = 1;
+		
+		for (var c : clusters) {
+			c.setRank(rank);
+			rank++;
+		}
 	}
 }

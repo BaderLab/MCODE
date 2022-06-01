@@ -142,8 +142,6 @@ public class MCODEAnalyzeTask extends AbstractTask implements ObservableTask {
 
 			if (cancelled || clusters.isEmpty())
 				return;
-
-			mcodeUtil.sortClusters(clusters);
 			
 			tm.setProgress(0.5);
 			tm.setStatusMessage("Drawing Results (Step 3 of 3)");

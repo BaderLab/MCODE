@@ -15,7 +15,6 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -553,23 +552,6 @@ public class MCODEUtil {
 		}
 
 		return placeHolderImage;
-	}
-
-	/**
-	 * Sorts a list of MCODE generated clusters by the score.
-	 *
-	 * @param clusters   List of MCODE generated clusters
-	 */
-	public void sortClusters(List<MCODECluster> clusters) {
-		Collections.sort(clusters, (c1, c2) -> {
-			//sorting clusters by decreasing score
-			double d1 = c1.getScore();
-			double d2 = c2.getScore();
-			
-			if (d1 == d2)     return 0;
-			else if (d1 < d2) return 1;
-			return -1;
-		});
 	}
 
 	/**
